@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="142px" height="142px" viewBox="0 0 142 142" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 55.2 (78181) - https://sketchapp.com -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Lemming">
+            <g id="Group" transform="translate(-0.000000, 0.000000)">
+                <polygon id="Path-3" fill="#FFFFFF" points="-3.10862447e-15 71.5 142 70.5 142 42.6445312 127.707866 42.6445312 127.707866 57.0722656 85.0984054 57.0722656 85.0984054 42.6445312 99.210943 42.6445312 99.210943 26.9863281 56.3109878 26.9863281 56.3109878 57.0722656 14.318828 57.0722656 14.318828 42.6445312 2.84371051e-14 42.6445312"></polygon>
+                <polygon id="Path" fill="#03B605" points="28 42.6445312 70.6778509 42.6445312 70.6778509 28.7167969 99 28.7167969 99 14.328125 85.0822094 14.328125 85.0822094 0 56.0671875 0 56.0671875 14.328125 28 14.328125"></polygon>
+                <polygon id="Path-2" fill="#5B60FC" points="55.670582 57 85.5890902 57 85.5890902 98.8308068 99 98.8308068 99 127 84.5969096 127 84.5969096 113.432274 56.6627626 113.432274 56.6627626 127 42 127 42 98.8308068 55.670582 98.8308068"></polygon>
+                <rect id="Rectangle" fill="#FFFFFF" x="29" y="127" width="28" height="15"></rect>
+                <rect id="Rectangle-Copy" fill="#FFFFFF" x="85" y="127" width="28" height="15"></rect>
+            </g>
+        </g>
+    </g>
+</svg>
