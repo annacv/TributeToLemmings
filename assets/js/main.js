@@ -24,7 +24,7 @@ function main() {
   function createGameScreen() {
     var gameScreen = buildDom(`
       <section class="section-container">
-        <canvas width="768px" height="768px"></canvas>
+        <canvas width="468px" height="468px"></canvas>
       </section>
     `);
 
@@ -34,7 +34,6 @@ function main() {
     game.gameOverCallback(createGameOverScreen);
     
     game.startGame();
-    setTimeout(createGameOverScreen, 3000);
   };
 
   function createGameOverScreen() {
