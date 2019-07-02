@@ -17,8 +17,36 @@ function main() {
       </section>
     `);
 
-    var startButton = startScreen.querySelector('.btn-primary');
+    var startButton = startScreen.querySelector('button');
     startButton.addEventListener('click', createGameScreen);
+  };
+
+  function createGameScreen() {
+    var gameScreen = buildDom(`
+      <section class="section-container">
+        <canvas width="768px" height="768px"></canvas>
+      </section>
+    `);
+
+    var canvas = document.querySelector('canvas');
+    var game = new Game(canvas);
+
+    game.gameOverCallback(createGameOverScreen);
+    
+    game.startGame();
+    setTimeout(createGameOverScreen, 3000);
+  };
+
+  function createGameOverScreen() {
+    var gameOverScreen = buildDom(`
+      <section class="section-container">
+        <h1 class="section-title">Game Over</h1>
+        <button class="btn-primmary">Restart</button>
+      </section>
+    `);
+
+    var restartButton = gameOverScreen.querySelector('button');
+    restartButton.addEventListener('click', createGameScreen);
   };
 
   createStartScreen();
