@@ -22,6 +22,7 @@ Game.prototype.startGame = function() {
     this.update();
     this.clear();
     this.draw();
+    this.checkCollisions();
 
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
@@ -47,6 +48,23 @@ Game.prototype.draw = function() {
   this.player.drawImage();
   this.bombs.forEach(function(bomb) {
     bomb.drawImage();
+  })
+}
+
+Game.prototype.checkCollisions = function() {
+  this.bombs.forEach((bomb, index) => {
+    var rightLeft = this.player.dx + this.player.dWidth >= bomb.dx; //ca
+    var leftRight = this.player.dx <= bomb.dx + bomb.dWidth; // ac
+    var bottomTop = this.player.dy + this.player.dHeight >= bomb.dy; //db
+    var topBottom = this.player.dy <= bomb.dy + bomb.dHeight; // bd
+    
+    if (rightLeft && leftRight && bottomTop && topBottom) {
+      this.bombs.splice(index, 1);
+      this.player.lives --;
+      if (this.player.lives === 0) {
+        this.isGameOver = true;
+      }
+    }
   })
 }
 
