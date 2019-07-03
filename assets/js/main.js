@@ -34,6 +34,15 @@ function main() {
     game.gameOverCallback(createGameOverScreen);
     
     game.startGame();
+
+    // Lemming commands
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'ArrowRight') { 
+        game.player.setDirection(1);
+      } else if (event.key === 'ArrowLeft') { 
+        game.player.setDirection(-1);
+      }
+    });
   };
 
   function createGameOverScreen() {

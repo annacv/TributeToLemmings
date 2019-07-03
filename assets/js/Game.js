@@ -17,8 +17,11 @@ Game.prototype.startGame = function() {
       var newBomb = new Bomb(this.canvas);
       this.bombs.push(newBomb);
     }
-
+    
+    this.update();
+    this.clear();
     this.draw();
+
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
     } else {
@@ -28,8 +31,15 @@ Game.prototype.startGame = function() {
   loop();
 }
 
+Game.prototype.update = function() {
+  this.player.move();
+};
+
+Game.prototype.clear = function() {
+  this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+};
+
 Game.prototype.draw = function() {
-  console.log('draw is called');
   this.player.drawImage();
   this.bombs.forEach(function(bomb) {
     bomb.drawImage();
