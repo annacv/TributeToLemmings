@@ -18,7 +18,20 @@ function Player(canvas) {
 
 /* Methods */
 
+//move
+Player.prototype.move = function() {
+  this.dx = this.dx + this.direction;
+  if (this.dx + this.direction == 0 || this.dx + this.direction > 418) {
+    this.direction = this.direction/-1;
+  }
+}
+
 // drawImage
 Player.prototype.drawImage = function() {
   this.ctx.drawImage(this.image, this.dx, this.dy, this.dWidth, this.dHeight);
+}
+
+//setNewDirection
+Player.prototype.setDirection = function(newDirection) {
+  this.direction = newDirection;
 }
