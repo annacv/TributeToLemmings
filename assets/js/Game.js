@@ -7,10 +7,12 @@ function Game(canvas) {
   this.canvas = canvas;
   this.ctx = this.canvas.getContext('2d');
   this.onGameOver = null;
+  this.intervalID = 0;
 }
 
 Game.prototype.startGame = function() {
   this.player = new Player(this.canvas);
+  this.gameCount();
 
   var loop = () => {
     if (Math.random() > 0.97) {
@@ -28,9 +30,24 @@ Game.prototype.startGame = function() {
       requestAnimationFrame(loop);
     } else {
       this.onGameOver();
+      clearInterval(this.intervalID);
     }
   };
   loop();
+}
+
+Game.prototype.gameCount = function() { 
+  var COUNTER_INIT = 0; 
+  var counter = COUNTER_INIT;
+  var counterDisplay = document.querySelector('.counter-rank');
+  this.intervalID = setInterval(callback, 1000);
+
+  counterDisplay.innerHTML = COUNTER_INIT;
+
+  function callback() {
+    counter ++;
+    counterDisplay.innerHTML = counter;
+  };
 }
 
 Game.prototype.update = function() {
