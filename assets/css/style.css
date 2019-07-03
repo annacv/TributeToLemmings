@@ -47,14 +47,23 @@ body {
 
 /* ---- layout ---- */
 
+.container {
+  height: 8rem;
+}
+
+.site-header,
+.site-footer {
+  background-color: #000;
+}
+
+#site-main {
+  padding: 8rem 6rem;
+}
+
 .section-container {
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
-}
-
-.container {
-  margin: 0 20px;
 }
 
 .section {
@@ -75,5 +84,9 @@ canvas {
 
 /* ---- components ---- */
 
+.counter-rank {
+  font-size: 1.5rem;
+  color: #fff;
+}
 /* button, score, lives styles */
 
