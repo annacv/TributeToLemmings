@@ -22,7 +22,7 @@ function Player(canvas) {
 //move
 Player.prototype.move = function() {
   this.dx = this.dx + this.direction * this.speed;
-  if (this.dx + this.direction * this.speed == 0 || this.dx + this.direction * this.speed >= 418) {
+  if (this.dx + this.direction * this.speed == 0 || this.dx + this.direction * this.speed >= 419) {
     this.direction = this.direction/-1;
   }
 }
