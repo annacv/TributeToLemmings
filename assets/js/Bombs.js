@@ -8,7 +8,7 @@ function Bomb(canvas, randomX) {
   this.image = new Image();
   this.image.src = "./assets/images/svg/bomb.svg";
   this.dx = randomX;
-  this.dy = -42;
+  this.dy = -45;
   this.dWidth = 38;
   this.dHeight = 42;
   this.direction = 1;
