@@ -14,7 +14,8 @@ Game.prototype.startGame = function() {
 
   var loop = () => {
     if (Math.random() > 0.97) {
-      var newBomb = new Bomb(this.canvas);
+      var randomX = Math.random() * this.canvas.width - 38;
+      var newBomb = new Bomb(this.canvas, randomX);
       this.bombs.push(newBomb);
     }
     
@@ -33,6 +34,9 @@ Game.prototype.startGame = function() {
 
 Game.prototype.update = function() {
   this.player.move();
+  this.bombs.forEach(function(bomb) {
+    bomb.move();
+  })
 };
 
 Game.prototype.clear = function() {

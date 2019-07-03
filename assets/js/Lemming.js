@@ -13,6 +13,7 @@ function Player(canvas) {
   this.dHeight = 50;
   this.lives = 3;
   this.direction = 0;
+  this.speed = 2;
 }
 
 
@@ -20,8 +21,8 @@ function Player(canvas) {
 
 //move
 Player.prototype.move = function() {
-  this.dx = this.dx + this.direction;
-  if (this.dx + this.direction == 0 || this.dx + this.direction > 418) {
+  this.dx = this.dx + this.direction * this.speed;
+  if (this.dx + this.direction * this.speed == 0 || this.dx + this.direction * this.speed >= 418) {
     this.direction = this.direction/-1;
   }
 }
