@@ -7,10 +7,6 @@ function Bomb(canvas) {
   this.ctx = canvas.getContext('2d');
   this.image = new Image();
   this.image.src = "./assets/images/svg/bomb.svg";
-  this.sx = 0;
-  this.sy = 0;
-  this.sWidth = 76;
-  this.sHeight = 84;
   this.dx = 0;
   this.dy = 0;
   this.dWidth = 38;
@@ -24,5 +20,5 @@ function Bomb(canvas) {
 
 // drawImage
 Bomb.prototype.drawImage = function() {
-  this.ctx.drawImage(this.image, this.sx, this.sy, this.sWidth, this.sHeight, this.dx, this.dy, this.dWidth, this.dHeight);
+  this.ctx.drawImage(this.image, this.dx, this.dy, this.dWidth, this.dHeight);
 }

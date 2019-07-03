@@ -7,10 +7,6 @@ function Player(canvas) {
   this.ctx = canvas.getContext('2d');
   this.image = new Image();
   this.image.src = "./assets/images/svg/lemming.svg";
-  this.sx = 0;
-  this.sy = 0;
-  this.sWidth = 142;
-  this.sHeight = 142;
   this.dx = 40;
   this.dy = 380;
   this.dWidth = 50;
@@ -24,5 +20,5 @@ function Player(canvas) {
 
 // drawImage
 Player.prototype.drawImage = function() {
-  this.ctx.drawImage(this.image, this.sx, this.sy, this.sWidth, this.sHeight, this.dx, this.dy, this.dWidth, this.dHeight);
+  this.ctx.drawImage(this.image, this.dx, this.dy, this.dWidth, this.dHeight);
 }
