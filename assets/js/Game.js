@@ -14,11 +14,15 @@ Game.prototype.startGame = function() {
 
   var loop = () => {
     if (Math.random() > 0.97) {
-      var newBomb = new Bomb(this.canvas);
+      var randomX = Math.random() * this.canvas.width - 38;
+      var newBomb = new Bomb(this.canvas, randomX);
       this.bombs.push(newBomb);
     }
-
+    
+    this.update();
+    this.clear();
     this.draw();
+
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
     } else {
@@ -28,8 +32,18 @@ Game.prototype.startGame = function() {
   loop();
 }
 
+Game.prototype.update = function() {
+  this.player.move();
+  this.bombs.forEach(function(bomb) {
+    bomb.move();
+  })
+};
+
+Game.prototype.clear = function() {
+  this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+};
+
 Game.prototype.draw = function() {
-  console.log('draw is called');
   this.player.drawImage();
   this.bombs.forEach(function(bomb) {
     bomb.drawImage();

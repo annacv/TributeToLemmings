@@ -48,13 +48,9 @@ Classes and methods definition.:
   * image.src
   * dx
   * dy
-  * sx
-  * sy
-  * direction
   * dwidth
   * dheight
-  * swidth
-  * sheight
+  * direction
   * lives
   
 2. Methods
@@ -70,14 +66,10 @@ Classes and methods definition.:
   * image.src
   * dx
   * dy
-  * sx
-  * sy
-  * speed
-  * direction
   * dwidth
   * dheight
-  * swidth
-  * sheight
+  * speed
+  * direction
 
 2. Methods
   * move
