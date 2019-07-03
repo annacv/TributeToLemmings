@@ -25,6 +25,7 @@ Game.prototype.startGame = function() {
     this.clear();
     this.draw();
     this.checkCollisions();
+    this.displayLives();
 
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
@@ -78,11 +79,16 @@ Game.prototype.checkCollisions = function() {
     if (rightLeft && leftRight && bottomTop && topBottom) {
       this.bombs.splice(index, 1);
       this.player.lives --;
-      if (this.player.lives === 0) {
+      if (this.player.lives < 1) {
         this.isGameOver = true;
       }
     }
   })
+}
+
+Game.prototype.displayLives = function() {
+  var livesDisplay = document.querySelector('.counter-lives');
+  livesDisplay.innerHTML = this.player.lives;
 }
 
 Game.prototype.gameOverCallback = function(callback) {
