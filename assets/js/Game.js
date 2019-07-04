@@ -39,7 +39,6 @@ Game.prototype.startGame = function() {
       requestAnimationFrame(loop);
     } else {
       this.onGameOver(this.score);
-      clearInterval(this.intervalID);
       var scoreDisplay = document.querySelector('.counter-rank');
       scoreDisplay.innerHTML = this.score;
     }
