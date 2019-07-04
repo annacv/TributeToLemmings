@@ -88,10 +88,17 @@ body {
 /* ---- FOOTER ---- */
 
 .site-footer {
-  height: 2rem;
+  height: 3rem;
   background-color: #000;
   border-top: .25rem solid #54bbfe;
-  margin-top: 4.5rem;
+  margin-top: 6.5rem;
+}
+
+@media (min-width: 768px) {
+  .site-footer {
+     height: 7rem;
+    margin-top: 9rem;
+  }
 }
 
 /* ---- START GAME SCREEN ---- */
