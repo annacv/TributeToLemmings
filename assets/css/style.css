@@ -194,7 +194,7 @@ canvas {
 .touch-right,
 .touch-left {
   position: absolute;
-  top: 30%;
+  top: 45%;
   padding: .25rem .5rem;
   font-weight: 900;
   font-size: .875rem;
@@ -216,7 +216,7 @@ canvas {
   .touch-right {
     top: 50%;
   }
-  
+
   .touch-left {
     left: 10%;
   }
