@@ -1,8 +1,10 @@
 # Project's name
 TributeToLemmings
+![TributeToLemmings](background-0.jpg)
 
 ## Description
 As it was a bonus screen in the original Lemmings' game... WOW!! A simple skip bombs game!! Try to keep alive your Lemming as much you can!!!!
+
 
 ## MVP (DOM - CANVAS)
 The MVP is simple: To create a game with one Lemming player, which has to skip failing bombs by using arrow commands and save the score of the amount of minutes alive. Our Lemming has 3 lifes, so it can resist to three collisions before dying.
@@ -50,11 +52,12 @@ Classes and methods definition.:
   * dy
   * dwidth
   * dheight
-  * direction
   * lives
+  * direction
+  * speed
   
 2. Methods
-  * direction
+  * setDirection
   * move
   * drawImage
 
@@ -85,13 +88,15 @@ Definition of the different states and their transition (transition functions)
 
 *2. gameScreen*
   * create screen
-  * init game (canvas)
-  * count score (seconds alive)
+  * game loop
+  * count score & save data
+  * display lives
   * update / move / clear
   * check collisions
 
 *3. gameoverScreen*
   * create screen
+  * display score
   * restart game
   
 *4. rankingScreen (2nd Iteration)*
