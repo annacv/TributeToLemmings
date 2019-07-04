@@ -9,6 +9,7 @@ function Game(canvas) {
   this.onGameOver = null;
   this.score = 0;
   this.count = 0;
+  this.gameSong = new Audio("assets/sounds/03_-_Lemmings_-_DOS_-_Lemming_2.ogg");
 }
 
 Game.prototype.startGame = function() {
@@ -22,7 +23,6 @@ Game.prototype.startGame = function() {
     }
     this.count++;
     
-    // requestAnimationFrame fa que el loop s'actualitza 60 vegades per segon, aqui utilitzem la sinèrgia de la f() per fer el contador.
     if (this.count % 60 ===0) { 
       this.score++;
     }
@@ -36,11 +36,13 @@ Game.prototype.startGame = function() {
     this.saveScore(this.score);
 
     if (!this.isGameOver) {
+      this.gameSong.play();
       requestAnimationFrame(loop);
     } else {
       this.onGameOver(this.score);
       var scoreDisplay = document.querySelector('.counter-rank');
       scoreDisplay.innerHTML = this.score;
+      this.gameSong.pause();
     }
   };
   loop();
