@@ -53,18 +53,19 @@ function main() {
   };
 
   function createGameOverScreen(score) {
-    var finalScore = score.innerHTML;
     var gameOverScreen = buildDom(`
-      <section class="section-container">
-        <h2 class="section-description game-over"><span class="description-highlighted"> ></span> Booom!!! Lemming life in seconds was: </h2>
-        <p class="counter-rank"></p>
-        <div class="image-container">
-          <h1 class="section-title game-over">Game Over!</h1>
-          <button class="btn-primmary">Restart</button>
-        </div>
-      </section>
+    <section class="section-container">
+    <h2 class="section-description game-over"><span class="description-highlighted"> ></span> Booom!!! Lemming life in seconds was: </h2>
+    <p class="counter-rank"></p>
+    <div class="image-container">
+    <h1 class="section-title game-over">Game Over!</h1>
+    <button class="btn-primmary">Restart</button>
+    </div>
+    </section>
     `);
-
+    
+    var finalScore = document.querySelector('.counter-rank');
+    finalScore.innerHTML = localStorage.getItem('score-rank');
     var restartButton = gameOverScreen.querySelector('button');
     restartButton.addEventListener('click', createGameScreen);
   };

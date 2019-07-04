@@ -7,13 +7,12 @@ function Game(canvas) {
   this.canvas = canvas;
   this.ctx = this.canvas.getContext('2d');
   this.onGameOver = null;
-  this.intervalID = 0;
   this.score = 0;
+  this.count = 0;
 }
 
 Game.prototype.startGame = function() {
   this.player = new Player(this.canvas);
-  this.gameCount();
 
   var loop = () => {
     if (Math.random() > 0.97) {
@@ -21,36 +20,31 @@ Game.prototype.startGame = function() {
       var newBomb = new Bomb(this.canvas, randomX);
       this.bombs.push(newBomb);
     }
+    this.count++;
     
+    // requestAnimationFrame fa que el loop s'actualitza 60 vegades per segon, aqui utilitzem la sinèrgia de la f() per fer el contador.
+    if (this.count % 60 ===0) { 
+      this.score++;
+    }
+
     this.update();
     this.clear();
     this.draw();
     this.checkCollisions();
     this.displayLives();
     this.updateScore();
+    this.saveScore(this.score);
 
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
     } else {
       this.onGameOver(this.score);
       clearInterval(this.intervalID);
+      var scoreDisplay = document.querySelector('.counter-rank');
+      scoreDisplay.innerHTML = this.score;
     }
   };
   loop();
-}
-
-Game.prototype.gameCount = function() { 
-  var COUNTER_INIT = 0; 
-  var counter = COUNTER_INIT;
-  var counterDisplay = document.querySelector('.counter-rank');
-  this.intervalID = setInterval(callback, 1000);
-
-  counterDisplay.innerHTML = COUNTER_INIT;
-
-  function callback() {
-    counter ++;
-    counterDisplay.innerHTML = counter;
-  };
 }
 
 Game.prototype.update = function() {
@@ -90,11 +84,11 @@ Game.prototype.checkCollisions = function() {
 
 Game.prototype.updateScore = function() {
   var scoreDisplay = document.querySelector('.counter-rank');
-  var arrGameScore = [];
-  arrGameScore.push(scoreDisplay);
-  this.score = arrGameScore.reduce(function(a, b) {
-    return a > b ? a : b; 
-  }, 0);
+  scoreDisplay.innerHTML = this.score;
+}
+
+Game.prototype.saveScore = function(score) {
+  localStorage.setItem('score-value', score);
 }
 
 Game.prototype.displayLives = function() {
