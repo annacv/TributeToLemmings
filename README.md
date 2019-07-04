@@ -4,7 +4,7 @@ TributeToLemmings
 ![TributeToLemmings](lemmings-preview.jpg)
 
 ## Description
-As it was a bonus screen in the original Lemmings' game... WOW!! A simple skip bombs game!! Try to keep alive your Lemming as much you can!!!!
+As it was a bonus screen in the original Lemmings' game... WOW!! A classic skip-bomb game!! Try to keep alive your Lemming as much you can!!!!
 
 
 ## MVP (DOM - CANVAS)
@@ -132,4 +132,4 @@ URls for the project repo and deploy
 
 ### Slides
 URls for the project presentation (slides)
-[Link Slides.com](http://slides.com)
+[Link Slides.com](https://docs.google.com/presentation/d/1EbzBOfI99dptD5MHH2yhKvpC5YnKM8_bhUs1j-IFi18/edit?usp=sharing)
