@@ -13,7 +13,7 @@ function Player(canvas) {
   this.dHeight = 50;
   this.lives = 3;
   this.direction = 0;
-  this.speed = 2;
+  this.speed = 1;
 }
 
 
