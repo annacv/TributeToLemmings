@@ -30,6 +30,13 @@ Player.prototype.move = function() {
 // drawImage
 Player.prototype.drawImage = function() {
   this.ctx.drawImage(this.image, this.dx, this.dy, this.dWidth, this.dHeight);
+  if (this.lives === 2) {
+    this.image.src = "./assets/images/svg/lemming--2-lives.svg";
+  } else if (this.lives === 1 || this.lives === 0) {
+    this.image.src = "./assets/images/svg/lemming--1-life.svg";
+  } else {
+    this.image.src = "./assets/images/svg/lemming.svg";
+  }
 }
 
 //setNewDirection
