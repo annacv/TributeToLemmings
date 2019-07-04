@@ -16,7 +16,7 @@ Game.prototype.startGame = function() {
 
   var loop = () => {
     if (Math.random() > 0.97) {
-      var randomX = Math.random() * (this.canvas.width - 38);
+      var randomX = Math.random() * (this.canvas.width - 28);
       var newBomb = new Bomb(this.canvas, randomX);
       this.bombs.push(newBomb);
     }
@@ -39,7 +39,6 @@ Game.prototype.startGame = function() {
       requestAnimationFrame(loop);
     } else {
       this.onGameOver(this.score);
-      clearInterval(this.intervalID);
       var scoreDisplay = document.querySelector('.counter-rank');
       scoreDisplay.innerHTML = this.score;
     }
