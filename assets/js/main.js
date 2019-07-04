@@ -52,7 +52,8 @@ function main() {
     });
   };
 
-  function createGameOverScreen() {
+  function createGameOverScreen(score) {
+    var finalScore = score.innerHTML;
     var gameOverScreen = buildDom(`
       <section class="section-container">
         <h2 class="section-description game-over"><span class="description-highlighted"> ></span> Booom!!! Lemming life in seconds was: </h2>

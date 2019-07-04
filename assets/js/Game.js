@@ -8,6 +8,7 @@ function Game(canvas) {
   this.ctx = this.canvas.getContext('2d');
   this.onGameOver = null;
   this.intervalID = 0;
+  this.score = 0;
 }
 
 Game.prototype.startGame = function() {
@@ -26,11 +27,12 @@ Game.prototype.startGame = function() {
     this.draw();
     this.checkCollisions();
     this.displayLives();
+    this.updateScore();
 
     if (!this.isGameOver) {
       requestAnimationFrame(loop);
     } else {
-      this.onGameOver();
+      this.onGameOver(this.score);
       clearInterval(this.intervalID);
     }
   };
@@ -84,6 +86,15 @@ Game.prototype.checkCollisions = function() {
       }
     }
   })
+}
+
+Game.prototype.updateScore = function() {
+  var scoreDisplay = document.querySelector('.counter-rank');
+  var arrGameScore = [];
+  arrGameScore.push(scoreDisplay);
+  this.score = arrGameScore.reduce(function(a, b) {
+    return a > b ? a : b; 
+  }, 0);
 }
 
 Game.prototype.displayLives = function() {
