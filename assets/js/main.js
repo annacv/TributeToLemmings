@@ -12,7 +12,7 @@ function main() {
     var startScreen = buildDom(`
       <section class="section-container intro">
         <h1 class="section-title">Lemmings Explosion's Party</h1>
-        <p class="section-description"><span class="description-highlighted">WOW!!</span> A classic skip-bomb game! Keep your Lemming alive as much as you can -:P<p>
+        <p class="section-description"><span class="description-highlighted">WOW!!</span> A classic skip-bomb game! Keep the Lemming alive as much as you can -:P<p>
         <button class="btn-primmary">Start</button>
       </section>
     `);
@@ -24,6 +24,8 @@ function main() {
   function createGameScreen() {
     var gameScreen = buildDom(`
       <section class="section-container play">
+      <div class="touch-left"><</div>
+      <div class="touch-right">></div>
         <div class="counter-container">
           <span class="description-highlighted">lives</span>
           <p class="counter-lives"></p>
@@ -42,10 +44,19 @@ function main() {
     
     game.startGame();
 
-    // Lemming commands
+    // Lemming commands mobile & tablet
+    var arrowRight = document.querySelector('.touch-right');
+    arrowRight.addEventListener('touchstart', moveRight);
+    function moveRight() { game.player.setDirection(1)}
+
+    var arrowLeft = document.querySelector('.touch-left');
+    arrowLeft.addEventListener('touchstart', moveLeft);
+    function moveLeft() { game.player.setDirection(-1)}
+
+    // Lemming commands desktop
     document.addEventListener('keydown', function(event) {
       if (event.key === 'ArrowRight') { 
-        game.player.setDirection(1);
+        game.player.setDirection(1)
       } else if (event.key === 'ArrowLeft') { 
         game.player.setDirection(-1);
       }
