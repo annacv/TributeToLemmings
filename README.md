@@ -1,6 +1,7 @@
 # Project's name
 TributeToLemmings
-![TributeToLemmings](background-0.jpg)
+
+![TributeToLemmings](lemmings-preview.jpg)
 
 ## Description
 As it was a bonus screen in the original Lemmings' game... WOW!! A simple skip bombs game!! Try to keep alive your Lemming as much you can!!!!
@@ -126,7 +127,7 @@ Task definition in order of priority
 ### Git
 URls for the project repo and deploy
 [Link Repo](https://github.com/annacv/TributeToLemmings)
-[Link Deploy](http://github.com)
+[Link Deploy](https://annacv.github.io/TributeToLemmings/)
 
 
 ### Slides
