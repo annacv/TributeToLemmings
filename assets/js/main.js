@@ -55,8 +55,7 @@ function main() {
   function createGameOverScreen(score) {
     var gameOverScreen = buildDom(`
     <section class="section-container">
-    <h2 class="section-description game-over"><span class="description-highlighted"> ></span> Booom!!! Lemming life in seconds was: </h2>
-    <p class="counter-rank"></p>
+    <h2 class="section-description game-over"><span class="description-highlighted"> ></span> Booom!!! Your score is: <span class="counter-rank description-highlighted"></span></h2>    
     <div class="image-container">
     <h1 class="section-title game-over">Game Over!</h1>
     <button class="btn-primmary">Restart</button>
