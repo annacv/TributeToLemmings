@@ -9,10 +9,10 @@ function Bomb(canvas, randomX) {
   this.image.src = "./assets/images/svg/bomb.svg";
   this.dx = randomX;
   this.dy = -45;
-  this.dWidth = 38;
-  this.dHeight = 42;
+  this.dWidth = 28;
+  this.dHeight = 32;
   this.direction = 1;
-  this.speed = 3;
+  this.speed = 1.5;
 }
 
 
