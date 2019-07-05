@@ -9,7 +9,7 @@ function Game(canvas) {
   this.onGameOver = null;
   this.score = 0;
   this.count = 0;
-  this.gameSong = new Audio("assets/sounds/03_-_Lemmings_-_DOS_-_Lemming_2.ogg");
+  this.gameSong = new Audio('assets/sounds/03_-_Lemmings_-_DOS_-_Lemming_2.ogg');
 }
 
 Game.prototype.startGame = function() {
