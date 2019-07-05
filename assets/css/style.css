@@ -49,7 +49,7 @@ main {
 
 .section-container {
   width: 100%;
-  padding: 3rem 2rem;
+  padding: 3rem 2.15rem;
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
@@ -143,7 +143,7 @@ main {
 
 .section-description {
   width: 100%;
-  font-size: 1.125rem;
+  font-size: 1.05rem;
   line-height: 1.4;
   font-weight: 200;
   margin-bottom: 2.5rem;
@@ -151,10 +151,20 @@ main {
 
 .description-highlighted {
   padding: .25rem .25rem .115rem .25rem;
-  font-size: 1rem;
+  font-size: .875rem;
   font-weight: 900;
   color: #fff;
   background-color: #54bbfe;
+}
+
+@media (min-width: 768px) {
+  .section-description {
+    font-size: 1.125rem;
+  }
+
+  .description-highlighted {
+    font-size: 1rem;
+  }
 }
 
 /* ---- PLAY GAME SCREEN ---- */
@@ -188,11 +198,24 @@ canvas {
 .counter-rank {
   font-weight: 900;
   line-height: 1.8;
-  margin: 0 1rem;
+  margin: 0 .875rem;
+}
+
+@media (min-width: 768px) {
+  .counter-lives,
+  .counter-rank {
+    margin: 0 1rem;
+  }
 }
 
 .counter-lives {
-  margin-right: 2rem; 
+  margin-right: 1.25rem; 
+}
+
+@media (min-width: 768px) {
+  .counter-lives {
+    margin-right: 2rem;
+  }
 }
 
 /* MOBILE TOUCH COMMANDS */
@@ -201,7 +224,7 @@ canvas {
 .touch-left {
   position: absolute;
   top: 45%;
-  padding: .31rem .58rem;
+  padding: .41rem .68rem;
   font-weight: 900;
   font-size: .875rem;
   line-height: 1.3;
