@@ -68,16 +68,24 @@ Game.prototype.draw = function() {
 
 Game.prototype.checkCollisions = function() {
   this.bombs.forEach((bomb, index) => {
-    var rightLeft = this.player.dx + this.player.dWidth >= bomb.dx; //ca
-    var leftRight = this.player.dx <= bomb.dx + bomb.dWidth; // ac
-    var bottomTop = this.player.dy + this.player.dHeight >= bomb.dy; //db
-    var topBottom = this.player.dy <= bomb.dy + bomb.dHeight; // bd
-    
-    if (rightLeft && leftRight && bottomTop && topBottom) {
-      this.bombs.splice(index, 1);
-      this.player.lives --;
-      if (this.player.lives < 1) {
-        this.isGameOver = true;
+    if(!bomb.isExploding) {
+      var rightLeft = this.player.dx + this.player.dWidth >= bomb.dx; //ca
+      var leftRight = this.player.dx <= bomb.dx + bomb.dWidth; // ac
+      var bottomTop = this.player.dy + this.player.dHeight >= bomb.dy; //db
+      var topBottom = this.player.dy <= bomb.dy + bomb.dHeight; // bd
+      
+      if (rightLeft && leftRight && bottomTop && topBottom) {
+        bomb.image.src = './assets/images/svg/booom.svg';
+        bomb.isExploding = true;
+     
+        setTimeout(() => callback(this.bombs, this.player, this.isGameOver), 100);
+        var callback = (bombs, player) => {
+          bombs.splice(index, 1);
+          player.lives --;
+          if (player.lives < 1) {
+            this.isGameOver = true;
+          }
+        }
       }
     }
   })
