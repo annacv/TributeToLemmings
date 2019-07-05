@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="84px" height="84px" viewBox="0 0 84 84" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 55.2 (78181) - https://sketchapp.com -->
+    <title>BOOOOM</title>
+    <desc>Created with Sketch.</desc>
+    <g id="BOOOOM" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="boom">
+            <path d="M24,24 L12,24 L12,12 L24,12 L24,24 Z M36,36 L24,36 L24,24 L36,24 L36,36 Z M36,72 L24,72 L24,60 L36,60 L48,60 L48,72 L48,84 L36,84 L36,72 Z M60,36 L48,36 L48,24 L60,24 L60,36 Z M48,24 L36,24 L36,1.07647224e-12 L48,1.07647224e-12 L48,24 Z M72,24 L60,24 L60,12 L72,12 L72,24 Z M60,60 L48,60 L48,48 L60,48 L60,60 Z M72,72 L60,72 L60,60 L72,60 L72,72 Z M84,48 L60,48 L60,36 L84,36 L84,48 Z" id="Combined-Shape--red" fill="#C62828"></path>
+            <polygon id="Combined-Shape--egg" fill="#FFFFFF" points="36 36 48 36 48 48 36 48"></polygon>
+            <path d="M48,60 L36,60 L36,48 L48,48 L48,60 Z M36,48 L24,48 L24,36 L36,36 L36,48 Z" id="Combined-Shape--yellow" fill="#FFEB3B"></path>
+            <path d="M48,36 L36,36 L36,24 L48,24 L48,36 Z M60,48 L48,48 L48,36 L60,36 L60,48 Z" id="Combined-Shape--orange" fill="#FE9800"></path>
+            <path d="M12.15,48 L24,48 L24,60 L12,60 L12,48 L0.15,48 L0.15,36 L12.15,36 L12.15,48 Z" id="Combined-Shape" fill="#C62828"></path>
+            <path d="M24,48 L12,48 L12,36 L24,36 L24,48 Z M36,60 L24,60 L24,48 L36,48 L36,60 Z" id="Combined-Shape" fill="#FE9800"></path>
+        </g>
+    </g>
+</svg>
