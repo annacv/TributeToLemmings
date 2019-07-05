@@ -72,8 +72,9 @@ Classes and methods definition.:
   * dy
   * dwidth
   * dheight
-  * speed
   * direction
+  * speed
+  * isExploding
 
 2. Methods
   * move
