@@ -1,6 +1,9 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 
+/** ~100ms at 60fps — frames to show explosion before removal */
+const EXPLOSION_FRAMES = 6;
+
 export class Game {
   player: Player | null;
   bombs: Bomb[];
@@ -62,7 +65,24 @@ export class Game {
 
   update(): void {
     this.player?.move();
-    this.bombs.forEach((bomb) => bomb.move());
+
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const bomb = this.bombs[i];
+      bomb.move();
+
+      if (!bomb.isExploding) continue;
+
+      bomb.explosionFramesLeft--;
+      if (bomb.explosionFramesLeft > 0) continue;
+
+      this.bombs.splice(i, 1);
+      if (this.player) {
+        this.player.lives--;
+        if (this.player.lives < 1) {
+          this.isGameOver = true;
+        }
+      }
+    }
   }
 
   clear(): void {
@@ -91,11 +111,7 @@ export class Game {
       if (rightLeft && leftRight && bottomTop && topBottom) {
         bomb.image.src = './assets/images/svg/booom.svg';
         bomb.isExploding = true;
-        this.bombs.splice(i, 1);
-        player.lives--;
-        if (player.lives < 1) {
-          this.isGameOver = true;
-        }
+        bomb.explosionFramesLeft = EXPLOSION_FRAMES;
       }
     }
   }

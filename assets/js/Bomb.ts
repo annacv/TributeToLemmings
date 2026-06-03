@@ -9,6 +9,7 @@ export class Bomb {
   direction: number;
   speed: number;
   isExploding: boolean;
+  explosionFramesLeft: number;
 
   constructor(canvas: HTMLCanvasElement, randomX: number) {
     this.canvas = canvas;
@@ -22,6 +23,7 @@ export class Bomb {
     this.direction = 1;
     this.speed = 1.5;
     this.isExploding = false;
+    this.explosionFramesLeft = 0;
   }
 
   move(): void {

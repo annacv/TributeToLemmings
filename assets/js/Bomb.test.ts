@@ -26,5 +26,6 @@ describe('Bomb', () => {
   it('is not exploding on creation', () => {
     const bomb = new Bomb(canvas, 0);
     expect(bomb.isExploding).toBe(false);
+    expect(bomb.explosionFramesLeft).toBe(0);
   });
 });

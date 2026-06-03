@@ -39,6 +39,33 @@ describe('Game', () => {
     expect(game.onGameOver).toBe(cb);
   });
 
+  it('keeps exploding bombs visible until removal', () => {
+    const game = new Game(canvas);
+    game.player = new Player(canvas);
+
+    const bomb = new Bomb(canvas, 50);
+    bomb.dy = 390;
+    game.bombs.push(bomb);
+    game.checkCollisions();
+
+    expect(bomb.isExploding).toBe(true);
+    expect(bomb.explosionFramesLeft).toBe(6);
+    expect(bomb.image.src).toContain('booom.svg');
+    expect(game.bombs).toHaveLength(1);
+    expect(game.player.lives).toBe(3);
+
+    for (let frame = 0; frame < 5; frame++) {
+      game.update();
+      expect(game.bombs).toHaveLength(1);
+      expect(game.player.lives).toBe(3);
+    }
+
+    game.update();
+
+    expect(game.bombs).toHaveLength(0);
+    expect(game.player.lives).toBe(2);
+  });
+
   it('registers all overlapping bomb hits in the same frame', () => {
     const game = new Game(canvas);
     game.player = new Player(canvas);
@@ -50,6 +77,13 @@ describe('Game', () => {
 
     game.bombs.push(bomb1, bomb2);
     game.checkCollisions();
+
+    expect(game.player.lives).toBe(3);
+    expect(game.bombs).toHaveLength(2);
+
+    for (let frame = 0; frame < 6; frame++) {
+      game.update();
+    }
 
     expect(game.player.lives).toBe(1);
     expect(game.bombs).toHaveLength(0);
