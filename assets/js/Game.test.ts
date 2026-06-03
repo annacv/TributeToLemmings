@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { Game } from './Game';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
+import { SPRITES } from './assets';
 
 describe('Game', () => {
   let canvas: HTMLCanvasElement;
@@ -50,7 +51,7 @@ describe('Game', () => {
 
     expect(bomb.isExploding).toBe(true);
     expect(bomb.explosionFramesLeft).toBe(6);
-    expect(bomb.image.src).toContain('booom.svg');
+    expect(bomb.image.src).toContain(SPRITES.booom);
     expect(game.bombs).toHaveLength(1);
     expect(game.player.lives).toBe(3);
 

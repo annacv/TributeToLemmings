@@ -1,3 +1,5 @@
+import { SPRITES } from './assets';
+
 export class Bomb {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -15,7 +17,7 @@ export class Bomb {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.image = new Image();
-    this.image.src = './assets/images/svg/bomb.svg';
+    this.image.src = SPRITES.bomb;
     this.dx = randomX;
     this.dy = -45;
     this.dWidth = 28;

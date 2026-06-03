@@ -1,5 +1,6 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
+import { GAME_SONG, SPRITES } from './assets';
 
 /** ~100ms at 60fps — frames to show explosion before removal */
 const EXPLOSION_FRAMES = 6;
@@ -24,7 +25,7 @@ export class Game {
     this.onGameOver = null;
     this.score = 0;
     this.count = 0;
-    this.gameSong = new Audio('assets/sounds/03_-_Lemmings_-_DOS_-_Lemming_2.ogg');
+    this.gameSong = new Audio(GAME_SONG);
   }
 
   startGame(): void {
@@ -109,7 +110,7 @@ export class Game {
       const topBottom = player.dy <= bomb.dy + bomb.dHeight;
 
       if (rightLeft && leftRight && bottomTop && topBottom) {
-        bomb.image.src = './assets/images/svg/booom.svg';
+        bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionFramesLeft = EXPLOSION_FRAMES;
       }
