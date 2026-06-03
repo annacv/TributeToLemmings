@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["assets/js/**/*.ts", "vite.config.ts", "eslint.config.ts", "eslint-config-prettier.d.ts"],
+  "exclude": ["assets/js/**/*.test.ts", "node_modules"]
+}
