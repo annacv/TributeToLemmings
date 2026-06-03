@@ -79,8 +79,9 @@ export class Game {
 
     const player = this.player;
 
-    this.bombs.forEach((bomb, index) => {
-      if (bomb.isExploding) return;
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const bomb = this.bombs[i];
+      if (bomb.isExploding) continue;
 
       const rightLeft = player.dx + player.dWidth >= bomb.dx;
       const leftRight = player.dx <= bomb.dx + bomb.dWidth;
@@ -90,15 +91,13 @@ export class Game {
       if (rightLeft && leftRight && bottomTop && topBottom) {
         bomb.image.src = './assets/images/svg/booom.svg';
         bomb.isExploding = true;
-
-        // Synchronous resolution — no setTimeout deferral needed
-        this.bombs.splice(index, 1);
+        this.bombs.splice(i, 1);
         player.lives--;
         if (player.lives < 1) {
           this.isGameOver = true;
         }
       }
-    });
+    }
   }
 
   updateScore(): void {

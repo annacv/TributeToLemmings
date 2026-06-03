@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Game } from './Game';
+import { Player } from './Player';
+import { Bomb } from './Bomb';
 
 describe('Game', () => {
   let canvas: HTMLCanvasElement;
@@ -35,5 +37,21 @@ describe('Game', () => {
     const cb = (_score: number) => {};
     game.gameOverCallback(cb);
     expect(game.onGameOver).toBe(cb);
+  });
+
+  it('registers all overlapping bomb hits in the same frame', () => {
+    const game = new Game(canvas);
+    game.player = new Player(canvas);
+
+    const bomb1 = new Bomb(canvas, 50);
+    bomb1.dy = 390;
+    const bomb2 = new Bomb(canvas, 60);
+    bomb2.dy = 395;
+
+    game.bombs.push(bomb1, bomb2);
+    game.checkCollisions();
+
+    expect(game.player.lives).toBe(1);
+    expect(game.bombs).toHaveLength(0);
   });
 });
