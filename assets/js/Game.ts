@@ -55,8 +55,6 @@ export class Game {
         requestAnimationFrame(loop);
       } else {
         this.onGameOver?.(this.score);
-        const scoreDisplay = document.querySelector('.counter-rank');
-        if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
         this.gameSong.pause();
       }
     };
@@ -118,7 +116,7 @@ export class Game {
   }
 
   updateScore(): void {
-    const scoreDisplay = document.querySelector('.counter-rank');
+    const scoreDisplay = document.querySelector('.seconds-value');
     if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
   }
 
@@ -127,7 +125,7 @@ export class Game {
   }
 
   displayLives(): void {
-    const livesDisplay = document.querySelector('.counter-lives');
+    const livesDisplay = document.querySelector('.lives-value');
     if (livesDisplay && this.player) livesDisplay.innerHTML = String(this.player.lives);
   }
 
