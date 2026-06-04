@@ -1,8 +1,8 @@
-import bombSvg from '../images/svg/bomb.svg';
-import booomSvg from '../images/svg/booom.svg';
-import lemmingSvg from '../images/svg/lemming.svg';
-import lemming2LivesSvg from '../images/svg/lemming--2-lives.svg';
-import lemming1LifeSvg from '../images/svg/lemming--1-life.svg';
+import bombSvg from '../images/characters/bomb.svg';
+import booomSvg from '../images/characters/booom.svg';
+import lemmingSvg from '../images/characters/lemming.svg';
+import lemming2LivesSvg from '../images/characters/lemming--2-lives.svg';
+import lemming1LifeSvg from '../images/characters/lemming--1-life.svg';
 import gameSongOgg from '../sounds/03_-_Lemmings_-_DOS_-_Lemming_2.ogg';
 
 export const SPRITES = {
