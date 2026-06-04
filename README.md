@@ -16,28 +16,44 @@ If iterations are completed, we'll add a Rank Screen (and also add button in Gam
 
 
 ## Backlog
-##### FIRST ITERATION:
-Our first iteration will basically improve the UX of the game by:
-1. *Adding status on character depending on lifes / collisions*
-- 1st Bomb injured: A little hole will appear in the middle of the jersey.
-- 2nd Bomb injured: We'll consider our lemming nearly death, so it'll have a skeleton face.
-- 3rd Bomb injured: It'll die and exploit.
 
-2. *Changing bombs depending on level*
-- Level 1: Starting level will have a duration of 5 seconds.
-- Level 2: Mid level, with a duration of 10 seconds, will increase the number of bombs x time.
-- Level 3: Crazy level, with no limit of duration, will simply increase the speed, and maybe add stalactites as new kind of bomb.
+##### ITERATION I — Visual Foundation & Brand Identity
+Establish the visual and brand foundation that all subsequent iterations build on.
+1. Replace JPG backgrounds with natively-designed layered SVGs (animatable, resolution-independent).
+2. Redesign the splash screen as a branded "Tribute to Lemmings" hero screen with retro pixel typography and the lemming mascot.
+3. Wrap the game canvas in a CRT/PC monitor bezel to establish the retro-computer aesthetic.
+4. Make the canvas responsive so it scales up on large screens, no longer constrained by JPG resolution.
 
-##### SECOND ITERATION:
-The second iteration will add the Ranking feature by:
-1. Adding an input name in the Game Screen and saving that value with its score (seconds alive).
-2. Adding a Ranking Screen after Game Over.
-3. Highlighting player's position in the list.
+##### ITERATION II — Ranking & Gameplay Completeness
+Add persistent player identity and scoring.
+1. Add a player name input on the start screen.
+2. Save player name and score (seconds alive) to localStorage.
+3. Show a Ranking screen after Game Over with an ordered leaderboard.
+4. Highlight the current player's position in the ranking list.
 
-##### THIRD ITERATION:
-The third iteration is improving the UX via scenarios and screen flow's by:
-1. Changing backgrounds depending on level (we'll need two more backgrounds, level 2 and 3).
-2. Adding music.
+##### ITERATION III — Level Progression & Ground Erosion
+Introduce difficulty escalation and the bridge mechanic to the tunnel world.
+1. Dynamic level system: bombs spawn faster and more frequently as levels increase.
+2. Level transition UI with visual and audio cues between levels.
+3. Ground erosion: bombs progressively destroy the ground layer visually over time.
+4. "Ground fully destroyed" trigger — transitions the player to the Tunnel World (Iteration IV).
+
+##### ITERATION IV — Tunnel Escape Puzzle
+A new game screen with a puzzle mechanic: the player must blast their way out of an underground tunnel.
+1. Tunnel screen: underground environment with a confined layout, distinct from the surface game.
+2. Retro-styled info modal explaining the new controls before play begins.
+3. Unexploded bombs as pickable objects — one spacebar press picks one bomb.
+4. Player explores the tunnel left/right to find a crack in the wall.
+5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown).
+6. Explosion breaks the crack open and triggers the transition to the Abyss (Iteration V).
+
+##### ITERATION V — The Abyss: Bombs & Stalactites
+An enriched dodge game set underground, with a degrading environment.
+1. Combined dodge mechanic: falling bombs and falling stalactites simultaneously.
+2. Bombs that hit the ground create permanent holes — traversal hazards for the lemming.
+3. Stalactites that land get nailed to the ground — permanent vertical obstacles.
+4. Ground starts visually damaged as a narrative callback to the erosion in Iteration III.
+5. New abyss-world SVG background designed for the underground setting.
 
 
 ## Data structure
@@ -139,7 +155,6 @@ npm install
 > **Note:** Open the game via `npm run dev`, not by double-clicking `index.html` — the file must be served through Vite for ES modules and asset paths to resolve correctly.
 
 ## Links
-
 
 ### [Link Repo](https://github.com/annacv/TributeToLemmings)
 ### [Link Deploy](https://annacv.github.io/TributeToLemmings/)
