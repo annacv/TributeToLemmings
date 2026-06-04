@@ -21,14 +21,14 @@ function main(): void {
 
   function getCanvasSize(): number {
     const isDesktop = window.innerWidth >= 768;
-    // CRT frame padding: 18px top + 26px bottom = 44px; sides 22px × 2 = 44px
     const frameVPad = isDesktop ? 44 : 0;
     const frameHPad = isDesktop ? 44 : 32;
-    // header ~50px + footer ~96px + section padding/gaps/hint ~110px
     const uiHeight = 256;
     const maxByHeight = window.innerHeight - uiHeight - frameVPad;
-    const maxByWidth = window.innerWidth - frameHPad;
-    return Math.max(320, Math.min(maxByWidth, maxByHeight, 580));
+    // clientWidth excludes scrollbars — prevents canvas from causing the overflow it's measuring
+    const viewportWidth = document.documentElement.clientWidth;
+    const maxByWidth = viewportWidth - frameHPad;
+    return Math.max(280, Math.min(maxByWidth, maxByHeight, 580));
   }
 
   function showInfoModal(onClose: () => void): void {
@@ -85,8 +85,6 @@ function main(): void {
     const size = getCanvasSize();
     const gameScreen = buildDom(`
       <section class="section-container play">
-        <div class="touch-left">&lt;</div>
-        <div class="touch-right">&gt;</div>
         <div class="crt-frame">
           <canvas class="game-canvas"></canvas>
           <div class="game-hud">
@@ -100,6 +98,10 @@ function main(): void {
             </span>
           </div>
           <button class="mute-btn" aria-label="Mute sound"></button>
+        </div>
+        <div class="touch-controls">
+          <button class="touch-left" aria-label="Move left">&#x2190;</button>
+          <button class="touch-right" aria-label="Move right">&#x2192;</button>
         </div>
         <p class="game-hint">&gt; use arrow keys to move the lemming</p>
       </section>
@@ -128,9 +130,11 @@ function main(): void {
 
     const arrowRight = gameScreen.querySelector('.touch-right') as HTMLElement;
     arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
+    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
 
     const arrowLeft = gameScreen.querySelector('.touch-left') as HTMLElement;
     arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
+    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
 
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') game.player?.setDirection(1);

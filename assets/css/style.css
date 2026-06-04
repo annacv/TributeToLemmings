@@ -33,6 +33,7 @@
 
 html {
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 *,
@@ -270,6 +271,7 @@ main {
 
 canvas {
   display: block;
+  max-width: 100%;
   border-radius: 4px;
   box-shadow: inset 0 0 18px rgba(var(--black-rgb), 0.7);
 }
@@ -422,63 +424,52 @@ canvas {
   letter-spacing: .04em;
 }
 
+@media (max-width: 767px) {
+  .game-hint {
+    display: none;
+  }
+}
+
 /* ---- MOBILE TOUCH COMMANDS ---- */
 
-.touch-right,
-.touch-left {
-  position: absolute;
-  top: 45%;
-  padding: .41rem .68rem;
-  font-weight: 900;
-  font-size: .875rem;
-  line-height: 1.3;
-  color: var(--text-white);
-  background-color: var(--bg-black);
+.touch-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 580px;
+  padding: 0 .5rem;
+  gap: 1rem;
 }
 
-.touch-left {
-  left: 1%;
-}
-
+.touch-left,
 .touch-right {
-  right: 1%;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 1.25rem;
+  border: 2px solid var(--brand);
+  color: var(--brand);
+  background-color: var(--bg-black);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background-color .1s ease, color .1s ease;
 }
 
-@media (min-width: 375px) {
-  .touch-right,
-  .touch-left {
-    padding: .5rem .75rem;
-    font-size: .975rem;
-    line-height: 1.3;
-  }
-
-  .touch-left {
-    left: 2%;
-  }
-
-  .touch-right {
-    right: 2%;
-  }
+.touch-left:active,
+.touch-right:active {
+  background-color: var(--brand);
+  color: var(--bg-black);
 }
 
 @media (min-width: 768px) {
-  .touch-left,
-  .touch-right {
-    top: 50%;
-  }
-
-  .touch-left {
-    left: 5%;
-  }
-
-  .touch-right {
-    right: 5%;
-  }
-}
-
-@media (min-width: 1025px) {
-  .touch-right,
-  .touch-left {
+  .touch-controls {
     display: none;
   }
 }
