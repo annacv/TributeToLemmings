@@ -17,10 +17,10 @@ export class Player {
     this.ctx = canvas.getContext('2d')!;
     this.image = new Image();
     this.image.src = SPRITES.lemming;
-    this.dx = 40;
-    this.dy = 380;
     this.dWidth = 50;
     this.dHeight = 50;
+    this.dx = 40;
+    this.dy = canvas.height - this.dHeight - 38;
     this.lives = 3;
     this.direction = 0;
     this.speed = 1;
@@ -30,7 +30,7 @@ export class Player {
     this.dx = this.dx + this.direction * this.speed;
     if (
       this.dx + this.direction * this.speed === 0 ||
-      this.dx + this.direction * this.speed >= 419
+      this.dx + this.direction * this.speed >= this.canvas.width - this.dWidth - 1
     ) {
       this.direction = this.direction / -1;
     }
