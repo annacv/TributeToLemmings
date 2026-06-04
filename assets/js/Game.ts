@@ -1,0 +1,137 @@
+import { Player } from './Player';
+import { Bomb } from './Bomb';
+import { GAME_SONG, SPRITES } from './assets';
+
+/** ~100ms at 60fps — frames to show explosion before removal */
+const EXPLOSION_FRAMES = 6;
+
+export class Game {
+  player: Player | null;
+  bombs: Bomb[];
+  isGameOver: boolean;
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+  onGameOver: ((score: number) => void) | null;
+  score: number;
+  count: number;
+  gameSong: HTMLAudioElement;
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.player = null;
+    this.bombs = [];
+    this.isGameOver = false;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d')!;
+    this.onGameOver = null;
+    this.score = 0;
+    this.count = 0;
+    this.gameSong = new Audio(GAME_SONG);
+  }
+
+  startGame(): void {
+    this.player = new Player(this.canvas);
+
+    const loop = () => {
+      if (Math.random() > 0.97) {
+        const randomX = Math.random() * (this.canvas.width - 28);
+        this.bombs.push(new Bomb(this.canvas, randomX));
+      }
+      this.count++;
+
+      if (this.count % 60 === 0) {
+        this.score++;
+      }
+
+      this.update();
+      this.clear();
+      this.draw();
+      this.checkCollisions();
+      this.displayLives();
+      this.updateScore();
+      this.saveScore(this.score);
+
+      if (!this.isGameOver) {
+        this.gameSong.play();
+        requestAnimationFrame(loop);
+      } else {
+        this.onGameOver?.(this.score);
+        const scoreDisplay = document.querySelector('.counter-rank');
+        if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
+        this.gameSong.pause();
+      }
+    };
+
+    loop();
+  }
+
+  update(): void {
+    this.player?.move();
+
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const bomb = this.bombs[i];
+      bomb.move();
+
+      if (!bomb.isExploding) continue;
+
+      bomb.explosionFramesLeft--;
+      if (bomb.explosionFramesLeft > 0) continue;
+
+      this.bombs.splice(i, 1);
+      if (this.player) {
+        this.player.lives--;
+        if (this.player.lives < 1) {
+          this.isGameOver = true;
+        }
+      }
+    }
+  }
+
+  clear(): void {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  draw(): void {
+    this.player?.drawImage();
+    this.bombs.forEach((bomb) => bomb.drawImage());
+  }
+
+  checkCollisions(): void {
+    if (!this.player) return;
+
+    const player = this.player;
+
+    for (let i = this.bombs.length - 1; i >= 0; i--) {
+      const bomb = this.bombs[i];
+      if (bomb.isExploding) continue;
+
+      const rightLeft = player.dx + player.dWidth >= bomb.dx;
+      const leftRight = player.dx <= bomb.dx + bomb.dWidth;
+      const bottomTop = player.dy + player.dHeight >= bomb.dy;
+      const topBottom = player.dy <= bomb.dy + bomb.dHeight;
+
+      if (rightLeft && leftRight && bottomTop && topBottom) {
+        bomb.image.src = SPRITES.booom;
+        bomb.isExploding = true;
+        bomb.explosionFramesLeft = EXPLOSION_FRAMES;
+      }
+    }
+  }
+
+  updateScore(): void {
+    const scoreDisplay = document.querySelector('.counter-rank');
+    if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
+  }
+
+  saveScore(score: number): void {
+    localStorage.setItem('score-value', String(score));
+  }
+
+  displayLives(): void {
+    const livesDisplay = document.querySelector('.counter-lives');
+    if (livesDisplay && this.player) livesDisplay.innerHTML = String(this.player.lives);
+  }
+
+  gameOverCallback(callback: (score: number) => void): void {
+    this.onGameOver = callback;
+  }
+}

@@ -118,19 +118,30 @@ Task definition in order of priority
 7. Test in canvas
 8. Iterations
 
+## Development
+
+### Prerequisites
+Node 18+ and npm 9+.
+
+### Setup
+```bash
+npm install
+```
+
+### Commands
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite dev server at `http://localhost:5173` |
+| `npm run build` | Bundle for production into `dist/` |
+| `npm test` | Run the Vitest test suite |
+| `npm run lint` | Type-check with `tsc` and lint with ESLint |
+
+> **Note:** Open the game via `npm run dev`, not by double-clicking `index.html` — the file must be served through Vite for ES modules and asset paths to resolve correctly.
+
 ## Links
-
-
-### Trello
-[Link url](https://trello.com/b/m0jmTCtD)
 
 
 ### Git
 URls for the project repo and deploy
 [Link Repo](https://github.com/annacv/TributeToLemmings)
 [Link Deploy](https://annacv.github.io/TributeToLemmings/)
-
-
-### Slides
-URls for the project presentation (slides)
-[Link Slides.com](https://docs.google.com/presentation/d/1EbzBOfI99dptD5MHH2yhKvpC5YnKM8_bhUs1j-IFi18/edit?usp=sharing)

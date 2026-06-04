@@ -1,4 +1,5 @@
 # artefacts
+.claude/
 .eslintcache
 .npm
 .nyc_output
@@ -8,8 +9,13 @@ node_modules/
 coverage/
 build/
 dist/
+openspec/
 
 # ide
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
 .bak
 *.swp
 *~
