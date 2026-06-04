@@ -141,7 +141,5 @@ npm install
 ## Links
 
 
-### Git
-URls for the project repo and deploy
-[Link Repo](https://github.com/annacv/TributeToLemmings)
-[Link Deploy](https://annacv.github.io/TributeToLemmings/)
+### [Link Repo](https://github.com/annacv/TributeToLemmings)
+### [Link Deploy](https://annacv.github.io/TributeToLemmings/)
