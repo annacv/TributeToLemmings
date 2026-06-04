@@ -1,27 +1,32 @@
-# artefacts
-.claude/
+# dependencies & build
+node_modules/
+dist/
+coverage/
+
+# tooling caches
 .eslintcache
-.npm
-.nyc_output
+.prettiercache
+*.tsbuildinfo
+
+# logs
 *.log
 logs/
-node_modules/
-coverage/
-build/
-dist/
+
+# local / agent
+.claude/
 openspec/
 
-# ide
+# env
+.env
+.env.local
+.env.*.local
+
+# IDE
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
-.bak
-*.swp
-*~
-*#
+.idea/
 
-# spam
+# OS
 .DS_Store
 .DS_Store?
 ._*
@@ -31,18 +36,8 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-
-# dotenv
-.env
-© 2019 GitHub, Inc.
-Terms
-Privacy
-Security
-Status
-Help
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
+# editor backups
+*.swp
+*~
+*#
+.bak
