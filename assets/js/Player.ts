@@ -156,7 +156,7 @@ export class Player {
   drawImage(frameCount: number): void {
     if (this.blinkFramesLeft > 0) {
       this.blinkFramesLeft--;
-      if (this.blinkFramesLeft % 2 !== 0) return;
+      if (this.blinkFramesLeft % 2 === 0) return;
     }
 
     const { ctx, dx, dy, dWidth, direction } = this;
