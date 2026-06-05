@@ -77,8 +77,8 @@ export class Game {
 
       this.bombs.splice(i, 1);
       if (this.player) {
-        this.player.lives--;
         this.player.triggerBlink();
+        this.player.lives--;
         if (this.player.lives < 1) {
           this.isGameOver = true;
         }

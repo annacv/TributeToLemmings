@@ -123,6 +123,7 @@ export class Player {
   direction: number;
   speed: number;
   blinkFramesLeft: number;
+  blinkColor: string;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -135,6 +136,7 @@ export class Player {
     this.direction = 0;
     this.speed = 1;
     this.blinkFramesLeft = 0;
+    this.blinkColor = '#FFFFFF';
   }
 
   move(): void {
@@ -148,6 +150,7 @@ export class Player {
   }
 
   triggerBlink(): void {
+    this.blinkColor = getBodyColor(this.lives);
     this.blinkFramesLeft = BLINK_TOTAL_FRAMES;
   }
 
@@ -159,7 +162,7 @@ export class Player {
 
     const { ctx, dx, dy, dWidth, direction } = this;
     const scale = dWidth / SVG_SIZE;
-    const bodyColor = getBodyColor(this.lives);
+    const bodyColor = this.blinkFramesLeft > 0 ? this.blinkColor : getBodyColor(this.lives);
     const { body, hair, hairExtras, clothes } = getPaths();
     const hairLevel = getHairLevel(frameCount);
 
