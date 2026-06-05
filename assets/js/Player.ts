@@ -145,7 +145,7 @@ export class Player {
       this.dx + this.direction * this.speed === 0 ||
       this.dx + this.direction * this.speed >= this.canvas.width - this.dWidth - 1
     ) {
-      this.direction = this.direction / -1;
+      this.direction = -this.direction;
     }
   }
 
