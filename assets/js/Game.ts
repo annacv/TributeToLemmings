@@ -31,6 +31,7 @@ export class Game {
   startGame(): void {
     this.player = new Player(this.canvas);
     this.initLivesIcons();
+    this.gameSong.loop = true;
     this.gameSong.play();
 
     const loop = () => {
@@ -55,6 +56,7 @@ export class Game {
       if (!this.isGameOver) {
         requestAnimationFrame(loop);
       } else {
+        this.saveScore(this.score);
         this.onGameOver?.(this.score);
         this.gameSong.pause();
       }
