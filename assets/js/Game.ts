@@ -127,7 +127,7 @@ export class Game {
 
   updateScore(): void {
     const scoreDisplay = document.querySelector('.seconds-value');
-    if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
+    if (scoreDisplay) scoreDisplay.textContent = String(this.score);
   }
 
   saveScore(score: number): void {
@@ -149,7 +149,7 @@ export class Game {
 
   displayLives(): void {
     const livesDisplay = document.querySelector('.lives-value');
-    if (livesDisplay && this.player) livesDisplay.innerHTML = String(this.player.lives);
+    if (livesDisplay && this.player) livesDisplay.textContent = String(this.player.lives);
 
     const container = document.querySelector('.lives-icons');
     if (!container || !this.player) return;
