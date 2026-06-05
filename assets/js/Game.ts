@@ -30,6 +30,7 @@ export class Game {
 
   startGame(): void {
     this.player = new Player(this.canvas);
+    this.initLivesIcons();
 
     const loop = () => {
       if (Math.random() > 0.97) {
@@ -125,9 +126,31 @@ export class Game {
     localStorage.setItem('score-value', String(score));
   }
 
+  initLivesIcons(): void {
+    const container = document.querySelector('.lives-icons');
+    if (!container || !this.player) return;
+    container.innerHTML = '';
+    for (let i = 0; i < this.player.lives; i++) {
+      const img = document.createElement('img');
+      img.src = SPRITES.lemming;
+      img.className = 'life-icon';
+      img.alt = '';
+      container.appendChild(img);
+    }
+  }
+
   displayLives(): void {
     const livesDisplay = document.querySelector('.lives-value');
     if (livesDisplay && this.player) livesDisplay.innerHTML = String(this.player.lives);
+
+    const container = document.querySelector('.lives-icons');
+    if (!container || !this.player) return;
+    const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
+    if (activeIcons.length > this.player.lives) {
+      const last = activeIcons[activeIcons.length - 1] as HTMLElement;
+      last.classList.add('life-losing');
+      last.addEventListener('animationend', () => last.remove(), { once: true });
+    }
   }
 
   gameOverCallback(callback: (score: number) => void): void {

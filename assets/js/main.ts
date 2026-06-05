@@ -104,10 +104,13 @@ function main(): void {
         <div class="crt-frame">
           <canvas class="game-canvas"></canvas>
           <div class="game-hud">
-            <span class="hud-item">
-              <span class="hud-label">lives</span>
-              <span class="hud-value lives-value">3</span>
-            </span>
+            <div class="hud-lives">
+              <span class="hud-item">
+                <span class="hud-label">lives</span>
+                <span class="hud-value lives-value">3</span>
+              </span>
+              <div class="lives-icons"></div>
+            </div>
             <span class="hud-item">
               <span class="hud-value seconds-value">0</span>
               <span class="hud-label">sec</span>
