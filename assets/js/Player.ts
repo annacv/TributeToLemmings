@@ -132,7 +132,7 @@ export class Player {
     this.dx = 40;
     this.dy = canvas.height - this.dHeight - 38;
     this.lives = 3;
-    this.direction = 1;
+    this.direction = 0;
     this.speed = 1;
     this.blinkFramesLeft = 0;
   }
