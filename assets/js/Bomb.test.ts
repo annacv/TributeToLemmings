@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Bomb } from './Bomb';
+import { makeCanvas } from './test-helpers';
 
 describe('Bomb', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
-    canvas = document.createElement('canvas');
-    canvas.getContext = vi.fn().mockReturnValue({ drawImage: vi.fn() }) as typeof canvas.getContext;
+    canvas = makeCanvas();
   });
 
   it('instantiates without throwing', () => {

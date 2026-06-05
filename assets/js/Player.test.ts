@@ -1,38 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Player } from './Player';
+import { makeCtx, makeCanvas } from './test-helpers';
 
 const BLINK_TOTAL_FRAMES = 30;
-
-function makeCtx() {
-  const fills: string[] = [];
-  const ctx = {
-    clearRect: vi.fn(),
-    save: vi.fn(),
-    restore: vi.fn(),
-    translate: vi.fn(),
-    scale: vi.fn(),
-    fillRect: vi.fn(),
-    drawImage: vi.fn(),
-    fillStyle: '' as string | CanvasGradient | CanvasPattern,
-    fill: vi.fn().mockImplementation(() => { fills.push(ctx.fillStyle as string); }),
-    _fills: fills,
-  };
-  return ctx;
-}
 
 describe('Player', () => {
   let canvas: HTMLCanvasElement;
   let mockCtx: ReturnType<typeof makeCtx>;
 
   beforeEach(() => {
-    canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 400;
     mockCtx = makeCtx();
+    canvas = makeCanvas();
     canvas.getContext = vi.fn().mockReturnValue(mockCtx) as typeof canvas.getContext;
-    (global as unknown as Record<string, unknown>).Path2D = class {
-      moveTo() {} lineTo() {} closePath() {} rect() {}
-    };
   });
 
   it('instantiates without throwing', () => {
@@ -101,39 +80,39 @@ describe('Player', () => {
 
   it('triggerBlink uses livesSnapshot when provided', () => {
     const player = new Player(canvas);
-    player.lives = 1; // post-damage
-    player.triggerBlink(3); // snapshot from before damage
+    player.lives = 1;
+    player.triggerBlink(3);
     expect(player.blinkColor).toBe('#FFFFFF');
   });
 
   it('drawImage first blink frame is visible', () => {
     const player = new Player(canvas);
-    player.triggerBlink(); // blinkFramesLeft = 30
-    player.drawImage(0);   // 30→29 (odd) → draws
+    player.triggerBlink();
+    player.drawImage(0);
     expect(mockCtx.fill).toHaveBeenCalled();
   });
 
   it('drawImage second blink frame is hidden', () => {
     const player = new Player(canvas);
     player.triggerBlink();
-    player.drawImage(0);             // 30→29 visible
+    player.drawImage(0);
     mockCtx.fill.mockClear();
-    player.drawImage(0);             // 29→28 (even) → skipped
+    player.drawImage(0);
     expect(mockCtx.fill).not.toHaveBeenCalled();
   });
 
   it('drawImage uses blinkColor (pre-damage) on visible blink frames', () => {
     const player = new Player(canvas);
-    player.triggerBlink();   // blinkColor = '#FFFFFF' (3 lives)
-    player.lives = 2;        // post-damage
+    player.triggerBlink();
+    player.lives = 2;
     mockCtx._fills.length = 0;
-    player.drawImage(0);     // first visible blink frame
+    player.drawImage(0);
     expect(mockCtx._fills[0]).toBe('#FFFFFF');
   });
 
   it('drawImage uses post-damage body color after blink ends', () => {
     const player = new Player(canvas);
-    player.lives = 2;        // blinkFramesLeft is 0
+    player.lives = 2;
     mockCtx._fills.length = 0;
     player.drawImage(0);
     expect(mockCtx._fills[0]).toBe('#FEBD00');

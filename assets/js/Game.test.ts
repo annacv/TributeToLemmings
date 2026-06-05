@@ -3,32 +3,43 @@ import { Game } from './Game';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
+import { makeCanvas } from './test-helpers';
 
-function makeCtx() {
-  return {
-    clearRect: vi.fn(),
-    save: vi.fn(),
-    restore: vi.fn(),
-    translate: vi.fn(),
-    scale: vi.fn(),
-    fill: vi.fn(),
-    fillRect: vi.fn(),
-    drawImage: vi.fn(),
-    fillStyle: '',
-  } as unknown as CanvasRenderingContext2D;
+// --- helpers ---
+
+function makeGameWithPlayer(canvas: HTMLCanvasElement) {
+  const game = new Game(canvas);
+  game.player = new Player(canvas);
+  return game as Game & { player: Player };
 }
+
+function placeHitBomb(game: Game, dx = 50): Bomb {
+  const bomb = new Bomb(game.canvas, dx);
+  bomb.dy = 390;
+  game.bombs.push(bomb);
+  game.checkCollisions();
+  return bomb;
+}
+
+function runFrames(game: Game, frames = 6): void {
+  for (let i = 0; i < frames; i++) game.update();
+}
+
+function setupHud(iconCount = 3): void {
+  const icons = Array.from({ length: iconCount }, () => '<img class="life-icon" alt="" />').join('\n        ');
+  document.body.innerHTML = `
+    <div class="lives-icons">${icons}</div>
+    <span class="lives-value"></span>
+  `;
+}
+
+// --- tests ---
 
 describe('Game', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
-    canvas = document.createElement('canvas');
-    canvas.width = 468;
-    canvas.height = 468;
-    canvas.getContext = vi.fn().mockReturnValue(makeCtx()) as typeof canvas.getContext;
-    (global as unknown as Record<string, unknown>).Path2D = class {
-      moveTo() {} lineTo() {} closePath() {} rect() {}
-    };
+    canvas = makeCanvas(468, 468);
   });
 
   afterEach(() => {
@@ -59,13 +70,8 @@ describe('Game', () => {
   });
 
   it('keeps exploding bombs visible until removal', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
-
-    const bomb = new Bomb(canvas, 50);
-    bomb.dy = 390;
-    game.bombs.push(bomb);
-    game.checkCollisions();
+    const game = makeGameWithPlayer(canvas);
+    const bomb = placeHitBomb(game);
 
     expect(bomb.isExploding).toBe(true);
     expect(bomb.explosionFramesLeft).toBe(6);
@@ -73,60 +79,39 @@ describe('Game', () => {
     expect(game.bombs).toHaveLength(1);
     expect(game.player.lives).toBe(3);
 
-    for (let frame = 0; frame < 5; frame++) {
-      game.update();
-      expect(game.bombs).toHaveLength(1);
-      expect(game.player.lives).toBe(3);
-    }
+    runFrames(game, 5);
+    expect(game.bombs).toHaveLength(1);
+    expect(game.player.lives).toBe(3);
 
     game.update();
-
     expect(game.bombs).toHaveLength(0);
     expect(game.player.lives).toBe(2);
   });
 
   it('registers all overlapping bomb hits in the same frame', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
+    const game = makeGameWithPlayer(canvas);
+    placeHitBomb(game, 50);
+    placeHitBomb(game, 60);
 
-    const bomb1 = new Bomb(canvas, 50);
-    bomb1.dy = 390;
-    const bomb2 = new Bomb(canvas, 60);
-    bomb2.dy = 395;
-
-    game.bombs.push(bomb1, bomb2);
-    game.checkCollisions();
-
-    for (let frame = 0; frame < 6; frame++) {
-      game.update();
-    }
+    runFrames(game);
 
     expect(game.player.lives).toBe(1);
     expect(game.bombs).toHaveLength(0);
   });
 
   it('sets isGameOver when last life is lost', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
+    const game = makeGameWithPlayer(canvas);
     game.player.lives = 1;
+    placeHitBomb(game);
 
-    const bomb = new Bomb(canvas, 50);
-    bomb.dy = 390;
-    game.bombs.push(bomb);
-    game.checkCollisions();
-
-    for (let frame = 0; frame < 6; frame++) {
-      game.update();
-    }
+    runFrames(game);
 
     expect(game.player.lives).toBe(0);
     expect(game.isGameOver).toBe(true);
   });
 
   it('removes bombs that fall off the bottom of the canvas', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
-
+    const game = makeGameWithPlayer(canvas);
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -137,59 +122,30 @@ describe('Game', () => {
   });
 
   it('uses pre-loop lives color when multiple bombs expire in one frame', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
+    const game = makeGameWithPlayer(canvas);
+    placeHitBomb(game, 50);
+    placeHitBomb(game, 60);
 
-    const bomb1 = new Bomb(canvas, 50);
-    bomb1.dy = 390;
-    const bomb2 = new Bomb(canvas, 60);
-    bomb2.dy = 395;
+    runFrames(game);
 
-    game.bombs.push(bomb1, bomb2);
-    game.checkCollisions();
-
-    for (let frame = 0; frame < 6; frame++) {
-      game.update();
-    }
-
-    // started at 3 lives (white), both expired same frame — blinkColor must be white
     expect(game.player.blinkColor).toBe('#FFFFFF');
-    // single blink triggered: blinkFramesLeft should be exactly 30, not doubled or partial
     expect(game.player.blinkFramesLeft).toBe(30);
   });
 
   it('displayLives does not throw when lives drop below zero', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
+    const game = makeGameWithPlayer(canvas);
     game.player.lives = -1;
-
-    document.body.innerHTML = `
-      <div class="lives-icons">
-        <img class="life-icon" alt="" />
-        <img class="life-icon" alt="" />
-        <img class="life-icon" alt="" />
-      </div>
-      <span class="lives-value"></span>
-    `;
+    setupHud();
 
     expect(() => game.displayLives()).not.toThrow();
     expect(document.querySelectorAll('.life-losing')).toHaveLength(3);
   });
 
   it('removes all excess life icons when multiple lives are lost at once', () => {
-    const game = new Game(canvas);
-    game.player = new Player(canvas);
-
-    document.body.innerHTML = `
-      <div class="lives-icons">
-        <img class="life-icon" alt="" />
-        <img class="life-icon" alt="" />
-        <img class="life-icon" alt="" />
-      </div>
-      <span class="lives-value"></span>
-    `;
-
+    const game = makeGameWithPlayer(canvas);
     game.player.lives = 1;
+    setupHud();
+
     game.displayLives();
 
     expect(document.querySelectorAll('.life-losing')).toHaveLength(2);
