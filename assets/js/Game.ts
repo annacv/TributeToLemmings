@@ -77,6 +77,7 @@ export class Game {
       this.bombs.splice(i, 1);
       if (this.player) {
         this.player.lives--;
+        this.player.triggerBlink();
         if (this.player.lives < 1) {
           this.isGameOver = true;
         }
@@ -89,7 +90,7 @@ export class Game {
   }
 
   draw(): void {
-    this.player?.drawImage();
+    this.player?.drawImage(this.count);
     this.bombs.forEach((bomb) => bomb.drawImage());
   }
 

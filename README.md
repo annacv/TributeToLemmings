@@ -24,6 +24,12 @@ Establish the visual and brand foundation that all subsequent iterations build o
 3. Wrap the game canvas in a CRT/PC monitor bezel to establish the retro-computer aesthetic.
 4. Make the canvas responsive so it scales up on large screens, no longer constrained by JPG resolution.
 
+###### Iteration I Extra — Lemming Character Polish
+5. Programmatic body color: replace the three lemming SVG assets (one per health state) with a single SVG reference and draw the character directly on canvas, changing body/feet color via `ctx.fillStyle` based on lives remaining.
+6. Blink on hit: when the player loses a life the lemming flashes (alternating visible/invisible frames) before settling into the new body color.
+7. Hair animation: extra pixel groups adjacent to the main hair polygon are toggled on/off every few frames to simulate continuous hair movement.
+8. Directional flip: the lemming faces right when moving right and left when moving left via a canvas horizontal mirror transform.
+
 ##### ITERATION II — Ranking & Gameplay Completeness
 Add persistent player identity and scoring.
 1. Add a player name input on the start screen.
