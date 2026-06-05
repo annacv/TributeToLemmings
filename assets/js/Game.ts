@@ -66,6 +66,8 @@ export class Game {
   update(): void {
     this.player?.move();
 
+    const preLives = this.player?.lives;
+
     for (let i = this.bombs.length - 1; i >= 0; i--) {
       const bomb = this.bombs[i];
       bomb.move();
@@ -80,12 +82,15 @@ export class Game {
 
       this.bombs.splice(i, 1);
       if (this.player) {
-        this.player.triggerBlink();
         this.player.lives--;
         if (this.player.lives < 1) {
           this.isGameOver = true;
         }
       }
+    }
+
+    if (this.player && preLives !== undefined && this.player.lives < preLives) {
+      this.player.triggerBlink(preLives);
     }
   }
 
@@ -149,7 +154,7 @@ export class Game {
     const container = document.querySelector('.lives-icons');
     if (!container || !this.player) return;
     const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
-    const excess = activeIcons.length - this.player.lives;
+    const excess = activeIcons.length - Math.max(0, this.player.lives);
     for (let i = 0; i < excess; i++) {
       const icon = activeIcons[activeIcons.length - 1 - i] as HTMLElement;
       icon.classList.add('life-losing');

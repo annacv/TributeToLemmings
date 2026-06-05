@@ -149,8 +149,8 @@ export class Player {
     }
   }
 
-  triggerBlink(): void {
-    this.blinkColor = getBodyColor(this.lives);
+  triggerBlink(livesSnapshot?: number): void {
+    this.blinkColor = getBodyColor(livesSnapshot ?? this.lives);
     this.blinkFramesLeft = BLINK_TOTAL_FRAMES;
   }
 
