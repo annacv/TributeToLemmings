@@ -70,14 +70,12 @@ function getPaths(): { body: Path2D; hair: Path2D; hairExtras: Path2D[]; clothes
   return { body: _bodyPath, hair: _hairPath!, hairExtras: _hairExtras!, clothes: _clothesPath! };
 }
 
-// Returns 0-3: how many extra hair blocks to draw this frame.
-// Produces a wave: 0→1→2→3→2→1→0→… over HAIR_PERIOD frames.
+// Returns 0-2: how many extra hair blocks to draw this frame.
+// Produces a wave: 0→1→2→1→0→… over HAIR_PERIOD frames.
 function getHairLevel(frameCount: number): number {
   const phase = frameCount % HAIR_PERIOD;
   if (phase < 8) return 0;
   if (phase < 16) return 1;
-  if (phase < 24) return 2;
-  if (phase < 32) return 3;
   if (phase < 40) return 2;
   return 1;
 }
