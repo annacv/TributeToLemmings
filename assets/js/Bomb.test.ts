@@ -1,26 +1,24 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Bomb } from './Bomb';
+import { makeCanvas } from './test-helpers';
 
 describe('Bomb', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
-    canvas = document.createElement('canvas');
+    canvas = makeCanvas();
   });
 
   it('instantiates without throwing', () => {
-    const bomb = new Bomb(canvas, 100);
-    expect(bomb).toBeDefined();
+    expect(() => new Bomb(canvas, 100)).not.toThrow();
   });
 
   it('starts at the given x position', () => {
-    const bomb = new Bomb(canvas, 200);
-    expect(bomb.dx).toBe(200);
+    expect(new Bomb(canvas, 200).dx).toBe(200);
   });
 
   it('starts above the visible area', () => {
-    const bomb = new Bomb(canvas, 0);
-    expect(bomb.dy).toBe(-45);
+    expect(new Bomb(canvas, 0).dy).toBe(-45);
   });
 
   it('is not exploding on creation', () => {

@@ -1,7 +1,6 @@
 import { SPRITES } from './assets';
 
 export class Bomb {
-  canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   image: HTMLImageElement;
   dx: number;
@@ -14,7 +13,6 @@ export class Bomb {
   explosionFramesLeft: number;
 
   constructor(canvas: HTMLCanvasElement, randomX: number) {
-    this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.image = new Image();
     this.image.src = SPRITES.bomb;

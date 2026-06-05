@@ -30,6 +30,9 @@ export class Game {
 
   startGame(): void {
     this.player = new Player(this.canvas);
+    this.initLivesIcons();
+    this.gameSong.loop = true;
+    this.gameSong.play();
 
     const loop = () => {
       if (Math.random() > 0.97) {
@@ -40,6 +43,7 @@ export class Game {
 
       if (this.count % 60 === 0) {
         this.score++;
+        this.saveScore(this.score);
       }
 
       this.update();
@@ -48,12 +52,11 @@ export class Game {
       this.checkCollisions();
       this.displayLives();
       this.updateScore();
-      this.saveScore(this.score);
 
       if (!this.isGameOver) {
-        this.gameSong.play();
         requestAnimationFrame(loop);
       } else {
+        this.saveScore(this.score);
         this.onGameOver?.(this.score);
         this.gameSong.pause();
       }
@@ -65,11 +68,16 @@ export class Game {
   update(): void {
     this.player?.move();
 
+    const preLives = this.player?.lives;
+
     for (let i = this.bombs.length - 1; i >= 0; i--) {
       const bomb = this.bombs[i];
       bomb.move();
 
-      if (!bomb.isExploding) continue;
+      if (!bomb.isExploding) {
+        if (bomb.dy > this.canvas.height) this.bombs.splice(i, 1);
+        continue;
+      }
 
       bomb.explosionFramesLeft--;
       if (bomb.explosionFramesLeft > 0) continue;
@@ -82,6 +90,10 @@ export class Game {
         }
       }
     }
+
+    if (this.player && preLives !== undefined && this.player.lives < preLives) {
+      this.player.triggerBlink(preLives);
+    }
   }
 
   clear(): void {
@@ -89,7 +101,7 @@ export class Game {
   }
 
   draw(): void {
-    this.player?.drawImage();
+    this.player?.drawImage(this.count);
     this.bombs.forEach((bomb) => bomb.drawImage());
   }
 
@@ -117,16 +129,39 @@ export class Game {
 
   updateScore(): void {
     const scoreDisplay = document.querySelector('.seconds-value');
-    if (scoreDisplay) scoreDisplay.innerHTML = String(this.score);
+    if (scoreDisplay) scoreDisplay.textContent = String(this.score);
   }
 
   saveScore(score: number): void {
     localStorage.setItem('score-value', String(score));
   }
 
+  initLivesIcons(): void {
+    const container = document.querySelector('.lives-icons');
+    if (!container || !this.player) return;
+    container.innerHTML = '';
+    for (let i = 0; i < this.player.lives; i++) {
+      const img = document.createElement('img');
+      img.src = SPRITES.lemming;
+      img.className = 'life-icon';
+      img.alt = '';
+      container.appendChild(img);
+    }
+  }
+
   displayLives(): void {
     const livesDisplay = document.querySelector('.lives-value');
-    if (livesDisplay && this.player) livesDisplay.innerHTML = String(this.player.lives);
+    if (livesDisplay && this.player) livesDisplay.textContent = String(this.player.lives);
+
+    const container = document.querySelector('.lives-icons');
+    if (!container || !this.player) return;
+    const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
+    const excess = activeIcons.length - Math.max(0, this.player.lives);
+    for (let i = 0; i < excess; i++) {
+      const icon = activeIcons[activeIcons.length - 1 - i] as HTMLElement;
+      icon.classList.add('life-losing');
+      icon.addEventListener('animationend', () => icon.remove(), { once: true });
+    }
   }
 
   gameOverCallback(callback: (score: number) => void): void {

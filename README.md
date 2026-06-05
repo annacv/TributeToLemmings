@@ -1,7 +1,7 @@
 # Project's name
 TributeToLemmings
 
-![TributeToLemmings](lemmings-preview.jpg)
+![TributeToLemmings](lemmings-preview.png)
 
 ## Description
 As it was a bonus screen in the original Lemmings' game... WOW!! A classic skip-bomb game!! Try to keep alive your Lemming as much you can!!!!
@@ -17,12 +17,17 @@ If iterations are completed, we'll add a Rank Screen (and also add button in Gam
 
 ## Backlog
 
-##### ITERATION I — Visual Foundation & Brand Identity
-Establish the visual and brand foundation that all subsequent iterations build on.
+##### ITERATION I — Visual Foundations & Brand Identity
+Establish the visual and brand foundations that all subsequent iterations build on.
 1. Replace JPG backgrounds with natively-designed layered SVGs (animatable, resolution-independent).
 2. Redesign the splash screen as a branded "Tribute to Lemmings" hero screen with retro pixel typography and the lemming mascot.
 3. Wrap the game canvas in a CRT/PC monitor bezel to establish the retro-computer aesthetic.
 4. Make the canvas responsive so it scales up on large screens, no longer constrained by JPG resolution.
+5. Programmatic body color: replace the three lemming SVG assets (one per health state) with a single SVG reference and draw the character directly on canvas, changing body/feet color via `ctx.fillStyle` based on lives remaining.
+6. Blink on hit: when the player loses a life the lemming flashes (alternating visible/invisible frames) before settling into the new body color.
+7. Hair animation: extra pixel groups adjacent to the main hair polygon are toggled on/off every few frames to simulate continuous hair movement.
+8. Directional flip: the lemming faces right when moving right and left when moving left via a canvas horizontal mirror transform.
+9. Lives icons: the lives counter displays one small lemming icon per remaining life. When a life is lost the corresponding icon blinks and fades out smoothly before being removed.
 
 ##### ITERATION II — Ranking & Gameplay Completeness
 Add persistent player identity and scoring.
