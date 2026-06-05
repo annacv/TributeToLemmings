@@ -80,29 +80,25 @@ function getHairLevel(frameCount: number): number {
   return 1;
 }
 
-export function drawLemmingMascot(ctx: CanvasRenderingContext2D, canvasSize: number, frameCount: number): void {
-  const scale = canvasSize / SVG_SIZE;
+function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: string, hairLevel: number): void {
   const { body, hair, hairExtras, clothes } = getPaths();
-  const hairLevel = getHairLevel(frameCount);
-
-  ctx.clearRect(0, 0, canvasSize, canvasSize);
-  ctx.save();
-  ctx.scale(scale, scale);
-
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = bodyColor;
   ctx.fill(body);
-
   ctx.fillStyle = '#03B605';
   ctx.fill(hair);
   for (let i = 0; i < Math.min(hairLevel, hairExtras.length); i++) ctx.fill(hairExtras[i]);
-
   ctx.fillStyle = '#5B60FC';
   ctx.fill(clothes);
-
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = bodyColor;
   ctx.fillRect(29, 127, 28, 15);
   ctx.fillRect(85, 127, 28, 15);
+}
 
+export function drawLemmingMascot(ctx: CanvasRenderingContext2D, canvasSize: number, frameCount: number): void {
+  ctx.clearRect(0, 0, canvasSize, canvasSize);
+  ctx.save();
+  ctx.scale(canvasSize / SVG_SIZE, canvasSize / SVG_SIZE);
+  drawLemmingShape(ctx, '#FFFFFF', getHairLevel(frameCount));
   ctx.restore();
 }
 
@@ -163,8 +159,6 @@ export class Player {
     const { ctx, dx, dy, dWidth, direction } = this;
     const scale = dWidth / SVG_SIZE;
     const bodyColor = this.blinkFramesLeft > 0 ? this.blinkColor : getBodyColor(this.lives);
-    const { body, hair, hairExtras, clothes } = getPaths();
-    const hairLevel = getHairLevel(frameCount);
 
     ctx.save();
     if (direction < 0) {
@@ -174,21 +168,7 @@ export class Player {
       ctx.translate(dx, dy);
       ctx.scale(scale, scale);
     }
-
-    ctx.fillStyle = bodyColor;
-    ctx.fill(body);
-
-    ctx.fillStyle = '#03B605';
-    ctx.fill(hair);
-    for (let i = 0; i < Math.min(hairLevel, hairExtras.length); i++) ctx.fill(hairExtras[i]);
-
-    ctx.fillStyle = '#5B60FC';
-    ctx.fill(clothes);
-
-    ctx.fillStyle = bodyColor;
-    ctx.fillRect(29, 127, 28, 15);
-    ctx.fillRect(85, 127, 28, 15);
-
+    drawLemmingShape(ctx, bodyColor, getHairLevel(frameCount));
     ctx.restore();
   }
 
