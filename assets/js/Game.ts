@@ -31,6 +31,7 @@ export class Game {
   startGame(): void {
     this.player = new Player(this.canvas);
     this.initLivesIcons();
+    this.gameSong.play();
 
     const loop = () => {
       if (Math.random() > 0.97) {
@@ -41,6 +42,7 @@ export class Game {
 
       if (this.count % 60 === 0) {
         this.score++;
+        this.saveScore(this.score);
       }
 
       this.update();
@@ -49,10 +51,8 @@ export class Game {
       this.checkCollisions();
       this.displayLives();
       this.updateScore();
-      this.saveScore(this.score);
 
       if (!this.isGameOver) {
-        this.gameSong.play();
         requestAnimationFrame(loop);
       } else {
         this.onGameOver?.(this.score);
@@ -70,7 +70,10 @@ export class Game {
       const bomb = this.bombs[i];
       bomb.move();
 
-      if (!bomb.isExploding) continue;
+      if (!bomb.isExploding) {
+        if (bomb.dy > this.canvas.height) this.bombs.splice(i, 1);
+        continue;
+      }
 
       bomb.explosionFramesLeft--;
       if (bomb.explosionFramesLeft > 0) continue;
