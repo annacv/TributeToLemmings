@@ -1,5 +1,5 @@
 import { Game } from './Game';
-import { SPRITES } from './assets';
+import { drawLemmingMascot } from './Player';
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -71,14 +71,30 @@ function main(): void {
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
-        <img class="splash-mascot" src="${SPRITES.lemming}" alt="Lemming mascot" />
+        <canvas class="splash-mascot" aria-label="Lemming mascot"></canvas>
         <h1 class="splash-title">Tribute to<br>Lemmings</h1>
         <p class="splash-tagline">&gt; skip the bombs. stay alive.</p>
         <button class="splash-start">Start</button>
       </section>
     `);
 
-    mainElement.querySelector('button')!.addEventListener('click', createGameScreen);
+    const mascotCanvas = mainElement.querySelector('.splash-mascot') as HTMLCanvasElement;
+    mascotCanvas.width = 142;
+    mascotCanvas.height = 142;
+    const mascotCtx = mascotCanvas.getContext('2d')!;
+
+    let mascotFrame = 0;
+    let mascotRafId: number;
+    function animateMascot(): void {
+      drawLemmingMascot(mascotCtx, 142, mascotFrame++);
+      mascotRafId = requestAnimationFrame(animateMascot);
+    }
+    animateMascot();
+
+    mainElement.querySelector('button')!.addEventListener('click', () => {
+      cancelAnimationFrame(mascotRafId);
+      createGameScreen();
+    });
   }
 
   function createGameScreen(): void {

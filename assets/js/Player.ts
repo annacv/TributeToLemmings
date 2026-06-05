@@ -1,14 +1,13 @@
 const BLINK_TOTAL_FRAMES = 30;
-const HAIR_PERIOD = 16;
-const HAIR_ON_FRAMES = 8;
+const HAIR_PERIOD = 48;
 const SVG_SIZE = 142;
 
 let _bodyPath: Path2D | null = null;
 let _hairPath: Path2D | null = null;
-let _hairExtraPath: Path2D | null = null;
+let _hairExtras: Path2D[] | null = null;
 let _clothesPath: Path2D | null = null;
 
-function getPaths(): { body: Path2D; hair: Path2D; hairExtra: Path2D; clothes: Path2D } {
+function getPaths(): { body: Path2D; hair: Path2D; hairExtras: Path2D[]; clothes: Path2D } {
   if (!_bodyPath) {
     const body = new Path2D();
     body.moveTo(0, 71.5);
@@ -42,11 +41,15 @@ function getPaths(): { body: Path2D; hair: Path2D; hairExtra: Path2D; clothes: P
     hair.closePath();
     _hairPath = hair;
 
-    // Extra hair pixels following the main hair polygon — fills the lower-right
-    // step adjacent to the main hair shape, toggled on/off for the hair animation
-    const hairExtra = new Path2D();
-    hairExtra.rect(70.6778509, 28.7167969, 28.3221491, 13.9277343);
-    _hairExtraPath = hairExtra;
+    // Three extra hair pixel blocks forming a staircase up the left side of the
+    // hair. They appear/disappear progressively to simulate hair movement.
+    // Block 1 — left of the lower hair step
+    const e1 = new Path2D(); e1.rect(14, 28.7167969, 14, 13.9277343);
+    // Blocks 2+3 — appear together: row 2 above block 1, and row 1 further left
+    const e23 = new Path2D();
+    e23.rect(14, 14.328125, 14, 14.3886282);  // block 2 (row 2)
+    e23.rect(0, 28.7167969, 14, 13.9277343);  // block 3 (row 1, further left)
+    _hairExtras = [e1, e23];
 
     const clothes = new Path2D();
     clothes.moveTo(55.670582, 57);
@@ -64,7 +67,45 @@ function getPaths(): { body: Path2D; hair: Path2D; hairExtra: Path2D; clothes: P
     clothes.closePath();
     _clothesPath = clothes;
   }
-  return { body: _bodyPath, hair: _hairPath!, hairExtra: _hairExtraPath!, clothes: _clothesPath! };
+  return { body: _bodyPath, hair: _hairPath!, hairExtras: _hairExtras!, clothes: _clothesPath! };
+}
+
+// Returns 0-3: how many extra hair blocks to draw this frame.
+// Produces a wave: 0→1→2→3→2→1→0→… over HAIR_PERIOD frames.
+function getHairLevel(frameCount: number): number {
+  const phase = frameCount % HAIR_PERIOD;
+  if (phase < 8) return 0;
+  if (phase < 16) return 1;
+  if (phase < 24) return 2;
+  if (phase < 32) return 3;
+  if (phase < 40) return 2;
+  return 1;
+}
+
+export function drawLemmingMascot(ctx: CanvasRenderingContext2D, canvasSize: number, frameCount: number): void {
+  const scale = canvasSize / SVG_SIZE;
+  const { body, hair, hairExtras, clothes } = getPaths();
+  const hairLevel = getHairLevel(frameCount);
+
+  ctx.clearRect(0, 0, canvasSize, canvasSize);
+  ctx.save();
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill(body);
+
+  ctx.fillStyle = '#03B605';
+  ctx.fill(hair);
+  for (let i = 0; i < Math.min(hairLevel, hairExtras.length); i++) ctx.fill(hairExtras[i]);
+
+  ctx.fillStyle = '#5B60FC';
+  ctx.fill(clothes);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(29, 127, 28, 15);
+  ctx.fillRect(85, 127, 28, 15);
+
+  ctx.restore();
 }
 
 function getBodyColor(lives: number): string {
@@ -121,7 +162,8 @@ export class Player {
     const { ctx, dx, dy, dWidth, direction } = this;
     const scale = dWidth / SVG_SIZE;
     const bodyColor = getBodyColor(this.lives);
-    const { body, hair, hairExtra, clothes } = getPaths();
+    const { body, hair, hairExtras, clothes } = getPaths();
+    const hairLevel = getHairLevel(frameCount);
 
     ctx.save();
     if (direction < 0) {
@@ -137,9 +179,7 @@ export class Player {
 
     ctx.fillStyle = '#03B605';
     ctx.fill(hair);
-    if (frameCount % HAIR_PERIOD < HAIR_ON_FRAMES) {
-      ctx.fill(hairExtra);
-    }
+    for (let i = 0; i < Math.min(hairLevel, hairExtras.length); i++) ctx.fill(hairExtras[i]);
 
     ctx.fillStyle = '#5B60FC';
     ctx.fill(clothes);
