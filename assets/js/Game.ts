@@ -146,10 +146,11 @@ export class Game {
     const container = document.querySelector('.lives-icons');
     if (!container || !this.player) return;
     const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
-    if (activeIcons.length > this.player.lives) {
-      const last = activeIcons[activeIcons.length - 1] as HTMLElement;
-      last.classList.add('life-losing');
-      last.addEventListener('animationend', () => last.remove(), { once: true });
+    const excess = activeIcons.length - this.player.lives;
+    for (let i = 0; i < excess; i++) {
+      const icon = activeIcons[activeIcons.length - 1 - i] as HTMLElement;
+      icon.classList.add('life-losing');
+      icon.addEventListener('animationend', () => icon.remove(), { once: true });
     }
   }
 
