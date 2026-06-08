@@ -1,5 +1,8 @@
 import { Game } from './Game';
 import { drawLemmingMascot } from './Player';
+import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+
+const GAME_OVER_TRANSITION_MS = 2000;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -11,8 +14,24 @@ const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" heig
   <path d="M11 6.5l3 3M14 6.5l-3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 </svg>`;
 
+export function generateGuestHandle(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let id = '';
+  for (let i = 0; i < 3; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return `Lemming #${id}`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function main(): void {
   const mainElement = document.querySelector('#site-main') as HTMLElement;
+  let playerName = '';
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -25,7 +44,6 @@ function main(): void {
     const frameHPad = isDesktop ? 44 : 32;
     const uiHeight = 256;
     const maxByHeight = window.innerHeight - uiHeight - frameVPad;
-    // clientWidth excludes scrollbars — prevents canvas from causing the overflow it's measuring
     const viewportWidth = document.documentElement.clientWidth;
     const maxByWidth = viewportWidth - frameHPad;
     return Math.max(280, Math.min(maxByWidth, maxByHeight, 580));
@@ -74,6 +92,17 @@ function main(): void {
         <canvas class="splash-mascot" aria-label="Lemming mascot"></canvas>
         <h1 class="splash-title">Tribute to<br>Lemmings</h1>
         <p class="splash-tagline">&gt; skip the bombs. stay alive.</p>
+        <div class="splash-name-wrap">
+          <input
+            class="splash-name-input"
+            type="text"
+            maxlength="20"
+            placeholder="Enter your name"
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <p class="splash-name-notice">&gt; your nickname &amp; score will be saved to a public leaderboard.</p>
+        </div>
         <button class="splash-start">Start</button>
       </section>
     `);
@@ -91,8 +120,17 @@ function main(): void {
     }
     animateMascot();
 
-    mainElement.querySelector('button')!.addEventListener('click', () => {
+    const nameInput = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
+    const startBtn = mainElement.querySelector('.splash-start') as HTMLButtonElement;
+    if (playerName) {
+      nameInput.value = playerName;
+      startBtn.focus();
+    }
+
+    startBtn.addEventListener('click', () => {
       cancelAnimationFrame(mascotRafId);
+      const input = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
+      playerName = input.value.trim() || generateGuestHandle();
       createGameScreen();
     });
   }
@@ -173,7 +211,6 @@ function main(): void {
             <p class="go-boom">BOOOM!!!</p>
             <h1 class="go-title">GAME OVER</h1>
             <p class="go-score">score <span class="go-score-value"></span></p>
-            <button class="splash-start go-restart">Restart</button>
           </div>
         </div>
       </section>
@@ -186,7 +223,101 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
-    gameOverScreen.querySelector('.go-restart')!.addEventListener('click', createGameScreen);
+    // Submit score non-blocking; capture error for ranking screen
+    const submissionResult = submitScore(playerName, score)
+      .then(() => false)
+      .catch(() => true);
+
+    setTimeout(() => {
+      submissionResult.then((submissionError) => {
+        createRankingScreen(score, submissionError);
+      });
+    }, GAME_OVER_TRANSITION_MS);
+  }
+
+  function createRankingScreen(currentScore: number, submissionError = false): void {
+    const size = getCanvasSize();
+    buildDom(`
+      <section class="section-container ranking-screen">
+        <div class="crt-frame">
+          <canvas class="ranking-canvas"></canvas>
+          <div class="ranking-overlay">
+            ${submissionError ? '<p class="ranking-save-error">&gt; score could not be saved.</p>' : ''}
+            <h1 class="ranking-title">Hall of Fame</h1>
+            <div class="ranking-list">
+              <p class="ranking-loading">&gt; loading...</p>
+            </div>
+            <button class="splash-start ranking-play-again">Play again</button>
+          </div>
+        </div>
+      </section>
+    `);
+
+    const canvas = mainElement.querySelector('.ranking-canvas') as HTMLCanvasElement;
+    canvas.width = size;
+    canvas.height = size;
+
+    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', createStartScreen);
+
+    loadRanking(currentScore);
+  }
+
+  async function loadRanking(currentScore: number): Promise<void> {
+    const listEl = mainElement.querySelector('.ranking-list');
+    if (!listEl) return;
+
+    try {
+      const scores = await fetchTopScores(10);
+
+      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+
+      if (scores.length === 0) {
+        listEl.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
+        return;
+      }
+
+      const playerInTop10 = scores.some(
+        (s) => s.name === playerName && s.score === currentScore,
+      );
+
+      let html = '<ol class="ranking-table">';
+      scores.forEach((s, i) => {
+        const isCurrent = s.name === playerName && s.score === currentScore;
+        html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
+          <span class="ranking-rank">${i + 1}.</span>
+          <span class="ranking-name">${escapeHtml(s.name)}</span>
+          <span class="ranking-score">${s.score}s</span>
+        </li>`;
+      });
+      html += '</ol>';
+
+      if (!playerInTop10) {
+        const rank = await getPlayerRank(currentScore);
+        if (!mainElement.querySelector('.ranking-list')) return;
+        html += `
+          <hr class="ranking-divider">
+          <p class="ranking-not-top10">&gt; you are still not in the top 10</p>
+          <div class="ranking-row ranking-row--current">
+            <span class="ranking-rank">${rank}.</span>
+            <span class="ranking-name">${escapeHtml(playerName)}</span>
+            <span class="ranking-score">${currentScore}s</span>
+          </div>
+        `;
+      }
+
+      listEl.innerHTML = html;
+    } catch {
+      if (!mainElement.querySelector('.ranking-list')) return;
+      listEl.innerHTML = `
+        <p class="ranking-error">&gt; could not load rankings.</p>
+        <a class="ranking-retry" href="#">try again</a>
+      `;
+      listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
+        loadRanking(currentScore);
+      });
+    }
   }
 
   createStartScreen();
