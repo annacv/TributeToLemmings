@@ -268,7 +268,7 @@ function main(): void {
 
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
 
-      if (submissionError) {
+      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
         const overlay = mainElement.querySelector('.ranking-overlay');
         const title = overlay?.querySelector('.ranking-title');
         if (overlay && title) {
@@ -329,6 +329,18 @@ function main(): void {
       listEl.innerHTML = html;
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
+      const { error: submissionError } = await submission;
+      if (!mainElement.querySelector('.ranking-list')) return;
+      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
+        const overlay = mainElement.querySelector('.ranking-overlay');
+        const title = overlay?.querySelector('.ranking-title');
+        if (overlay && title) {
+          const banner = document.createElement('p');
+          banner.className = 'ranking-save-error';
+          banner.textContent = '> score could not be saved.';
+          overlay.insertBefore(banner, title);
+        }
+      }
       listEl.innerHTML = `
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
