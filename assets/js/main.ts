@@ -223,15 +223,15 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
-    // Submit score non-blocking; capture doc id and error flag for ranking screen
-    const submissionResult = submitScore(playerName, score)
-      .then((docId) => ({ error: false, docId }))
-      .catch(() => ({ error: true, docId: null }));
+    // Submit score non-blocking; snapshot state at transition time (default: failed)
+    let submissionState: { error: boolean; docId: string | null } = { error: true, docId: null };
+
+    submitScore(playerName, score)
+      .then((docId) => { submissionState = { error: false, docId }; })
+      .catch(() => { submissionState = { error: true, docId: null }; });
 
     setTimeout(() => {
-      submissionResult.then(({ error, docId }) => {
-        createRankingScreen(score, error, docId);
-      });
+      createRankingScreen(score, submissionState.error, submissionState.docId);
     }, GAME_OVER_TRANSITION_MS);
   }
 
