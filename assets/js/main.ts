@@ -223,26 +223,20 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
-    // Submit score non-blocking; snapshot state at transition time (default: failed)
-    let submissionState: { error: boolean; docId: string | null } = { error: true, docId: null };
+    const submission: Promise<{ error: boolean; docId: string | null }> = submitScore(playerName, score)
+      .then((docId) => ({ error: false, docId }))
+      .catch(() => ({ error: true, docId: null }));
 
-    submitScore(playerName, score)
-      .then((docId) => { submissionState = { error: false, docId }; })
-      .catch(() => { submissionState = { error: true, docId: null }; });
-
-    setTimeout(() => {
-      createRankingScreen(score, submissionState.error, submissionState.docId);
-    }, GAME_OVER_TRANSITION_MS);
+    setTimeout(() => createRankingScreen(score, submission), GAME_OVER_TRANSITION_MS);
   }
 
-  function createRankingScreen(currentScore: number, submissionError = false, submittedDocId: string | null = null): void {
+  function createRankingScreen(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): void {
     const size = getCanvasSize();
     buildDom(`
       <section class="section-container ranking-screen">
         <div class="crt-frame">
           <canvas class="ranking-canvas"></canvas>
           <div class="ranking-overlay">
-            ${submissionError ? '<p class="ranking-save-error">&gt; score could not be saved.</p>' : ''}
             <h1 class="ranking-title">Hall of Fame</h1>
             <div class="ranking-list">
               <p class="ranking-loading">&gt; loading...</p>
@@ -259,17 +253,31 @@ function main(): void {
 
     mainElement.querySelector('.ranking-play-again')!.addEventListener('click', createStartScreen);
 
-    loadRanking(currentScore, submittedDocId);
+    loadRanking(currentScore, submission);
   }
 
-  async function loadRanking(currentScore: number, submittedDocId: string | null): Promise<void> {
+  async function loadRanking(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): Promise<void> {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
     try {
-      const scores = await fetchTopScores(10);
+      const [scores, { error: submissionError, docId: submittedDocId }] = await Promise.all([
+        fetchTopScores(10),
+        submission,
+      ]);
 
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+
+      if (submissionError) {
+        const overlay = mainElement.querySelector('.ranking-overlay');
+        const title = overlay?.querySelector('.ranking-title');
+        if (overlay && title) {
+          const banner = document.createElement('p');
+          banner.className = 'ranking-save-error';
+          banner.textContent = '> score could not be saved.';
+          overlay.insertBefore(banner, title);
+        }
+      }
 
       if (scores.length === 0) {
         let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
@@ -328,7 +336,7 @@ function main(): void {
       listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
         listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
-        loadRanking(currentScore, submittedDocId);
+        loadRanking(currentScore, submission);
       });
     }
   }
