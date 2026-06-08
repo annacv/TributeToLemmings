@@ -273,7 +273,7 @@ function main(): void {
 
       if (scores.length === 0) {
         let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
-        if (currentScore > 0) {
+        if (currentScore > 0 && submittedDocId !== null) {
           const rank = await getPlayerRank(currentScore);
           if (!mainElement.querySelector('.ranking-list')) return;
           html += `
@@ -309,7 +309,7 @@ function main(): void {
         if (!mainElement.querySelector('.ranking-list')) return;
         html += `
           <hr class="ranking-divider">
-          <p class="ranking-not-top10">&gt; you are still not in the top 10</p>
+          ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
           <div class="ranking-row ranking-row--current">
             <span class="ranking-rank">${rank}.</span>
             <span class="ranking-name">${escapeHtml(playerName)}</span>
