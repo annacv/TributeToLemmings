@@ -15,6 +15,7 @@ logs/
 # local / agent
 .claude/
 openspec/
+assets/images/backgrounds/refs/
 
 # env
 .env
