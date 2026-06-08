@@ -31,8 +31,9 @@ const app = initializeApp({
 const db = getFirestore(app);
 const scoresCol = collection(db, 'scores');
 
-export async function submitScore(name: string, score: number): Promise<void> {
-  await addDoc(scoresCol, { name, score, createdAt: serverTimestamp() });
+export async function submitScore(name: string, score: number): Promise<string> {
+  const ref = await addDoc(scoresCol, { name, score, createdAt: serverTimestamp() });
+  return ref.id;
 }
 
 export async function fetchTopScores(n: number): Promise<ScoreRecord[]> {

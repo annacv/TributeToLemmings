@@ -223,19 +223,19 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
-    // Submit score non-blocking; capture error for ranking screen
+    // Submit score non-blocking; capture doc id and error flag for ranking screen
     const submissionResult = submitScore(playerName, score)
-      .then(() => false)
-      .catch(() => true);
+      .then((docId) => ({ error: false, docId }))
+      .catch(() => ({ error: true, docId: null }));
 
     setTimeout(() => {
-      submissionResult.then((submissionError) => {
-        createRankingScreen(score, submissionError);
+      submissionResult.then(({ error, docId }) => {
+        createRankingScreen(score, error, docId);
       });
     }, GAME_OVER_TRANSITION_MS);
   }
 
-  function createRankingScreen(currentScore: number, submissionError = false): void {
+  function createRankingScreen(currentScore: number, submissionError = false, submittedDocId: string | null = null): void {
     const size = getCanvasSize();
     buildDom(`
       <section class="section-container ranking-screen">
@@ -259,10 +259,10 @@ function main(): void {
 
     mainElement.querySelector('.ranking-play-again')!.addEventListener('click', createStartScreen);
 
-    loadRanking(currentScore);
+    loadRanking(currentScore, submittedDocId);
   }
 
-  async function loadRanking(currentScore: number): Promise<void> {
+  async function loadRanking(currentScore: number, submittedDocId: string | null): Promise<void> {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
@@ -272,19 +272,32 @@ function main(): void {
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
 
       if (scores.length === 0) {
-        listEl.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
+        let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
+        if (currentScore > 0) {
+          const rank = await getPlayerRank(currentScore);
+          if (!mainElement.querySelector('.ranking-list')) return;
+          html += `
+            <hr class="ranking-divider">
+            <div class="ranking-row ranking-row--current">
+              <span class="ranking-rank">${rank}.</span>
+              <span class="ranking-name">${escapeHtml(playerName)}</span>
+              <span class="ranking-score">${currentScore}s</span>
+            </div>
+          `;
+        }
+        listEl.innerHTML = html;
         return;
       }
 
-      const playerInTop10 = scores.some(
-        (s) => s.name === playerName && s.score === currentScore,
-      );
+      const playerInTop10 = submittedDocId !== null && scores.some((s) => s.id === submittedDocId);
 
       let html = '<ol class="ranking-table">';
+      let displayRank = 1;
       scores.forEach((s, i) => {
-        const isCurrent = s.name === playerName && s.score === currentScore;
+        if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
+        const isCurrent = submittedDocId !== null && s.id === submittedDocId;
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
-          <span class="ranking-rank">${i + 1}.</span>
+          <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
           <span class="ranking-score">${s.score}s</span>
         </li>`;
@@ -315,7 +328,7 @@ function main(): void {
       listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
         listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
-        loadRanking(currentScore);
+        loadRanking(currentScore, submittedDocId);
       });
     }
   }

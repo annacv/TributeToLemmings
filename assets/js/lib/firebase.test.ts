@@ -36,13 +36,14 @@ describe('submitScore', () => {
     vi.clearAllMocks();
   });
 
-  it('calls addDoc with name, score, and serverTimestamp', async () => {
-    mockAddDoc.mockResolvedValue({});
-    await submitScore('TestPlayer', 42);
+  it('calls addDoc with name, score, and serverTimestamp, returns doc id', async () => {
+    mockAddDoc.mockResolvedValue({ id: 'new-doc-id' });
+    const id = await submitScore('TestPlayer', 42);
     expect(mockAddDoc).toHaveBeenCalledWith(
       'scores-col-ref',
       { name: 'TestPlayer', score: 42, createdAt: 'SERVER_TS' },
     );
+    expect(id).toBe('new-doc-id');
   });
 
   it('rejects when addDoc throws', async () => {
