@@ -261,12 +261,19 @@ function main(): void {
     if (!listEl) return;
 
     try {
-      const [scores, { error: submissionError, docId: submittedDocId }] = await Promise.all([
-        fetchTopScores(10),
-        submission,
-      ]);
+      const scores = await fetchTopScores(10);
 
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+
+      // Give submission up to 1 s after scores arrive; fall back to failed if still pending
+      const { error: submissionError, docId: submittedDocId } = await Promise.race([
+        submission,
+        new Promise<{ error: boolean; docId: string | null }>((resolve) =>
+          setTimeout(() => resolve({ error: true, docId: null }), 1000)
+        ),
+      ]);
+
+      if (!mainElement.querySelector('.ranking-list')) return;
 
       if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
         const overlay = mainElement.querySelector('.ranking-overlay');
@@ -329,7 +336,10 @@ function main(): void {
       listEl.innerHTML = html;
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
-      const { error: submissionError } = await submission;
+      const { error: submissionError } = await Promise.race([
+        submission,
+        Promise.resolve<{ error: boolean; docId: string | null }>({ error: true, docId: null }),
+      ]);
       if (!mainElement.querySelector('.ranking-list')) return;
       if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
         const overlay = mainElement.querySelector('.ranking-overlay');
