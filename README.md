@@ -29,12 +29,15 @@ Establish the visual and brand foundations that all subsequent iterations build 
 8. Directional flip: the lemming faces right when moving right and left when moving left via a canvas horizontal mirror transform.
 9. Lives icons: the lives counter displays one small lemming icon per remaining life. When a life is lost the corresponding icon blinks and fades out smoothly before being removed.
 
-##### ITERATION II — Ranking & Gameplay Completeness
-Add persistent player identity and scoring.
-1. Add a player name input on the start screen.
-2. Save player name and score (seconds alive) to localStorage.
-3. Show a Ranking screen after Game Over with an ordered leaderboard.
-4. Highlight the current player's position in the ranking list.
+##### ITERATION II — Global Leaderboard
+Add shared player identity and competitive scoring via an external data service (Firebase or Supabase free tier). localStorage-only storage is explicitly out of scope — a single-device ranking offers no competitive value.
+1. Optional player name input on the splash screen; blank entry auto-assigns a guest handle (e.g. `Lemming #A3F`).
+2. On game over, write `{ name, score (seconds alive), timestamp }` to the external collection.
+3. Show a Ranking screen after Game Over with the global top-10 ordered by score descending.
+4. Highlight the current player's row; show their global position even if outside the top 10.
+5. Add a one-line data notice on the splash screen: "Your nickname and score will be saved to a public leaderboard."
+
+> **Deployment note:** The Vite/GitHub Pages pipeline is unchanged. API keys are stored as GitHub Actions secrets and injected as Vite env variables at build time; the Firebase/Supabase domain restriction locks the key to the deployed origin.
 
 ##### ITERATION III — Level Progression & Ground Erosion
 Introduce difficulty escalation and the bridge mechanic to the tunnel world.

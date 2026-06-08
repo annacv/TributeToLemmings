@@ -43,7 +43,6 @@ export class Game {
 
       if (this.count % 60 === 0) {
         this.score++;
-        this.saveScore(this.score);
       }
 
       this.update();
@@ -56,7 +55,6 @@ export class Game {
       if (!this.isGameOver) {
         requestAnimationFrame(loop);
       } else {
-        this.saveScore(this.score);
         this.onGameOver?.(this.score);
         this.gameSong.pause();
       }
@@ -130,10 +128,6 @@ export class Game {
   updateScore(): void {
     const scoreDisplay = document.querySelector('.seconds-value');
     if (scoreDisplay) scoreDisplay.textContent = String(this.score);
-  }
-
-  saveScore(score: number): void {
-    localStorage.setItem('score-value', String(score));
   }
 
   initLivesIcons(): void {

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" preserveAspectRatio="xMidYMid slice">
+
+  <!-- Void sky -->
+  <rect width="320" height="320" fill="#000"/>
+
+  <!-- Cave ceiling -->
+  <rect x="0" y="0" width="320" height="44" fill="#6b4c10"/>
+  <rect x="0" y="36" width="320" height="12" fill="#8a6010"/>
+  <!-- Ceiling stone patches -->
+  <rect x="18" y="6" width="40" height="18" rx="2" fill="#5a3e0c" opacity="0.65"/>
+  <rect x="185" y="9" width="46" height="15" rx="2" fill="#5a3e0c" opacity="0.5"/>
+  <rect x="280" y="4" width="30" height="20" rx="2" fill="#5a3e0c" opacity="0.55"/>
+
+  <!-- Stalactites above column-1 zone (x≈80) -->
+  <polygon points="73,48 66,75 80,75" fill="#8a6010"/>
+  <polygon points="85,48 81,63 89,63" fill="#7a5614"/>
+
+  <!-- Stalactites above column-2 zone (x≈240) -->
+  <polygon points="233,48 226,78 240,78" fill="#8a6010"/>
+  <polygon points="246,48 242,65 250,65" fill="#7a5614"/>
+
+  <!-- ── Column 1  (taller, centred at x=80) ── -->
+  <!-- Abacus slab -->
+  <rect x="46" y="132" width="68" height="10" fill="#a07018"/>
+  <rect x="46" y="132" width="68" height="4"  fill="#c8961e"/>
+  <!-- Capital -->
+  <rect x="50" y="140" width="60" height="18" fill="#c8961e"/>
+  <rect x="50" y="140" width="60" height="6"  fill="#e8b040"/>
+  <rect x="50" y="152" width="60" height="6"  fill="#8a6010"/>
+  <!-- Shaft -->
+  <rect x="60" y="156" width="40" height="118" fill="#c8961e"/>
+  <!-- Left highlight -->
+  <rect x="60" y="156" width="6"  height="118" fill="#e8b040"/>
+  <!-- Right shadow -->
+  <rect x="94" y="156" width="6"  height="118" fill="#8a6010"/>
+  <!-- Fluting lines -->
+  <rect x="71" y="160" width="2" height="112" fill="#d4a030" opacity="0.4"/>
+  <rect x="80" y="160" width="2" height="112" fill="#d4a030" opacity="0.4"/>
+  <rect x="89" y="160" width="2" height="112" fill="#8a6010" opacity="0.35"/>
+  <!-- Base plinth -->
+  <rect x="50" y="272" width="60" height="12" fill="#8a6010"/>
+  <rect x="50" y="272" width="60" height="4"  fill="#c8961e"/>
+
+  <!-- ── Column 2  (shorter, centred at x=240) ── -->
+  <!-- Abacus slab -->
+  <rect x="206" y="174" width="68" height="10" fill="#a07018"/>
+  <rect x="206" y="174" width="68" height="4"  fill="#c8961e"/>
+  <!-- Capital -->
+  <rect x="210" y="182" width="60" height="18" fill="#c8961e"/>
+  <rect x="210" y="182" width="60" height="6"  fill="#e8b040"/>
+  <rect x="210" y="194" width="60" height="6"  fill="#8a6010"/>
+  <!-- Shaft -->
+  <rect x="220" y="198" width="40" height="76" fill="#c8961e"/>
+  <!-- Left highlight -->
+  <rect x="220" y="198" width="6"  height="76" fill="#e8b040"/>
+  <!-- Right shadow -->
+  <rect x="254" y="198" width="6"  height="76" fill="#8a6010"/>
+  <!-- Fluting lines -->
+  <rect x="231" y="202" width="2" height="70" fill="#d4a030" opacity="0.4"/>
+  <rect x="240" y="202" width="2" height="70" fill="#d4a030" opacity="0.4"/>
+  <rect x="249" y="202" width="2" height="70" fill="#8a6010" opacity="0.35"/>
+  <!-- Base plinth -->
+  <rect x="210" y="272" width="60" height="12" fill="#8a6010"/>
+  <rect x="210" y="272" width="60" height="4"  fill="#c8961e"/>
+
+  <!-- Ground -->
+  <rect x="0" y="284" width="320" height="36" fill="#5a3c08"/>
+  <rect x="0" y="284" width="320" height="10" fill="#8a6010"/>
+  <rect x="0" y="284" width="320" height="3"  fill="#c8961e"/>
+  <!-- Ground surface patches -->
+  <rect x="8"   y="287" width="52" height="5" fill="#a07018" opacity="0.45"/>
+  <rect x="128" y="287" width="42" height="5" fill="#a07018" opacity="0.4"/>
+  <rect x="244" y="287" width="54" height="5" fill="#a07018" opacity="0.45"/>
+
+</svg>
