@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module '*.WAV' {
+  const src: string;
+  export default src;
+}
+
 interface ImportMetaEnv {
   readonly VITE_FIREBASE_API_KEY: string;
   readonly VITE_FIREBASE_PROJECT_ID: string;
