@@ -4,6 +4,7 @@ import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
 import { DIE_SFX, RANKING_MUSIC } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
+const SUBMISSION_TIMEOUT_MS = 2500;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -300,7 +301,7 @@ function main(): void {
       const { error: submissionError, docId: submittedDocId } = await Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), 1000)
+          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
@@ -370,7 +371,7 @@ function main(): void {
       const { error: submissionError } = await Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), 1000)
+          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
       if (!mainElement.querySelector('.ranking-list')) return;
