@@ -37,30 +37,36 @@ Add shared player identity and competitive scoring via an external data service 
 4. Highlight the current player's row; show their global position even if outside the top 10.
 5. Add a one-line data notice on the splash screen: "Your nickname and score will be saved to a public leaderboard."
 
-> **Deployment note:** The Vite/GitHub Pages pipeline is unchanged. API keys are stored as GitHub Actions secrets and injected as Vite env variables at build time; the Firebase/Supabase domain restriction locks the key to the deployed origin.
+##### ITERATION III — Sound & Music
+Reinforce the emotional arc of each game moment with audio feedback sourced from the original Lemmings DOS OST.
+1. Bomb hit SFX: a short explosion pop (300–500 ms) plays each time a bomb hits the player — the biggest audio gap in the current experience.
+2. Game over sting: a distinct Lemmings DOS OST cue plays on the 2-second cinematic Game Over beat, which is currently completely silent.
+3. Ranking screen ambient: a looping Lemmings DOS OST track on the Hall of Fame screen (nice-to-have; subject to finding a suitable track).
+4. All new audio respects the existing `audio-muted` localStorage preference — muting during gameplay mutes SFX and all screens.
+5. All assets sourced from the Lemmings DOS OST for tonal and legal consistency with the tribute concept.
 
-##### ITERATION III — Level Progression & Ground Erosion
+##### ITERATION IV — Level Progression & Ground Erosion
 Introduce difficulty escalation and the bridge mechanic to the tunnel world.
 1. Dynamic level system: bombs spawn faster and more frequently as levels increase.
 2. Level transition UI with visual and audio cues between levels.
 3. Ground erosion: bombs progressively destroy the ground layer visually over time.
-4. "Ground fully destroyed" trigger — transitions the player to the Tunnel World (Iteration IV).
+4. "Ground fully destroyed" trigger — transitions the player to the Tunnel World (Iteration V).
 
-##### ITERATION IV — Tunnel Escape Puzzle
+##### ITERATION V — Tunnel Escape Puzzle
 A new game screen with a puzzle mechanic: the player must blast their way out of an underground tunnel.
 1. Tunnel screen: underground environment with a confined layout, distinct from the surface game.
 2. Retro-styled info modal explaining the new controls before play begins.
 3. Unexploded bombs as pickable objects — one spacebar press picks one bomb.
 4. Player explores the tunnel left/right to find a crack in the wall.
 5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown).
-6. Explosion breaks the crack open and triggers the transition to the Abyss (Iteration V).
+6. Explosion breaks the crack open and triggers the transition to the Abyss (Iteration VI).
 
-##### ITERATION V — The Abyss: Bombs & Stalactites
+##### ITERATION VI — The Abyss: Bombs & Stalactites
 An enriched dodge game set underground, with a degrading environment.
 1. Combined dodge mechanic: falling bombs and falling stalactites simultaneously.
 2. Bombs that hit the ground create permanent holes — traversal hazards for the lemming.
 3. Stalactites that land get nailed to the ground — permanent vertical obstacles.
-4. Ground starts visually damaged as a narrative callback to the erosion in Iteration III.
+4. Ground starts visually damaged as a narrative callback to the erosion in Iteration IV.
 5. New abyss-world SVG background designed for the underground setting.
 
 

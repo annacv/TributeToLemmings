@@ -1,8 +1,10 @@
 import { Game } from './Game';
 import { drawLemmingMascot } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+import { DIE_SFX, RANKING_MUSIC } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
+const SUBMISSION_TIMEOUT_MS = 2500;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -32,10 +34,24 @@ function escapeHtml(str: string): string {
 function main(): void {
   const mainElement = document.querySelector('#site-main') as HTMLElement;
   let playerName = '';
+  let rankingMusic: HTMLAudioElement | null = null;
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
     return mainElement;
+  }
+
+  function setupMuteButton(btn: HTMLButtonElement, onToggle: (muted: boolean) => void): void {
+    const muted = localStorage.getItem('audio-muted') === '1';
+    btn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
+    btn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+    btn.addEventListener('click', () => {
+      const nowMuted = localStorage.getItem('audio-muted') !== '1';
+      localStorage.setItem('audio-muted', nowMuted ? '1' : '0');
+      btn.innerHTML = nowMuted ? ICON_MUTED : ICON_SOUND;
+      btn.setAttribute('aria-label', nowMuted ? 'Unmute sound' : 'Mute sound');
+      onToggle(nowMuted);
+    });
   }
 
   function getCanvasSize(): number {
@@ -171,19 +187,11 @@ function main(): void {
     const game = new Game(canvas);
     game.gameOverCallback(createGameOverScreen);
 
-    const muteBtn = gameScreen.querySelector('.mute-btn') as HTMLButtonElement;
-    const savedMute = localStorage.getItem('audio-muted') === '1';
-    game.gameSong.muted = savedMute;
-    muteBtn.innerHTML = savedMute ? ICON_MUTED : ICON_SOUND;
-    muteBtn.setAttribute('aria-label', savedMute ? 'Unmute sound' : 'Mute sound');
-
-    muteBtn.addEventListener('click', () => {
-      game.gameSong.muted = !game.gameSong.muted;
-      const muted = game.gameSong.muted;
-      localStorage.setItem('audio-muted', muted ? '1' : '0');
-      muteBtn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
-      muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
-    });
+    game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
+    setupMuteButton(
+      gameScreen.querySelector('.mute-btn') as HTMLButtonElement,
+      (muted) => { game.gameSong.muted = muted; },
+    );
 
     const arrowRight = gameScreen.querySelector('.touch-right') as HTMLElement;
     arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
@@ -223,6 +231,17 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
+    if (localStorage.getItem('audio-muted') !== '1') {
+      const dieSfx = new Audio(DIE_SFX);
+      dieSfx.addEventListener('ended', () => {
+        if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
+        rankingMusic = new Audio(RANKING_MUSIC);
+        rankingMusic.loop = true;
+        rankingMusic.play();
+      });
+      dieSfx.play();
+    }
+
     const submission: Promise<{ error: boolean; docId: string | null }> = submitScore(playerName, score)
       .then((docId) => ({ error: false, docId }))
       .catch(() => ({ error: true, docId: null }));
@@ -243,6 +262,7 @@ function main(): void {
             </div>
             <button class="splash-start ranking-play-again">Play again</button>
           </div>
+          <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
       </section>
     `);
@@ -251,7 +271,19 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
-    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', createStartScreen);
+    setupMuteButton(
+      mainElement.querySelector('.mute-btn') as HTMLButtonElement,
+      (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
+    );
+
+    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', () => {
+      if (rankingMusic) {
+        rankingMusic.pause();
+        rankingMusic.src = '';
+        rankingMusic = null;
+      }
+      createStartScreen();
+    });
 
     loadRanking(currentScore, submission);
   }
@@ -269,7 +301,7 @@ function main(): void {
       const { error: submissionError, docId: submittedDocId } = await Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), 1000)
+          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
@@ -339,7 +371,7 @@ function main(): void {
       const { error: submissionError } = await Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), 1000)
+          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
       if (!mainElement.querySelector('.ranking-list')) return;

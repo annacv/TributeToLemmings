@@ -5,7 +5,10 @@ vi.mock('firebase/app', () => ({
   initializeApp: vi.fn(() => ({})),
 }));
 
-const mockAddDoc = vi.fn();
+const mockSetDoc = vi.fn();
+const mockUpdateDoc = vi.fn();
+const mockDocRef = { id: 'new-doc-id' };
+const mockDoc = vi.fn(() => mockDocRef);
 const mockGetDocs = vi.fn();
 const mockGetCountFromServer = vi.fn();
 const mockCollection = vi.fn(() => 'scores-col-ref');
@@ -18,7 +21,9 @@ const mockServerTimestamp = vi.fn(() => 'SERVER_TS');
 vi.mock('firebase/firestore', () => ({
   getFirestore: vi.fn(() => ({})),
   collection: mockCollection,
-  addDoc: mockAddDoc,
+  doc: mockDoc,
+  setDoc: mockSetDoc,
+  updateDoc: mockUpdateDoc,
   query: mockQuery,
   orderBy: mockOrderBy,
   limit: mockLimit,
@@ -36,18 +41,51 @@ describe('submitScore', () => {
     vi.clearAllMocks();
   });
 
-  it('calls addDoc with name, score, and serverTimestamp, returns doc id', async () => {
-    mockAddDoc.mockResolvedValue({ id: 'new-doc-id' });
+  it('creates a new entry with id field when player name does not exist yet', async () => {
+    mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
+    mockSetDoc.mockResolvedValue(undefined);
+
     const id = await submitScore('TestPlayer', 42);
-    expect(mockAddDoc).toHaveBeenCalledWith(
-      'scores-col-ref',
-      { name: 'TestPlayer', score: 42, createdAt: 'SERVER_TS' },
+
+    expect(mockSetDoc).toHaveBeenCalledWith(
+      mockDocRef,
+      { id: 'new-doc-id', name: 'TestPlayer', score: 42, createdAt: 'SERVER_TS' },
     );
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
     expect(id).toBe('new-doc-id');
   });
 
-  it('rejects when addDoc throws', async () => {
-    mockAddDoc.mockRejectedValue(new Error('network error'));
+  it('updates the score when new score beats the existing one', async () => {
+    const fakeRef = {};
+    mockGetDocs.mockResolvedValue({
+      empty: false,
+      docs: [{ id: 'existing-id', ref: fakeRef, data: () => ({ name: 'TestPlayer', score: 30 }) }],
+    });
+    mockUpdateDoc.mockResolvedValue(undefined);
+
+    const id = await submitScore('TestPlayer', 50);
+
+    expect(mockUpdateDoc).toHaveBeenCalledWith(fakeRef, { score: 50, createdAt: 'SERVER_TS' });
+    expect(mockSetDoc).not.toHaveBeenCalled();
+    expect(id).toBe('existing-id');
+  });
+
+  it('keeps the existing entry when new score does not beat it', async () => {
+    mockGetDocs.mockResolvedValue({
+      empty: false,
+      docs: [{ id: 'existing-id', ref: {}, data: () => ({ name: 'TestPlayer', score: 100 }) }],
+    });
+
+    const id = await submitScore('TestPlayer', 40);
+
+    expect(mockUpdateDoc).not.toHaveBeenCalled();
+    expect(mockSetDoc).not.toHaveBeenCalled();
+    expect(id).toBe('existing-id');
+  });
+
+  it('rejects when setDoc throws', async () => {
+    mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
+    mockSetDoc.mockRejectedValue(new Error('network error'));
     await expect(submitScore('TestPlayer', 10)).rejects.toThrow('network error');
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Game } from './Game';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
@@ -139,6 +139,33 @@ describe('Game', () => {
 
     expect(() => game.displayLives()).not.toThrow();
     expect(document.querySelectorAll('.life-losing')).toHaveLength(3);
+  });
+
+  it('has a bombHitSfx audio element', () => {
+    expect(new Game(canvas).bombHitSfx).toBeInstanceOf(HTMLAudioElement);
+  });
+
+  it('plays bombHitSfx from currentTime=0 on collision when unmuted', () => {
+    const game = makeGameWithPlayer(canvas);
+    const playSpy = vi.fn().mockResolvedValue(undefined);
+    game.bombHitSfx.play = playSpy;
+    game.gameSong.muted = false;
+
+    placeHitBomb(game);
+
+    expect(game.bombHitSfx.currentTime).toBe(0);
+    expect(playSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not play bombHitSfx when audio is muted', () => {
+    const game = makeGameWithPlayer(canvas);
+    const playSpy = vi.fn().mockResolvedValue(undefined);
+    game.bombHitSfx.play = playSpy;
+    game.gameSong.muted = true;
+
+    placeHitBomb(game);
+
+    expect(playSpy).not.toHaveBeenCalled();
   });
 
   it('removes all excess life icons when multiple lives are lost at once', () => {
