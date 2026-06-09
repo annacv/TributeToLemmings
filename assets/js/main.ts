@@ -40,6 +40,19 @@ function main(): void {
     return mainElement;
   }
 
+  function setupMuteButton(btn: HTMLButtonElement, onToggle: (muted: boolean) => void): void {
+    const muted = localStorage.getItem('audio-muted') === '1';
+    btn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
+    btn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
+    btn.addEventListener('click', () => {
+      const nowMuted = localStorage.getItem('audio-muted') !== '1';
+      localStorage.setItem('audio-muted', nowMuted ? '1' : '0');
+      btn.innerHTML = nowMuted ? ICON_MUTED : ICON_SOUND;
+      btn.setAttribute('aria-label', nowMuted ? 'Unmute sound' : 'Mute sound');
+      onToggle(nowMuted);
+    });
+  }
+
   function getCanvasSize(): number {
     const isDesktop = window.innerWidth >= 768;
     const frameVPad = isDesktop ? 44 : 0;
@@ -173,19 +186,11 @@ function main(): void {
     const game = new Game(canvas);
     game.gameOverCallback(createGameOverScreen);
 
-    const muteBtn = gameScreen.querySelector('.mute-btn') as HTMLButtonElement;
-    const savedMute = localStorage.getItem('audio-muted') === '1';
-    game.gameSong.muted = savedMute;
-    muteBtn.innerHTML = savedMute ? ICON_MUTED : ICON_SOUND;
-    muteBtn.setAttribute('aria-label', savedMute ? 'Unmute sound' : 'Mute sound');
-
-    muteBtn.addEventListener('click', () => {
-      game.gameSong.muted = !game.gameSong.muted;
-      const muted = game.gameSong.muted;
-      localStorage.setItem('audio-muted', muted ? '1' : '0');
-      muteBtn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
-      muteBtn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
-    });
+    game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
+    setupMuteButton(
+      gameScreen.querySelector('.mute-btn') as HTMLButtonElement,
+      (muted) => { game.gameSong.muted = muted; },
+    );
 
     const arrowRight = gameScreen.querySelector('.touch-right') as HTMLElement;
     arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
@@ -256,6 +261,7 @@ function main(): void {
             </div>
             <button class="splash-start ranking-play-again">Play again</button>
           </div>
+          <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
       </section>
     `);
@@ -263,6 +269,11 @@ function main(): void {
     const canvas = mainElement.querySelector('.ranking-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
+
+    setupMuteButton(
+      mainElement.querySelector('.mute-btn') as HTMLButtonElement,
+      (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
+    );
 
     mainElement.querySelector('.ranking-play-again')!.addEventListener('click', () => {
       if (rankingMusic) {
