@@ -2,7 +2,8 @@ import { initializeApp } from 'firebase/app';
 import {
   getFirestore,
   collection,
-  addDoc,
+  doc,
+  setDoc,
   updateDoc,
   query,
   orderBy,
@@ -47,8 +48,9 @@ export async function submitScore(name: string, score: number): Promise<string> 
     return existingDoc.id;
   }
 
-  const ref = await addDoc(scoresCol, { name, score, createdAt: serverTimestamp() });
-  return ref.id;
+  const docRef = doc(scoresCol);
+  await setDoc(docRef, { id: docRef.id, name, score, createdAt: serverTimestamp() });
+  return docRef.id;
 }
 
 export async function fetchTopScores(n: number): Promise<ScoreRecord[]> {
