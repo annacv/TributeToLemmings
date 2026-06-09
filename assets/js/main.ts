@@ -228,6 +228,7 @@ function main(): void {
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
       dieSfx.addEventListener('ended', () => {
+        if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
         rankingMusic = new Audio(RANKING_MUSIC);
         rankingMusic.loop = true;
         rankingMusic.play();
