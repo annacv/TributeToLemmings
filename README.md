@@ -1,7 +1,7 @@
 # Project's name
 TributeToLemmings
 
-![TributeToLemmings](lemmings-preview.png)
+![TributeToLemmings](public/og-image.png)
 
 ## Description
 As it was a bonus screen in the original Lemmings' game... WOW!! A classic skip-bomb game!! Try to keep alive your Lemming as much you can!!!!
