@@ -1,6 +1,7 @@
 import { Game } from './Game';
 import { drawLemmingMascot } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+import { DIE_SFX, RANKING_MUSIC } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 
@@ -32,6 +33,7 @@ function escapeHtml(str: string): string {
 function main(): void {
   const mainElement = document.querySelector('#site-main') as HTMLElement;
   let playerName = '';
+  let rankingMusic: HTMLAudioElement | null = null;
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -223,6 +225,16 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
+    if (localStorage.getItem('audio-muted') !== '1') {
+      const dieSfx = new Audio(DIE_SFX);
+      dieSfx.addEventListener('ended', () => {
+        rankingMusic = new Audio(RANKING_MUSIC);
+        rankingMusic.loop = true;
+        rankingMusic.play();
+      });
+      dieSfx.play();
+    }
+
     const submission: Promise<{ error: boolean; docId: string | null }> = submitScore(playerName, score)
       .then((docId) => ({ error: false, docId }))
       .catch(() => ({ error: true, docId: null }));
@@ -251,7 +263,14 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
-    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', createStartScreen);
+    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', () => {
+      if (rankingMusic) {
+        rankingMusic.pause();
+        rankingMusic.src = '';
+        rankingMusic = null;
+      }
+      createStartScreen();
+    });
 
     loadRanking(currentScore, submission);
   }

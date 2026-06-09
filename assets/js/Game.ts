@@ -1,6 +1,6 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
-import { GAME_SONG, SPRITES } from './assets';
+import { FIRE_SFX, GAME_SONG, SPRITES } from './assets';
 
 /** ~100ms at 60fps — frames to show explosion before removal */
 const EXPLOSION_FRAMES = 6;
@@ -15,6 +15,7 @@ export class Game {
   score: number;
   count: number;
   gameSong: HTMLAudioElement;
+  bombHitSfx: HTMLAudioElement;
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -26,6 +27,7 @@ export class Game {
     this.score = 0;
     this.count = 0;
     this.gameSong = new Audio(GAME_SONG);
+    this.bombHitSfx = new Audio(FIRE_SFX);
   }
 
   startGame(): void {
@@ -121,6 +123,10 @@ export class Game {
         bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionFramesLeft = EXPLOSION_FRAMES;
+        if (!this.gameSong.muted) {
+          this.bombHitSfx.currentTime = 0;
+          this.bombHitSfx.play();
+        }
       }
     }
   }
