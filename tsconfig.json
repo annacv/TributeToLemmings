@@ -9,11 +9,11 @@
     "skipLibCheck": true
   },
   "include": [
-    "assets/js/**/*.ts",
-    "assets/js/vite-env.d.ts",
+    "assets/ts/**/*.ts",
+    "assets/ts/vite-env.d.ts",
     "vite.config.ts",
     "eslint.config.ts",
     "eslint-config-prettier.d.ts"
   ],
-  "exclude": ["assets/js/**/*.test.ts", "node_modules"]
+  "exclude": ["assets/ts/**/*.test.ts", "node_modules"]
 }

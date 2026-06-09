@@ -7,6 +7,6 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? GITHUB_PAGES_BASE : '/',
   test: {
     environment: 'jsdom',
-    setupFiles: ['./assets/js/test-setup.ts'],
+    setupFiles: ['./assets/ts/test-setup.ts'],
   },
 }));
