@@ -47,27 +47,38 @@ Reinforce the emotional arc of each game moment with audio feedback sourced from
 
 ##### ITERATION IV — Level Progression & Ground Erosion
 Introduce difficulty escalation and the bridge mechanic to the tunnel world.
-1. Dynamic level system: bombs spawn faster and more frequently as levels increase.
-2. Level transition UI with visual and audio cues between levels.
-3. Ground erosion: bombs progressively destroy the ground layer visually over time.
-4. "Ground fully destroyed" trigger — transitions the player to the Tunnel World (Iteration V).
+1. Dynamic level system: levels progress in discrete steps. Level 1 starts with ~12 seconds between bomb spawns, decreasing ~1.5–2 seconds per level with a hard floor (~4–5s). Bomb speed scales separately and more gradually.
+2. Level transition UI with visual and audio cues at each level change.
+3. Level-gated ground erosion: the ground becomes vulnerable only at the last level. Every missed bomb that crosses the ground threshold chips the ground visually (`erosionCounter++`). Before the last level, missed bombs exit the canvas harmlessly.
+4. Visual warning at the start of the last level: a crack texture appears on the ground layer to signal it is now vulnerable.
+5. "Ground fully destroyed" trigger — transitions to the Tunnel World (Iteration V) via a `triggerTunnelWorld()` stub. Until Iteration V ships, this routes to a "TO BE CONTINUED" interstitial screen before Game Over.
+6. Score is time-based and cumulative across screens. Difficulty level resets to 1 at each new screen.
+7. Audio — level-up SFX: short ascending Lemmings DOS OST cue on each level transition; existing background track continues throughout.
+8. Audio — ground crack SFX: low rumble each time a bomb chips the ground (last level only); one-shot ground collapse sting when the ground is fully destroyed and the transition fires.
 
 ##### ITERATION V — Tunnel Escape Puzzle
-A new game screen with a puzzle mechanic: the player must blast their way out of an underground tunnel.
+A new game screen with a puzzle mechanic: the player must blast their way out of an underground tunnel, across three escalating escape cycles.
 1. Tunnel screen: underground environment with a confined layout, distinct from the surface game.
 2. Retro-styled info modal explaining the new controls before play begins.
 3. Unexploded bombs as pickable objects — one spacebar press picks one bomb.
-4. Player explores the tunnel left/right to find a crack in the wall.
+4. Player explores the tunnel left/right to find a randomly-placed crack in the wall.
 5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown).
-6. Explosion breaks the crack open and triggers the transition to the Abyss (Iteration VI).
+6. Explosion breaks the crack open — triggers the next escape cycle.
+7. Three escape cycles per screen: after each successful escape, the ceiling lowers. Crack position randomizes each cycle to prevent memorization.
+8. After completing all three cycles, transitions to The Abyss (Iteration VI).
+9. Audio — new looping background track on screen entry: underground/cave mood, distinct from the surface game track. All subsequent audio respects the existing mute gate.
+10. Audio — SFX set: bomb pickup (one-shot), fuse burn (looping tick during three-press countdown, stops on explosion), explosion (bigger/more impactful than the surface bomb-hit SFX), ceiling lower between cycles (short grinding rumble).
 
-##### ITERATION VI — The Abyss: Bombs & Stalactites
-An enriched dodge game set underground, with a degrading environment.
-1. Combined dodge mechanic: falling bombs and falling stalactites simultaneously.
-2. Bombs that hit the ground create permanent holes — traversal hazards for the lemming.
-3. Stalactites that land get nailed to the ground — permanent vertical obstacles.
+##### ITERATION VI — The Abyss: Horizontal Escape
+A horizontal side-scroll escape through an underground corridor toward the exit door.
+1. Horizontal rightward scroll: the lemming advances right through the corridor toward the iconic exit door (referencing the original Lemmings game) as the win condition.
+2. Hazards along the corridor: stalactites as fixed ceiling obstacles the player navigates around; bombs fall from trigger zones as the player passes beneath them — two distinct hazard types, not simultaneous falling objects.
+3. Player must dodge all hazards and reach the door to complete the screen. Ceiling sits close to the floor to maintain tension.
 4. Ground starts visually damaged as a narrative callback to the erosion in Iteration IV.
 5. New abyss-world SVG background designed for the underground setting.
+6. On reaching the door: a brief (3–5s) non-interactive balloon escape cinematic plays — the lemming is lifted by the hot air balloon from the original Lemmings before the Ranking screen fades in.
+7. Audio — new looping background track on screen entry: faster and more driving than the tunnel track to convey chase energy.
+8. Audio — stalactite collision SFX (one-shot crunch on hit); door reached sting (triumphant one-shot on win condition); balloon cinematic track: the most iconic available Lemmings DOS OST cue, used as the emotional peak and payoff of the full game.
 
 
 ## Data structure
@@ -135,6 +146,31 @@ Definition of the different states and their transition (transition functions)
   * create screen
   * show rank list
   * highlight position in rank
+
+*5. toBeContiniuedScreen (4th Iteration stub)*
+  * create interstitial screen
+  * display "TO BE CONTINUED" in retro pixel style
+  * route to gameoverScreen
+
+*6. tunnelEscapeScreen (5th Iteration)*
+  * create screen
+  * display info modal on first entry
+  * bomb pickup loop
+  * crack detection
+  * bomb placement + fuse sequence
+  * cycle state (3 escapes, ceiling lowers per cycle, randomise crack position)
+
+*7. abyssScreen (6th Iteration)*
+  * create screen
+  * horizontal scroll loop
+  * hazard placement (stalactites + bomb trigger zones)
+  * collision detection
+  * door win-condition check
+
+*8. balloonEscapeScreen (6th Iteration endgame)*
+  * non-interactive cinematic (~3–5s)
+  * balloon lift animation
+  * transition to rankingScreen
 
 
 ## Task
