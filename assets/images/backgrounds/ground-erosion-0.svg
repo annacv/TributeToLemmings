@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <!-- Ground Erosion State 0: warning — single hairline crack at center, grass zone only -->
+  <!-- Triggered on Level 4 start (groundErosionActive = true, 0 misses) -->
+
+  <!-- Main crack spine: thin zigzag, centered at x=400, y=570 to y=656 -->
+  <polygon fill="#07050300" points="0,0"/>
+  <polygon fill="#06040300" points="0,0"/>
+  <!-- actual crack fill #070503 (near-black, warm) -->
+  <polygon fill="#070503"
+    points="
+      399,570  395,582  391,596  395,610  392,624  396,638  393,651  397,656
+      401,656  405,651  401,638  405,624  401,610  404,596  400,582  401,570
+    "/>
+
+  <!-- Left micro-spike at y≈594 -->
+  <polygon fill="#070503" points="392,591 380,585 382,594 392,598"/>
+
+  <!-- Right micro-spike at y≈622 -->
+  <polygon fill="#070503" points="404,619 416,614 414,623 404,626"/>
+
+  <!-- Tiny secondary sliver branching left near base -->
+  <polygon fill="#070503" points="394,646 385,642 386,648 394,652"/>
+</svg>

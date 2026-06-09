@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <!-- Ground Erosion State 2: moderate damage — two impact craters + all cracks from state 1 -->
+  <!-- erosionCounter >= 10 -->
+
+  <!-- ── Inherited cracks from State 1 ── -->
+
+  <!-- Left crack (x≈195) — same as state 1 -->
+  <polygon fill="#070503"
+    points="194,574 190,586 186,600 190,614 187,628 191,642 188,654 191,658
+            194,658 197,654 194,642 198,628 193,614 197,600 193,586 197,574"/>
+  <polygon fill="#070503" points="188,598 176,593 178,601 188,604"/>
+  <polygon fill="#070503" points="193,628 204,623 202,631 193,634"/>
+
+  <!-- Center crack (x≈400) — same as state 1 -->
+  <polygon fill="#070503"
+    points="397,570 393,583 388,597 393,612 189,627 393,641 390,655 393,669 397,681
+            402,681 406,669 403,655 406,641 401,627 405,612 401,597 405,583 402,570"/>
+  <polygon fill="#070503"
+    points="397,570 393,583 388,597 393,612 389,627 393,641 390,655 393,669 397,681
+            402,681 406,669 403,655 406,641 401,627 405,612 401,597 405,583 402,570"/>
+  <polygon fill="#070503" points="390,594 377,588 380,597 390,600"/>
+  <polygon fill="#070503" points="403,611 416,605 414,614 403,617"/>
+  <polygon fill="#070503" points="391,652 379,646 381,655 391,658"/>
+  <polygon fill="#070503" points="404,668 417,662 415,670 404,673"/>
+
+  <!-- Right crack (x≈600) — same as state 1 -->
+  <polygon fill="#070503"
+    points="598,572 594,585 590,599 594,613 591,627 595,641 592,653 596,656
+            599,656 602,653 598,641 602,627 597,613 601,599 597,585 601,572"/>
+  <polygon fill="#070503" points="592,597 580,591 582,600 592,603"/>
+  <polygon fill="#070503" points="597,628 609,622 607,631 597,634"/>
+
+  <!-- ── Left impact crater: center (285, 618) ── -->
+
+  <!-- Central void (~22px radius, irregular) -->
+  <polygon fill="#020208"
+    points="285,596 302,602 311,617 305,634 288,641 270,635 262,618 269,602"/>
+
+  <!-- Arms radiating from void -->
+  <!-- Up-left -->
+  <polygon fill="#070503" points="270,603 248,578 252,584 274,609"/>
+  <!-- Left branch off up-left arm -->
+  <polygon fill="#070503" points="253,581 240,571 242,578 254,585"/>
+  <!-- Up-right -->
+  <polygon fill="#070503" points="302,603 326,579 328,586 305,610"/>
+  <!-- Right -->
+  <polygon fill="#070503" points="310,616 344,612 344,619 310,622"/>
+  <polygon fill="#070503" points="334,613 347,604 347,612"/>
+  <!-- Down-left -->
+  <polygon fill="#070503" points="269,634 244,661 249,665 274,638"/>
+  <!-- Down-right -->
+  <polygon fill="#070503" points="305,633 328,663 323,666 300,636"/>
+
+  <!-- ── Right impact crater: center (528, 603) ── -->
+
+  <!-- Central void (~18px radius, irregular) -->
+  <polygon fill="#020208"
+    points="528,585 543,590 550,603 544,617 529,623 513,617 507,603 514,590"/>
+
+  <!-- Arms radiating from void -->
+  <!-- Up -->
+  <polygon fill="#070503" points="526,585 523,563 530,563 531,585"/>
+  <!-- Up-right -->
+  <polygon fill="#070503" points="542,591 562,572 565,578 546,597"/>
+  <!-- Right -->
+  <polygon fill="#070503" points="549,601 575,598 575,605 549,607"/>
+  <polygon fill="#070503" points="564,599 578,590 578,598"/>
+  <!-- Down-right -->
+  <polygon fill="#070503" points="543,616 563,638 558,641 538,619"/>
+  <!-- Down -->
+  <polygon fill="#070503" points="526,622 523,645 530,646 532,622"/>
+  <!-- Left -->
+  <polygon fill="#070503" points="508,602 482,598 482,605 508,608"/>
+  <!-- Up-left -->
+  <polygon fill="#070503" points="515,591 496,573 500,569 519,588"/>
+
+  <!-- Darkening at grass line where voids meet surface -->
+  <ellipse cx="285" cy="574" rx="10" ry="4" fill="#040302" opacity="0.8"/>
+  <ellipse cx="528" cy="574" rx="8"  ry="3" fill="#040302" opacity="0.7"/>
+</svg>

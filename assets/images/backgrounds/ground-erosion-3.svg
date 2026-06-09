@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+  <!-- Ground Erosion State 3: full collapse — large central void, rubble chunks, radiating cracks -->
+  <!-- erosionCounter >= 15 — triggers TENTON.WAV sequence + tunnel world transition -->
+
+  <!-- ── Main collapse void: large irregular hole centered ~(400, 655) ── -->
+  <!-- Void represents the underground darkness (tunnel entrance) -->
+  <polygon fill="#020208"
+    points="
+      375,578  400,570  428,576
+      458,585  477,600  486,622
+      484,645  476,664  470,682
+      462,700  448,714  428,722
+      406,726  382,724  358,716
+      340,702  330,682  326,660
+      324,636  328,613  336,594
+      350,581  363,575
+    "/>
+
+  <!-- Darker inner core for depth illusion -->
+  <ellipse cx="400" cy="652" rx="70" ry="55" fill="#010105" opacity="0.7"/>
+
+  <!-- ── Rubble chunks: upturned pieces of grass and cobblestone ── -->
+
+  <!-- Top edge: torn grass chunks (grass colors) -->
+  <polygon fill="#186010" points="362,580 348,574 345,582 360,586"/>
+  <polygon fill="#1e7010" points="415,573 428,570 430,578 417,580"/>
+  <polygon fill="#0c3208" points="390,578 380,572 377,580 389,584"/>
+  <polygon fill="#186010" points="438,578 450,576 452,584 440,586"/>
+
+  <!-- Left edge: broken cobblestone slabs (cobblestone colors) -->
+  <polygon fill="#3a3426" points="330,618 316,612 313,626 328,630"/>
+  <polygon fill="#28221a" points="325,646 310,641 308,654 323,657"/>
+  <polygon fill="#322c20" points="328,670 314,666 312,676 326,678"/>
+
+  <!-- Right edge: broken cobblestone slabs -->
+  <polygon fill="#3a3426" points="482,616 497,610 499,624 484,627"/>
+  <polygon fill="#28221a" points="484,644 500,640 501,653 485,656"/>
+  <polygon fill="#322c20" points="475,670 490,667 491,677 476,679"/>
+
+  <!-- Bottom edge: upturned soil and cobblestone chunks -->
+  <polygon fill="#3a3426" points="355,720 342,714 340,724 354,727"/>
+  <polygon fill="#0c3208" points="400,726 388,722 386,730 400,732"/>
+  <polygon fill="#28221a" points="445,720 458,716 460,725 447,728"/>
+  <polygon fill="#322c20" points="422,724 435,721 437,730 423,731"/>
+
+  <!-- ── Radiating crack lines from void edges ── -->
+
+  <!-- Top-left crack -->
+  <polygon fill="#070503" points="353,582 316,546 320,553 357,590"/>
+  <polygon fill="#070503" points="319,549 307,536 310,544 320,553"/>
+
+  <!-- Top crack -->
+  <polygon fill="#070503" points="397,571 393,536 401,535 403,571"/>
+  <polygon fill="#070503" points="395,540 390,522 398,521 401,540"/>
+
+  <!-- Top-right crack -->
+  <polygon fill="#070503" points="455,583 492,547 494,555 458,591"/>
+  <polygon fill="#070503" points="491,550 505,537 507,545 493,556"/>
+
+  <!-- Right crack -->
+  <polygon fill="#070503" points="485,622 524,618 524,626 485,630"/>
+  <polygon fill="#070503" points="513,619 534,610 536,618 515,625"/>
+
+  <!-- Bottom-right crack -->
+  <polygon fill="#070503" points="468,700 498,738 493,741 462,703"/>
+
+  <!-- Bottom-left crack -->
+  <polygon fill="#070503" points="332,698 302,740 307,742 337,701"/>
+
+  <!-- Left crack -->
+  <polygon fill="#070503" points="325,658 275,653 275,660 325,664"/>
+  <polygon fill="#070503" points="285,654 262,648 262,656 285,661"/>
+
+  <!-- Additional small fracture lines extending from top cracks -->
+  <polygon fill="#070503" points="335,560 322,550 326,558 336,565"/>
+  <polygon fill="#070503" points="464,558 477,549 474,557 463,564"/>
+</svg>
