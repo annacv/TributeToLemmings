@@ -25,6 +25,7 @@ const COVERAGE_ROWS = 3;
 const COLLAPSE_COVERAGE = 0.98;
 const EARLY_CRACK_MISSES = 4;
 const LATE_CRACK_MISSES = 14;
+const TUNNEL_STING_WATCHDOG_MS = 4000;
 
 interface GroundStamp {
   img: HTMLImageElement;
@@ -434,7 +435,10 @@ export class Game {
     this.isTunnelTransition = true;
     this.gameSong.pause();
 
+    let fired = false;
     const fireCallback = () => {
+      if (fired) return;
+      fired = true;
       if (this.onTunnelWorld) {
         this.onTunnelWorld(this.score);
       } else {
@@ -442,11 +446,17 @@ export class Game {
       }
     };
 
-    if (!this.gameSong.muted) {
-      this.tentonSfx.play();
-      this.tentonSfx.addEventListener('ended', fireCallback, { once: true });
-    } else {
+    if (this.gameSong.muted) {
       fireCallback();
+      return;
     }
+
+    /* Avoids stranding the player on a frozen canvas if any missing 'ended' (play() rejection, decode error,
+    stalled playback) */
+    this.tentonSfx.addEventListener('ended', fireCallback, { once: true });
+    this.tentonSfx.addEventListener('error', fireCallback, { once: true });
+    setTimeout(fireCallback, TUNNEL_STING_WATCHDOG_MS);
+    const playAttempt: Promise<void> | undefined = this.tentonSfx.play();
+    playAttempt?.catch(fireCallback);
   }
 }
