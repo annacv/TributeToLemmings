@@ -393,14 +393,24 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
     expect(cracks[7].img).toBe(game['crackImgs'][3]);
   });
 
-  it('stamps holes (cycling all four variants) from the ninth miss on', () => {
+  it('stamps holes (cycling all four variants) from the fifteenth miss on', () => {
     const game = makeGame();
-    for (let i = 0; i < 13; i++) dropBomb(game);
+    for (let i = 0; i < 14; i++) dropBomb(game);
+    expect(game['holeStamps']).toHaveLength(0);
+    for (let i = 0; i < 5; i++) dropBomb(game);
     const holes = game['holeStamps'];
-    expect(game['crackStamps']).toHaveLength(8);
     expect(holes).toHaveLength(5);
     expect(holes[0].img).not.toBe(holes[1].img);
     expect(holes[4].img).toBe(holes[0].img);
+  });
+
+  it('stamps a crack at every miss, even once holes are landing', () => {
+    const game = makeGame();
+    for (let i = 0; i < 17; i++) dropBomb(game);
+    const cracks = game['crackStamps'];
+    expect(cracks).toHaveLength(17);
+    // hole-phase misses keep using the heavy pair (crack-mark-3/4)
+    expect(cracks[16].img).toBe(game['crackImgs'][2 + (16 % 2)]);
   });
 
   it('keeps stamps inside the ground band', () => {
@@ -416,9 +426,9 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
 
   it('grows ground coverage once holes start landing', () => {
     const game = makeGame();
-    for (let i = 0; i < 8; i++) dropBomb(game);
+    for (let i = 0; i < 14; i++) dropBomb(game);
     expect(game['groundCoverage']()).toBe(0);
-    dropBomb(game); // 9th miss: first hole
+    dropBomb(game); // 15th miss: first hole
     expect(game['groundCoverage']()).toBeGreaterThan(0);
   });
 });

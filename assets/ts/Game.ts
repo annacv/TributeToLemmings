@@ -21,7 +21,7 @@ const COVERAGE_COLS = 8;
 const COVERAGE_ROWS = 3;
 const COLLAPSE_COVERAGE = 0.95;
 const EARLY_CRACK_MISSES = 4;
-const LATE_CRACK_MISSES = 8;
+const LATE_CRACK_MISSES = 14;
 
 interface GroundStamp {
   img: HTMLImageElement;
@@ -207,22 +207,23 @@ export class Game {
       if (!bomb.isExploding) {
         if (bomb.dy > this.canvas.height) {
           this.bombs.splice(i, 1);
+
           if (this.groundErosionActive) {
             this.erosionCounter++;
             const impactX = bomb.dx + bomb.dWidth / 2;
-            if (this.erosionCounter <= EARLY_CRACK_MISSES) {
-              this.stampCrack(impactX, 0); // crack-mark-1/2
-            } else if (this.erosionCounter <= LATE_CRACK_MISSES) {
-              this.stampCrack(impactX, 2); // crack-mark-3/4
-            } else {
+            this.stampCrack(impactX, this.erosionCounter <= EARLY_CRACK_MISSES ? 0 : 2);
+            
+            if (this.erosionCounter > LATE_CRACK_MISSES) {
               this.stampHole(impactX);
             }
             this.drawGroundErosion();
             this.triggerGroundShake();
+            
             if (!this.gameSong.muted) {
               this.bangSfx.currentTime = 0;
               this.bangSfx.play();
             }
+            
             if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
               this.triggerTunnelWorld();
               return;
@@ -290,7 +291,7 @@ export class Game {
   /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage. */
   private stampHole(impactX: number): void {
     const img = this.holeImgs[this.holeStamps.length % this.holeImgs.length];
-    const w = this.canvas.width * (0.2 + Math.random() * 0.08);
+    const w = this.canvas.width * (0.12 + Math.random() * 0.06);
     const h = w / Game.imgAspect(img, 1 / 0.6);
     const bandTop = this.canvas.height * GROUND_TOP_FRAC;
     const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
