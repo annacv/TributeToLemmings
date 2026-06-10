@@ -1,7 +1,7 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
-import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GROUND_EROSION_SVGS } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GROUND_EROSION_COLLAPSE_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
@@ -238,21 +238,26 @@ function main(): void {
     const ctx = canvas.getContext('2d')!;
 
     const groundImg = new Image();
-    groundImg.src = GROUND_EROSION_SVGS[3];
+    groundImg.src = GROUND_EROSION_COLLAPSE_SVG;
 
     if (localStorage.getItem('audio-muted') !== '1') {
       new Audio(FALLING_SFX).play();
     }
 
     const lemmingSize = size * 0.18;
+    const HOLE_CENTER_Y_FRAC = 0.435;
     const holeCenterY = size * 0.65;
-    const groundOffsetY = holeCenterY - size * (655 / 800);
     const holeX = size * 0.5 - lemmingSize / 2;
     const holeY = holeCenterY - lemmingSize / 2;
 
     function drawScene(lemmingY: number | null): void {
       ctx.clearRect(0, 0, size, size);
-      if (groundImg.complete) ctx.drawImage(groundImg, 0, groundOffsetY, size, size);
+      if (groundImg.complete) {
+        const imgH = groundImg.naturalWidth > 0
+          ? size * (groundImg.naturalHeight / groundImg.naturalWidth)
+          : size;
+        ctx.drawImage(groundImg, 0, holeCenterY - imgH * HOLE_CENTER_Y_FRAC, size, imgH);
+      }
       if (lemmingY !== null) {
         ctx.save();
         ctx.translate(holeX, lemmingY);
