@@ -441,7 +441,7 @@ canvas {
 
 .level-up-banner {
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.6);
   margin: 0;
@@ -483,7 +483,7 @@ canvas {
   padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   font-family: 'Press Start 2P', monospace;
   pointer-events: none;
   z-index: 2;
@@ -504,6 +504,15 @@ canvas {
 
 .hud-label {
   color: var(--brand);
+}
+
+.hud-item.blink {
+  animation: hud-blink 0.4s ease-in-out 3;
+}
+
+@keyframes hud-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
 }
 
 .hud-lives, .hud-score {
@@ -702,7 +711,7 @@ canvas {
 
 .tbc-overlay {
   position: absolute;
-  inset: 1.5rem;
+  inset: 1.5rem 1.5rem calc(1.5rem + 15%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -725,20 +734,17 @@ canvas {
 
 .tbc-line {
   font-family: 'Press Start 2P', monospace;
-  font-size: clamp(.9rem, 3.5vw, 1.75rem);
-  color: var(--text-white);
-  line-height: 1.4;
-  letter-spacing: .05em;
+  font-size: clamp(.5rem, 1.8vw, 1rem);
+  color: var(--brand);
+  line-height: 1.8;
+  letter-spacing: .2em;
   margin: 0;
-  text-shadow:
-    3px 3px 0 var(--brand),
-    -1px -1px 0 var(--brand),
-    0 0 20px rgba(var(--brand-rgb), 0.4);
+  text-shadow: 2px 2px 0 var(--bg-black);
 }
 
 @media (max-width: 767px) {
   .tbc-overlay {
-    inset: 0.25rem;
+    inset: 0.25rem 0.25rem calc(0.25rem + 10%);
   }
 }
 

@@ -378,6 +378,16 @@ export class Game {
   updateLevel(): void {
     const levelDisplay = document.querySelector('.level-value');
     if (levelDisplay) levelDisplay.textContent = String(this.currentLevel + 1);
+    this.blinkHudItem('.level-item');
+  }
+
+  private blinkHudItem(selector: string): void {
+    const item = document.querySelector(selector) as HTMLElement | null;
+    if (item) {
+      item.classList.remove('blink');
+      void item.offsetWidth; // restart animation if still running
+      item.classList.add('blink');
+    }
   }
 
   initLivesIcons(): void {
@@ -406,6 +416,7 @@ export class Game {
       icon.classList.add('life-losing');
       icon.addEventListener('animationend', () => icon.remove(), { once: true });
     }
+    if (excess > 0) this.blinkHudItem('.lives-item');
   }
 
   gameOverCallback(callback: (score: number) => void): void {

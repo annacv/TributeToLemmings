@@ -162,7 +162,7 @@ function main(): void {
           <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
-              <span class="hud-item">
+              <span class="hud-item lives-item">
                 <span class="hud-label">lives</span>
                 <span class="hud-value lives-value">3</span>
               </span>
@@ -173,7 +173,7 @@ function main(): void {
                 <span class="hud-value seconds-value">0</span>
                 <span class="hud-label">sec</span>
               </span>
-              <span class="hud-item">
+              <span class="hud-item level-item">
                 <span class="hud-label">level</span>
                 <span class="hud-value level-value">1</span>
               </span>
@@ -226,8 +226,7 @@ function main(): void {
         <div class="crt-frame">
           <canvas class="tbc-canvas"></canvas>
           <div class="tbc-overlay">
-            <p class="tbc-line">TO BE</p>
-            <p class="tbc-line">CONTINUED...</p>
+            <p class="tbc-line">TO BE CONTINUED...</p>
           </div>
         </div>
       </section>
@@ -246,12 +245,14 @@ function main(): void {
     }
 
     const lemmingSize = size * 0.18;
+    const holeCenterY = size * 0.65;
+    const groundOffsetY = holeCenterY - size * (655 / 800);
     const holeX = size * 0.5 - lemmingSize / 2;
-    const holeY = size * 0.78;
+    const holeY = holeCenterY - lemmingSize / 2;
 
     function drawScene(lemmingY: number | null): void {
       ctx.clearRect(0, 0, size, size);
-      if (groundImg.complete) ctx.drawImage(groundImg, 0, 0, size, size);
+      if (groundImg.complete) ctx.drawImage(groundImg, 0, groundOffsetY, size, size);
       if (lemmingY !== null) {
         ctx.save();
         ctx.translate(holeX, lemmingY);

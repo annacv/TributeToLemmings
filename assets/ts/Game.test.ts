@@ -29,7 +29,10 @@ function setupHud(iconCount = 3): void {
   const icons = Array.from({ length: iconCount }, () => '<img class="life-icon" alt="" />').join('\n        ');
   document.body.innerHTML = `
     <div class="lives-icons">${icons}</div>
-    <span class="lives-value"></span>
+    <span class="hud-item lives-item">
+      <span class="hud-label">lives</span>
+      <span class="hud-value lives-value"></span>
+    </span>
   `;
 }
 
@@ -176,6 +179,25 @@ describe('Game', () => {
     game.displayLives();
 
     expect(document.querySelectorAll('.life-losing')).toHaveLength(2);
+  });
+
+  it('blinks the HUD lives item when a life is lost', () => {
+    const game = makeGameWithPlayer(canvas);
+    game.player.lives = 2;
+    setupHud();
+
+    game.displayLives();
+
+    expect(document.querySelector('.lives-item')!.classList.contains('blink')).toBe(true);
+  });
+
+  it('does not blink the HUD lives item when no life was lost', () => {
+    const game = makeGameWithPlayer(canvas);
+    setupHud();
+
+    game.displayLives();
+
+    expect(document.querySelector('.lives-item')!.classList.contains('blink')).toBe(false);
   });
 });
 
@@ -488,6 +510,23 @@ describe('Game — level-up visual effects', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.useRealTimers();
+  });
+
+  it('blinks the HUD level item when the level updates', () => {
+    document.body.innerHTML += `
+      <span class="hud-item level-item">
+        <span class="hud-label">level</span>
+        <span class="hud-value level-value">1</span>
+      </span>
+    `;
+    const game = new Game(canvas);
+    game.gameSong.muted = true;
+    game.score = 18;
+
+    game['checkLevelUp']();
+
+    expect(document.querySelector('.level-value')!.textContent).toBe('2');
+    expect(document.querySelector('.level-item')!.classList.contains('blink')).toBe(true);
   });
 
   it('announces level 1 at game start', () => {
