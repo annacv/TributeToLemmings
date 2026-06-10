@@ -16,6 +16,7 @@ logs/
 .claude/
 openspec/
 assets/images/backgrounds/refs/
+CLAUDE.md
 
 # env
 .env

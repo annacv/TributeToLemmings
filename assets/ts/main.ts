@@ -1,12 +1,13 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
-import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GROUND_EROSION_COLLAPSE_SVG, GAME_BACKGROUND_SVG } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GAME_BACKGROUND_SVG, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
-const TBC_FALL_DURATION_MS = 700;
-const TBC_SCROLL_DURATION_MS = 1500;
+const TBC_FALL_DURATION_MS = 500;
+const TBC_SCROLL_DURATION_MS = 1700;
+const TBC_REST_FADE_MS = 500;
 const TBC_TRANSITION_MS = 3000;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
@@ -243,10 +244,12 @@ function main(): void {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    const groundImg = new Image();
-    groundImg.src = GROUND_EROSION_COLLAPSE_SVG;
     const bgImg = new Image();
     bgImg.src = GAME_BACKGROUND_SVG;
+    /* The collapse shaft (erosion + interspersed hole frames) is baked into this
+       single strip via svg defs/use — no per-row compositing in JS */
+    const undergroundImg = new Image();
+    undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 
     if (localStorage.getItem('audio-muted') !== '1') {
       new Audio(FALLING_SFX).play();
@@ -256,46 +259,52 @@ function main(): void {
     const HOLE_CENTER_Y_FRAC = 0.435;
     const GROUND_EROSION_ASPECT = 299 / 400;
     const BG_ZOOM = 1.5;
-    /* Stacked downward from the grass, overlapping into one continuous collapse shaft */
-    const EROSION_FRAME_COUNT = 3;
-    const EROSION_OVERLAP = 0.48; // fraction of frame height shared with the frame above
+    const BG_CROP_TOP_FRAC = 547 / 800;
+    const bgSize = size * BG_ZOOM;
+    const surfaceBottomY = bgSize * (1 - BG_CROP_TOP_FRAC);
+    /* Mirrors the shaft geometry baked into background-underground.svg (slot top
+       at canvas 0.02, erosion slot 0.85 wide) so the lemming lands in row 0's hole */
     const erosionFrameW = size * 0.85;
     const erosionFrameH = erosionFrameW * GROUND_EROSION_ASPECT;
-    const erosionStep = erosionFrameH * (1 - EROSION_OVERLAP);
-    const erosionStackTop = size * 0.5;
-    const SCROLL_DISTANCE = size * 1.9;
+    const erosionStackTop = size * 0.02;
+    const SCROLL_DISTANCE = surfaceBottomY + 2 * size;
     const holeCenterY = erosionStackTop + erosionFrameH * HOLE_CENTER_Y_FRAC;
     const holeX = size * 0.5 - lemmingSize / 2;
     const holeY = holeCenterY - lemmingSize / 2;
 
-    /* Debris anchored in world space below the ground; streams past during the scroll */
+    /* Debris anchored in world space below the ground; streams past during the
+       scroll but never comes to rest inside the final dark frame */
     const specks = Array.from({ length: 26 }, () => ({
       x: Math.random() * size,
-      y: size * 1.05 + Math.random() * (SCROLL_DISTANCE + size),
+      y: size * 1.05 + Math.random() * (SCROLL_DISTANCE - size * 1.6),
       w: 2 + Math.random() * 3,
       h: 6 + Math.random() * 8,
     }));
 
-    function drawScene(lemmingY: number, scrollY: number): void {
+    function drawScene(lemmingY: number, scrollY: number, veilAlpha: number): void {
       ctx.clearRect(0, 0, size, size);
       if (bgImg.complete && bgImg.naturalWidth > 0) {
-        const bgSize = size * BG_ZOOM;
-        ctx.drawImage(bgImg, (size - bgSize) / 2, size - bgSize - scrollY, bgSize, bgSize);
+        ctx.drawImage(bgImg, (size - bgSize) / 2, -bgSize * BG_CROP_TOP_FRAC - scrollY, bgSize, bgSize);
+      }
+      /* One draw for everything below the sky: shaft, dirt, veils, dark, hints.
+         The strip's top half-canvas is transparent except the shaft, so it
+         overlays the grass without hiding it. */
+      if (undergroundImg.complete && undergroundImg.naturalWidth > 0) {
+        ctx.drawImage(undergroundImg, 0, surfaceBottomY - size * 0.5 - scrollY, size, size * 3.5);
       }
       if (scrollY > 0) {
-        ctx.fillStyle = '#1c1610';
-        ctx.fillRect(0, Math.max(0, size - scrollY), size, size);
         ctx.fillStyle = '#3a3426';
         for (const speck of specks) {
           const speckY = speck.y - scrollY;
           if (speckY > -speck.h && speckY < size) ctx.fillRect(speck.x, speckY, speck.w, speck.h);
         }
       }
-      if (groundImg.complete && groundImg.naturalWidth > 0) {
-        const frameX = (size - erosionFrameW) / 2;
-        for (let i = 0; i < EROSION_FRAME_COUNT; i++) {
-          ctx.drawImage(groundImg, frameX, erosionStackTop + i * erosionStep - scrollY, erosionFrameW, erosionFrameH);
-        }
+      /* Rest-beat veil: lifts after the camera settles so the hint fragments breathe in */
+      if (veilAlpha > 0) {
+        ctx.globalAlpha = veilAlpha;
+        ctx.fillStyle = '#0d062b';
+        ctx.fillRect(0, 0, size, size);
+        ctx.globalAlpha = 1;
       }
       ctx.save();
       ctx.translate(holeX, lemmingY);
@@ -309,23 +318,42 @@ function main(): void {
       const fallT = Math.min(elapsed / TBC_FALL_DURATION_MS, 1);
       const lemmingY = -lemmingSize + fallT * (holeY + lemmingSize);
       const scrollT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS, 0) / TBC_SCROLL_DURATION_MS, 1);
-      const scrollY = scrollT * scrollT * SCROLL_DISTANCE;
-      drawScene(lemmingY, scrollY);
+      /* easeInOutQuart: accelerate into the dark, brake into the final frame */
+      const eased = scrollT < 0.5
+        ? 8 * scrollT ** 4
+        : 1 - (-2 * scrollT + 2) ** 4 / 2;
+      const scrollY = eased * SCROLL_DISTANCE;
+      const restT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS - TBC_SCROLL_DURATION_MS, 0) / TBC_REST_FADE_MS, 1);
+      /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
+      const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
+      drawScene(lemmingY, scrollY, veilAlpha);
       if (scrollT >= 0.45) screen.querySelector('.tbc-overlay')?.classList.add('show');
-      if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS) {
+      if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS + TBC_REST_FADE_MS) {
         requestAnimationFrame((n) => animate(startTime, n));
       }
     }
 
-    const start = () => requestAnimationFrame((now) => animate(now, now));
-    let pendingImgs = [groundImg, bgImg].filter((img) => !img.complete);
-    if (pendingImgs.length === 0) start();
-    else pendingImgs.forEach((img) => img.addEventListener('load', () => {
+    /* The game-over timer arms only once the animation starts, so a slow image
+       load can't tear the screen down mid-scroll */
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      requestAnimationFrame((now) => animate(now, now));
+      setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
+    };
+    let pendingImgs = [bgImg, undergroundImg].filter((img) => !img.complete);
+    const onImgSettled = (img: HTMLImageElement) => {
       pendingImgs = pendingImgs.filter((i) => i !== img);
       if (pendingImgs.length === 0) start();
-    }, { once: true }));
-
-    setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
+    };
+    if (pendingImgs.length === 0) start();
+    else pendingImgs.forEach((img) => {
+      /* 'error' counts as settled too — drawScene guards per image, and a missing
+         layer must not stall the whole transition */
+      img.addEventListener('load', () => onImgSettled(img), { once: true });
+      img.addEventListener('error', () => onImgSettled(img), { once: true });
+    });
   }
 
   function createGameOverScreen(score: number): void {

@@ -711,7 +711,7 @@ canvas {
 
 .tbc-overlay {
   position: absolute;
-  inset: 1.5rem 1.5rem calc(1.5rem + 15%);
+  inset: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -744,7 +744,7 @@ canvas {
 
 @media (max-width: 767px) {
   .tbc-overlay {
-    inset: 0.25rem 0.25rem calc(0.25rem + 10%);
+    inset: 0.25rem;
   }
 }
 
