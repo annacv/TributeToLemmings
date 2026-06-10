@@ -13,12 +13,16 @@ function makeGameWithPlayer(canvas: HTMLCanvasElement) {
   return game as Game & { player: Player };
 }
 
-function placeHitBomb(game: Game, dx = 50): Bomb {
+function placeBomb(game: Game, dx: number, dy = 390): Bomb {
   const bomb = new Bomb(game.canvas, dx);
-  bomb.dy = 390;
+  bomb.dy = dy;
   game.bombs.push(bomb);
   game.checkCollisions();
   return bomb;
+}
+
+function placeHitBomb(game: Game, dx = 50): Bomb {
+  return placeBomb(game, dx);
 }
 
 function runFrames(game: Game, frames = 6): void {
@@ -100,6 +104,54 @@ describe('Game', () => {
 
     expect(game.player.lives).toBe(1);
     expect(game.bombs).toHaveLength(0);
+  });
+
+  /* Hurtbox geometry on the 468×468 test canvas: player box (40,380) 50×50
+     → hurtbox x 48–82, y 385–430; bomb 28×32 with the right 6px (spark) trimmed
+     → dangerous span dx..dx+22. */
+
+  it('does not hit when a bomb only grazes the empty corner beside the head', () => {
+    const game = makeGameWithPlayer(canvas);
+    // Bomb body starts at 83, just past the hurtbox right edge (82) but well
+    // inside the old full box (right edge 90) — was a phantom hit before.
+    const bomb = placeBomb(game, 83);
+    expect(bomb.isExploding).toBe(false);
+  });
+
+  it('does not hit when only the decorative spark overlaps the player', () => {
+    const game = makeGameWithPlayer(canvas);
+    // Bomb body ends at 25+22=47, just short of the hurtbox left edge (48);
+    // only the trimmed spark zone (47–53) reaches the player.
+    const bomb = placeBomb(game, 25);
+    expect(bomb.isExploding).toBe(false);
+  });
+
+  it('does not hit when a bomb passes just above the head', () => {
+    const game = makeGameWithPlayer(canvas);
+    // Bomb bottom at 352+32=384, just above the hurtbox top (385) but below
+    // the old full box top (380) — was a phantom hit before.
+    const bomb = placeBomb(game, 50, 352);
+    expect(bomb.isExploding).toBe(false);
+  });
+
+  it('hits exactly at the new hurtbox boundaries', () => {
+    const game = makeGameWithPlayer(canvas);
+    // Right boundary: bomb body left edge touches hurtbox right edge (82).
+    expect(placeBomb(game, 82).isExploding).toBe(true);
+    // Left boundary: bomb body right edge (26+22=48) touches hurtbox left edge.
+    expect(placeBomb(game, 26).isExploding).toBe(true);
+  });
+
+  it('collision outcome is independent of facing direction', () => {
+    // The sprite mirrors with direction but the hurtbox must not: facing
+    // left or right at the same position must give the same outcome.
+    for (const [dx, expected] of [[82, true], [83, false]] as const) {
+      for (const direction of [1, -1]) {
+        const game = makeGameWithPlayer(canvas);
+        game.player.direction = direction;
+        expect(placeBomb(game, dx).isExploding).toBe(expected);
+      }
+    }
   });
 
   it('sets isGameOver when last life is lost', () => {

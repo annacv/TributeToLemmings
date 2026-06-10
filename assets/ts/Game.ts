@@ -16,6 +16,9 @@ const LEVEL_CONFIG = [
 ] as const;
 
 const LEVEL_THRESHOLDS = [0, 18, 36];
+const PLAYER_HITBOX_INSET_X = 8;   // torso/head span x≈15–35 of 50
+const PLAYER_HITBOX_INSET_TOP = 5; // hair top starts at y≈5 of 50
+const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs never mirror
 const GROUND_TOP_FRAC = 0.71;
 const COVERAGE_COLS = 8;
 const COVERAGE_ROWS = 3;
@@ -342,15 +345,20 @@ export class Game {
     if (!this.player) return;
 
     const player = this.player;
+    const playerLeft = player.dx + PLAYER_HITBOX_INSET_X;
+    const playerRight = player.dx + player.dWidth - PLAYER_HITBOX_INSET_X;
+    const playerTop = player.dy + PLAYER_HITBOX_INSET_TOP;
+    const playerBottom = player.dy + player.dHeight;
 
     for (let i = this.bombs.length - 1; i >= 0; i--) {
       const bomb = this.bombs[i];
       if (bomb.isExploding) continue;
 
-      const rightLeft = player.dx + player.dWidth >= bomb.dx;
-      const leftRight = player.dx <= bomb.dx + bomb.dWidth;
-      const bottomTop = player.dy + player.dHeight >= bomb.dy;
-      const topBottom = player.dy <= bomb.dy + bomb.dHeight;
+      const bombRight = bomb.dx + bomb.dWidth - BOMB_HITBOX_TRIM_RIGHT;
+      const rightLeft = playerRight >= bomb.dx;
+      const leftRight = playerLeft <= bombRight;
+      const bottomTop = playerBottom >= bomb.dy;
+      const topBottom = playerTop <= bomb.dy + bomb.dHeight;
 
       if (rightLeft && leftRight && bottomTop && topBottom) {
         bomb.image.src = SPRITES.booom;
