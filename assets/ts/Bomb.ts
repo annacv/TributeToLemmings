@@ -12,7 +12,7 @@ export class Bomb {
   isExploding: boolean;
   explosionFramesLeft: number;
 
-  constructor(canvas: HTMLCanvasElement, randomX: number, speed = 1.5) {
+  constructor(canvas: HTMLCanvasElement, randomX: number, speed: number) {
     this.ctx = canvas.getContext('2d')!;
     this.image = new Image();
     this.image.src = SPRITES.bomb;
@@ -21,7 +21,7 @@ export class Bomb {
     this.dWidth = 28;
     this.dHeight = 32;
     this.direction = 1;
-    this.speed = speed;
+    this.speed = 1.5;
     this.isExploding = false;
     this.explosionFramesLeft = 0;
   }
