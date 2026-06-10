@@ -51,7 +51,7 @@ Introduce difficulty escalation and the bridge mechanic to the tunnel world.
 2. Level transition UI with visual and audio cues at each level change; the game opens by announcing "Level 1" (visual only, no SFX), echoing the per-level intros of the original Lemmings.
 3. Level-gated ground erosion: the ground becomes vulnerable only at the last level. Every miss etches a crack mark aligned with where the bomb fell, escalating in phases — light crack variants (1/2) first, heavier ones (3/4) from the fifth miss, and from the fifteenth miss each impact additionally punches a ground hole (4 variants cycling) until collapse. Before the last level, missed bombs exit the canvas harmlessly.
 4. Warning at the start of the last level: an earthquake shake and a warning sting signal the ground is now vulnerable.
-5. "Ground fully destroyed" trigger — when holes cover ~95% of the ground it collapses and transitions to the Tunnel World (Iteration V) via a `triggerTunnelWorld()` stub. Until Iteration V ships, this routes to a "TO BE CONTINUED" interstitial screen before Game Over.
+5. "Ground fully destroyed" trigger — when holes cover ~98% of the ground it collapses and transitions to the Tunnel World (Iteration V) via a `triggerTunnelWorld()` stub. Until Iteration V ships, this routes to a "TO BE CONTINUED" interstitial screen before Game Over.
 6. Score is time-based and cumulative across screens. Difficulty level resets to 1 at each new screen.
 7. Audio — level-up SFX: short ascending Lemmings DOS OST cue on each level transition; existing background track continues throughout.
 8. Audio — ground crack SFX: low rumble each time a bomb chips the ground (last level only); one-shot ground collapse sting when the ground is fully destroyed and the transition fires.
