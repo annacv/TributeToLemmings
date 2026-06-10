@@ -266,7 +266,6 @@ export class Game {
   }
 
   private drawGroundErosion(): void {
-    if (!this.erosionCtx) return; // canvas 2d context unavailable (e.g. jsdom)
     this.erosionCtx.clearRect(0, 0, this.erosionCanvas.width, this.erosionCanvas.height);
     this.drawStamps(this.holeStamps);
     this.drawStamps(this.crackStamps);

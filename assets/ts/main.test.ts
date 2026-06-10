@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { generateGuestHandle } from './main';
-import { makeCtx } from './test-helpers';
 
 interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
@@ -58,9 +57,7 @@ describe('generateGuestHandle', () => {
 
 describe('game screen keyboard wiring', () => {
   beforeAll(() => {
-    /* jsdom implements neither 2d contexts nor rAF; the mascot loop needs both */
-    HTMLCanvasElement.prototype.getContext = vi.fn(() =>
-      makeCtx()) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+    /* jsdom has no rAF; the mascot loop needs it (getContext is stubbed in test-setup) */
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
