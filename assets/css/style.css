@@ -483,7 +483,7 @@ canvas {
   padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   font-family: 'Press Start 2P', monospace;
   pointer-events: none;
   z-index: 2;
