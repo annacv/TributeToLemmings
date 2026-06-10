@@ -137,12 +137,13 @@ export class Player {
 
   move(): void {
     this.dx = this.dx + this.direction * this.speed;
-    if (
-      this.dx + this.direction * this.speed === 0 ||
-      this.dx + this.direction * this.speed >= this.canvas.width - this.dWidth - 1
-    ) {
+    const maxX = this.canvas.width - this.dWidth - 1;
+    const next = this.dx + this.direction * this.speed;
+
+    if (next <= 0 || next >= maxX) {
       this.direction = -this.direction;
     }
+    this.dx = Math.max(0, Math.min(this.dx, maxX));
   }
 
   triggerBlink(livesSnapshot?: number): void {
