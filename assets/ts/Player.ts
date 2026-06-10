@@ -80,7 +80,7 @@ function getHairLevel(frameCount: number): number {
   return 1;
 }
 
-function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: string, hairLevel: number): void {
+export function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: string, hairLevel: number): void {
   const { body, hair, hairExtras, clothes } = getPaths();
   ctx.fillStyle = bodyColor;
   ctx.fill(body);
@@ -137,12 +137,13 @@ export class Player {
 
   move(): void {
     this.dx = this.dx + this.direction * this.speed;
-    if (
-      this.dx + this.direction * this.speed === 0 ||
-      this.dx + this.direction * this.speed >= this.canvas.width - this.dWidth - 1
-    ) {
+    const maxX = this.canvas.width - this.dWidth - 1;
+    const next = this.dx + this.direction * this.speed;
+
+    if (next <= 0 || next >= maxX) {
       this.direction = -this.direction;
     }
+    this.dx = Math.max(0, Math.min(this.dx, maxX));
   }
 
   triggerBlink(livesSnapshot?: number): void {

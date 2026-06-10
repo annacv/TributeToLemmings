@@ -59,6 +59,30 @@ describe('Player', () => {
     expect(player.direction).toBe(1);
   });
 
+  it('does not walk off the left edge when ← is pressed right after a left-wall bounce', () => {
+    const player = new Player(canvas);
+    player.dx = 1;
+    player.setDirection(1);
+    player.setDirection(-1);
+    for (let i = 0; i < 10; i++) {
+      player.move();
+      expect(player.dx).toBeGreaterThanOrEqual(0);
+    }
+    expect(player.direction).toBe(1);
+  });
+
+  it('does not walk off the right edge when → is pressed right after a right-wall bounce', () => {
+    const player = new Player(canvas);
+    player.dx = 348;
+    player.setDirection(-1);
+    player.setDirection(1);
+    for (let i = 0; i < 10; i++) {
+      player.move();
+      expect(player.dx).toBeLessThanOrEqual(349);
+    }
+    expect(player.direction).toBe(-1);
+  });
+
   it('triggerBlink sets blinkFramesLeft', () => {
     const player = new Player(canvas);
     player.triggerBlink();

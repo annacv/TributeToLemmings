@@ -110,7 +110,8 @@ main {
 
 /* Play and game-over screens */
 .section-container.play,
-.section-container.game-over-screen {
+.section-container.game-over-screen,
+.section-container.to-be-continued-screen {
   max-width: none;
   padding: 1.5rem 1rem 2rem;
   justify-content: center;
@@ -122,7 +123,8 @@ main {
 
 @media (min-width: 768px) {
   .section-container.play,
-  .section-container.game-over-screen {
+  .section-container.game-over-screen,
+  .section-container.to-be-continued-screen {
     padding: 2rem 1rem 2.5rem;
     justify-content: center;
   }
@@ -130,7 +132,8 @@ main {
 
 @media (min-width: 1024px) {
   .section-container.play,
-  .section-container.game-over-screen {
+  .section-container.game-over-screen,
+  .section-container.to-be-continued-screen {
     max-width: none;
   }
 }
@@ -282,6 +285,17 @@ canvas {
   background-size: cover;
 }
 
+@keyframes shake-light {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 1px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-1px, 1px); }
+}
+
+.game-canvas.shake-light {
+  animation: shake-light 0.2s ease-in-out;
+}
+
 .game-over-canvas {
   background-image: url("../images/backgrounds/background-gameover.svg");
   background-position: 50% 50%;
@@ -339,6 +353,43 @@ canvas {
   border-radius: 0.25rem;
 }
 
+.crt-frame::after {
+  content: '';
+  position: absolute;
+  inset: 1.125rem 1.375rem 1.625rem;
+  background: var(--text-white);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 0.25rem;
+}
+
+.crt-frame.flash-active::after {
+  animation: screen-flash 0.4s ease-out;
+}
+
+@keyframes screen-flash {
+  0%   { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+@keyframes shake-quake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-6px, 4px); }
+  20% { transform: translate(5px, -5px); }
+  30% { transform: translate(-5px, 5px); }
+  40% { transform: translate(6px, -3px); }
+  50% { transform: translate(-4px, 4px); }
+  60% { transform: translate(5px, -6px); }
+  70% { transform: translate(-3px, 3px); }
+  80% { transform: translate(4px, -4px); }
+  90% { transform: translate(-3px, 2px); }
+}
+
+.crt-frame.shake-quake {
+  animation: shake-quake 0.6s ease-in-out;
+}
+
 @media (max-width: 767px) {
   .crt-frame {
     padding: 0;
@@ -347,7 +398,8 @@ canvas {
     box-shadow: none;
   }
 
-  .crt-frame::before {
+  .crt-frame::before,
+  .crt-frame::after {
     inset: 0;
   }
 }
@@ -385,6 +437,42 @@ canvas {
   }
 }
 
+/* ---- LEVEL UP BANNER ---- */
+
+.level-up-banner {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  margin: 0;
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(1rem, 5vw, 1.75rem);
+  color: var(--text-white);
+  text-align: center;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow:
+    3px 3px 0 var(--brand),
+    -1px -1px 0 var(--brand),
+    0 0 1.25rem rgba(var(--brand-rgb), 0.6);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+  white-space: nowrap;
+}
+
+.level-up-banner.show {
+  animation: level-up-pop 1.2s ease-out;
+}
+
+@keyframes level-up-pop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  25%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
 /* ---- GAME HUD ---- */
 
 .game-hud {
@@ -418,10 +506,23 @@ canvas {
   color: var(--brand);
 }
 
-.hud-lives {
+.hud-item.blink {
+  animation: hud-blink 0.4s ease-in-out 3;
+}
+
+@keyframes hud-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+.hud-lives, .hud-score {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.hud-score {
+  align-items: flex-end;
 }
 
 .lives-icons {
@@ -599,6 +700,51 @@ canvas {
     left: 0.25rem;
     right: 0.25rem;
     bottom: 0.25rem;
+  }
+}
+
+/* ---- TO BE CONTINUED TRANSITION ---- */
+
+.tbc-canvas {
+  background-color: var(--bg-black);
+}
+
+.tbc-overlay {
+  position: absolute;
+  inset: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  pointer-events: none;
+  z-index: 2;
+  text-align: center;
+  opacity: 0;
+}
+
+.tbc-overlay.show {
+  animation: tbc-fade-in 0.6s ease-out forwards;
+}
+
+@keyframes tbc-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.tbc-line {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(.5rem, 1.8vw, 1rem);
+  color: var(--brand);
+  line-height: 1.8;
+  letter-spacing: .2em;
+  margin: 0;
+  text-shadow: 2px 2px 0 var(--bg-black);
+}
+
+@media (max-width: 767px) {
+  .tbc-overlay {
+    inset: 0.25rem;
   }
 }
 

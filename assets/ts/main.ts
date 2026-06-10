@@ -1,10 +1,14 @@
 import { Game } from './Game';
-import { drawLemmingMascot } from './Player';
+import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
-import { DIE_SFX, RANKING_MUSIC } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
+const TBC_FALL_DURATION_MS = 500;
+const TBC_SCROLL_DURATION_MS = 1700;
+const TBC_REST_FADE_MS = 500;
+const TBC_TRANSITION_MS = 3000;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -35,6 +39,11 @@ function main(): void {
   const mainElement = document.querySelector('#site-main') as HTMLElement;
   let playerName = '';
   let rankingMusic: HTMLAudioElement | null = null;
+
+  /* Dev-only shortcut (?screen=tbc) to replay the interstitial; skips score submission */
+  const debugScreen = import.meta.env.DEV
+    ? new URLSearchParams(window.location.search).get('screen')
+    : null;
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -157,18 +166,25 @@ function main(): void {
       <section class="section-container play">
         <div class="crt-frame">
           <canvas class="game-canvas"></canvas>
+          <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
-              <span class="hud-item">
+              <span class="hud-item lives-item">
                 <span class="hud-label">lives</span>
                 <span class="hud-value lives-value">3</span>
               </span>
               <div class="lives-icons"></div>
             </div>
-            <span class="hud-item">
-              <span class="hud-value seconds-value">0</span>
-              <span class="hud-label">sec</span>
-            </span>
+            <div class="hud-score">
+              <span class="hud-item">
+                <span class="hud-value seconds-value">0</span>
+                <span class="hud-label">sec</span>
+              </span>
+              <span class="hud-item level-item">
+                <span class="hud-label">level</span>
+                <span class="hud-value level-value">1</span>
+              </span>
+            </div>
           </div>
           <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
@@ -186,6 +202,7 @@ function main(): void {
 
     const game = new Game(canvas);
     game.gameOverCallback(createGameOverScreen);
+    game.tunnelWorldCallback(createToBeContiniuedScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -207,6 +224,130 @@ function main(): void {
     });
 
     showInfoModal(() => game.startGame());
+  }
+
+  function createToBeContiniuedScreen(score: number): void {
+    const size = getCanvasSize();
+    const screen = buildDom(`
+      <section class="section-container to-be-continued-screen">
+        <div class="crt-frame">
+          <canvas class="tbc-canvas"></canvas>
+          <div class="tbc-overlay">
+            <p class="tbc-line">TO BE CONTINUED...</p>
+          </div>
+        </div>
+      </section>
+    `);
+
+    const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    /* The surface backdrop and the collapse shaft (erosion + interspersed hole
+       frames) are baked into this single strip via svg defs/use — no per-row
+       compositing in JS */
+    const undergroundImg = new Image();
+    undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
+
+    if (localStorage.getItem('audio-muted') !== '1') {
+      new Audio(FALLING_SFX).play();
+    }
+
+    const lemmingSize = size * 0.14;
+    const HOLE_CENTER_Y_FRAC = 0.435;
+    const GROUND_EROSION_ASPECT = 299 / 400;
+    const BG_ZOOM = 1.5;
+    const BG_CROP_TOP_FRAC = 547 / 800;
+    const bgSize = size * BG_ZOOM;
+    const surfaceBottomY = bgSize * (1 - BG_CROP_TOP_FRAC);
+    /* Mirrors the shaft geometry baked into background-underground.svg (slot top
+       at canvas 0.02, erosion slot 0.85 wide) so the lemming lands in row 0's hole */
+    const erosionFrameW = size * 0.85;
+    const erosionFrameH = erosionFrameW * GROUND_EROSION_ASPECT;
+    const erosionStackTop = size * 0.02;
+    const SCROLL_DISTANCE = surfaceBottomY + 2 * size;
+    const holeCenterY = erosionStackTop + erosionFrameH * HOLE_CENTER_Y_FRAC;
+    const holeX = size * 0.5 - lemmingSize / 2;
+    const holeY = holeCenterY - lemmingSize / 2;
+
+    /* Debris anchored in world space below the ground; streams past during the
+       scroll but never comes to rest inside the final dark frame */
+    const specks = Array.from({ length: 26 }, () => ({
+      x: Math.random() * size,
+      y: size * 1.05 + Math.random() * (SCROLL_DISTANCE - size * 1.6),
+      w: 2 + Math.random() * 3,
+      h: 6 + Math.random() * 8,
+    }));
+
+    function drawScene(lemmingY: number, scrollY: number, veilAlpha: number): void {
+      ctx.clearRect(0, 0, size, size);
+      /* One draw for the whole world: surface, shaft, dirt, veils, dark, hints */
+      if (undergroundImg.complete && undergroundImg.naturalWidth > 0) {
+        ctx.drawImage(undergroundImg, 0, surfaceBottomY - size * 0.5 - scrollY, size, size * 3.5);
+      }
+      if (scrollY > 0) {
+        ctx.fillStyle = '#3a3426';
+        for (const speck of specks) {
+          const speckY = speck.y - scrollY;
+          if (speckY > -speck.h && speckY < size) ctx.fillRect(speck.x, speckY, speck.w, speck.h);
+        }
+      }
+      /* Rest-beat veil: lifts after the camera settles so the hint fragments breathe in */
+      if (veilAlpha > 0) {
+        ctx.globalAlpha = veilAlpha;
+        ctx.fillStyle = '#0d062b';
+        ctx.fillRect(0, 0, size, size);
+        ctx.globalAlpha = 1;
+      }
+      ctx.save();
+      ctx.translate(holeX, lemmingY);
+      ctx.scale(lemmingSize / 142, lemmingSize / 142);
+      drawLemmingShape(ctx, '#FFFFFF', scrollY > 0 ? 4 : 0);
+      ctx.restore();
+    }
+
+    function animate(startTime: number, now: number): void {
+      const elapsed = now - startTime;
+      const fallT = Math.min(elapsed / TBC_FALL_DURATION_MS, 1);
+      const lemmingY = -lemmingSize + fallT * (holeY + lemmingSize);
+      const scrollT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS, 0) / TBC_SCROLL_DURATION_MS, 1);
+      /* easeInOutQuart: accelerate into the dark, brake into the final frame */
+      const eased = scrollT < 0.5
+        ? 8 * scrollT ** 4
+        : 1 - (-2 * scrollT + 2) ** 4 / 2;
+      const scrollY = eased * SCROLL_DISTANCE;
+      const restT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS - TBC_SCROLL_DURATION_MS, 0) / TBC_REST_FADE_MS, 1);
+      /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
+      const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
+      drawScene(lemmingY, scrollY, veilAlpha);
+      if (scrollT >= 0.45) screen.querySelector('.tbc-overlay')?.classList.add('show');
+      if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS + TBC_REST_FADE_MS) {
+        requestAnimationFrame((n) => animate(startTime, n));
+      }
+    }
+
+    /* The game-over timer arms only once the animation starts, so a slow image
+       load can't tear the screen down mid-scroll */
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      requestAnimationFrame((now) => animate(now, now));
+      setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
+    };
+    let pendingImgs = [undergroundImg].filter((img) => !img.complete);
+    const onImgSettled = (img: HTMLImageElement) => {
+      pendingImgs = pendingImgs.filter((i) => i !== img);
+      if (pendingImgs.length === 0) start();
+    };
+    if (pendingImgs.length === 0) start();
+    else pendingImgs.forEach((img) => {
+      /* 'error' counts as settled too — drawScene guards per image, and a missing
+         layer must not stall the whole transition */
+      img.addEventListener('load', () => onImgSettled(img), { once: true });
+      img.addEventListener('error', () => onImgSettled(img), { once: true });
+    });
   }
 
   function createGameOverScreen(score: number): void {
@@ -242,9 +383,11 @@ function main(): void {
       dieSfx.play();
     }
 
-    const submission: Promise<{ error: boolean; docId: string | null }> = submitScore(playerName, score)
-      .then((docId) => ({ error: false, docId }))
-      .catch(() => ({ error: true, docId: null }));
+    const submission: Promise<{ error: boolean; docId: string | null }> = debugScreen
+      ? Promise.resolve({ error: false, docId: null })
+      : submitScore(playerName, score)
+        .then((docId) => ({ error: false, docId }))
+        .catch(() => ({ error: true, docId: null }));
 
     setTimeout(() => createRankingScreen(score, submission), GAME_OVER_TRANSITION_MS);
   }
@@ -397,7 +540,8 @@ function main(): void {
     }
   }
 
-  createStartScreen();
+  if (debugScreen === 'tbc') createToBeContiniuedScreen(42);
+  else createStartScreen();
 }
 
 window.addEventListener('load', main);
