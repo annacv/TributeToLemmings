@@ -11,7 +11,6 @@ import bangSfxWav from '../sounds/BANG.WAV';
 import tentonSfxWav from '../sounds/TENTON.WAV';
 import fallingSfxMp3 from '../sounds/intro-falling-sound-effect.mp3';
 import groundErosionSvg from '../images/backgrounds/ground-erosion.svg';
-import backgroundGameSvg from '../images/backgrounds/background-game.svg';
 import backgroundUndergroundSvg from '../images/backgrounds/background-underground.svg';
 import crackMark1Svg from '../images/backgrounds/crack-mark-1.svg';
 import crackMark2Svg from '../images/backgrounds/crack-mark-2.svg';
@@ -38,7 +37,6 @@ export const BANG_SFX = bangSfxWav;
 export const TENTON_SFX = tentonSfxWav;
 export const FALLING_SFX = fallingSfxMp3;
 export const GROUND_EROSION_COLLAPSE_SVG = groundErosionSvg;
-export const GAME_BACKGROUND_SVG = backgroundGameSvg;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
 
 export const CRACK_MARK_SVGS = [

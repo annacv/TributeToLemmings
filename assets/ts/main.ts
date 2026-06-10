@@ -1,7 +1,7 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
-import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GAME_BACKGROUND_SVG, UNDERGROUND_BACKGROUND_SVG } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
@@ -244,10 +244,9 @@ function main(): void {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    const bgImg = new Image();
-    bgImg.src = GAME_BACKGROUND_SVG;
-    /* The collapse shaft (erosion + interspersed hole frames) is baked into this
-       single strip via svg defs/use — no per-row compositing in JS */
+    /* The surface backdrop and the collapse shaft (erosion + interspersed hole
+       frames) are baked into this single strip via svg defs/use — no per-row
+       compositing in JS */
     const undergroundImg = new Image();
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 
@@ -283,12 +282,7 @@ function main(): void {
 
     function drawScene(lemmingY: number, scrollY: number, veilAlpha: number): void {
       ctx.clearRect(0, 0, size, size);
-      if (bgImg.complete && bgImg.naturalWidth > 0) {
-        ctx.drawImage(bgImg, (size - bgSize) / 2, -bgSize * BG_CROP_TOP_FRAC - scrollY, bgSize, bgSize);
-      }
-      /* One draw for everything below the sky: shaft, dirt, veils, dark, hints.
-         The strip's top half-canvas is transparent except the shaft, so it
-         overlays the grass without hiding it. */
+      /* One draw for the whole world: surface, shaft, dirt, veils, dark, hints */
       if (undergroundImg.complete && undergroundImg.naturalWidth > 0) {
         ctx.drawImage(undergroundImg, 0, surfaceBottomY - size * 0.5 - scrollY, size, size * 3.5);
       }
@@ -342,7 +336,7 @@ function main(): void {
       requestAnimationFrame((now) => animate(now, now));
       setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
     };
-    let pendingImgs = [bgImg, undergroundImg].filter((img) => !img.complete);
+    let pendingImgs = [undergroundImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
       pendingImgs = pendingImgs.filter((i) => i !== img);
       if (pendingImgs.length === 0) start();
