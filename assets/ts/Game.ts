@@ -3,11 +3,11 @@ import { Bomb } from './Bomb';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
-  GROUND_EROSION_SVGS,
+  CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
 } from './assets';
 
-/** ~100ms at 60fps — frames to show explosion before removal */
-const EXPLOSION_FRAMES = 6;
+
+const EXPLOSION_FRAMES = 6; // ~100ms at 60fps — frames to show explosion before removal
 
 const LEVEL_CONFIG = [
   { spawnIntervalFrames: 60,  bombSpeed: 1.2 },  // Level 1 — 1.0 s between bombs
@@ -15,30 +15,20 @@ const LEVEL_CONFIG = [
   { spawnIntervalFrames: 24,  bombSpeed: 1.8 },  // Level 3 — 0.4 s, ground erosion activates
 ] as const;
 
-const LEVEL_THRESHOLDS = [0, 18, 36]; // score (seconds) at which each level starts
-const EROSION_CAPACITY = 15;
+const LEVEL_THRESHOLDS = [0, 18, 36];
+const GROUND_TOP_FRAC = 0.71;
+const COVERAGE_COLS = 8;
+const COVERAGE_ROWS = 3;
+const COLLAPSE_COVERAGE = 0.95;
+const EARLY_CRACK_MISSES = 4;
+const LATE_CRACK_MISSES = 8;
 
-const PROGRESSIVE_HOLES = [
-  { atCount: 5,  xFrac: 0.18, yFrac: 0.78, rxFrac: 0.11,  ryFrac: 0.085 },
-  { atCount: 7,  xFrac: 0.82, yFrac: 0.78, rxFrac: 0.12,  ryFrac: 0.09 },
-  { atCount: 9,  xFrac: 0.30, yFrac: 0.88, rxFrac: 0.13,  ryFrac: 0.095 },
-  { atCount: 11, xFrac: 0.70, yFrac: 0.88, rxFrac: 0.135, ryFrac: 0.10 },
-  { atCount: 13, xFrac: 0.50, yFrac: 0.74, rxFrac: 0.14,  ryFrac: 0.105 },
-] as const;
-
-interface CrackMark {
+interface GroundStamp {
+  img: HTMLImageElement;
   x: number;
   y: number;
-  angle: number;
-  length: number;
-  jitter: number;
-}
-
-interface HoleMark {
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
+  w: number;
+  h: number;
 }
 
 export class Game {
@@ -64,9 +54,11 @@ export class Game {
   private isTunnelTransition: boolean;
   private erosionCanvas: HTMLCanvasElement;
   private erosionCtx: CanvasRenderingContext2D;
-  private erosionImgs: HTMLImageElement[];
-  private crackMarks: CrackMark[];
-  private holeMarks: HoleMark[];
+  private crackImgs: HTMLImageElement[];
+  private holeImgs: HTMLImageElement[];
+  private crackStamps: GroundStamp[];
+  private holeStamps: GroundStamp[];
+  private coveredCells: boolean[];
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -83,8 +75,9 @@ export class Game {
     this.groundErosionActive = false;
     this.erosionCounter = 0;
     this.isTunnelTransition = false;
-    this.crackMarks = [];
-    this.holeMarks = [];
+    this.crackStamps = [];
+    this.holeStamps = [];
+    this.coveredCells = new Array(COVERAGE_COLS * COVERAGE_ROWS).fill(false);
 
     this.gameSong = new Audio(GAME_SONG);
     this.bombHitSfx = new Audio(FIRE_SFX);
@@ -98,11 +91,13 @@ export class Game {
     this.erosionCanvas.height = canvas.height;
     this.erosionCtx = this.erosionCanvas.getContext('2d')!;
 
-    this.erosionImgs = (GROUND_EROSION_SVGS as readonly string[]).map((src) => {
+    const loadImgs = (srcs: readonly string[]) => srcs.map((src) => {
       const img = new Image();
       img.src = src;
       return img;
     });
+    this.crackImgs = loadImgs(CRACK_MARK_SVGS);
+    this.holeImgs = loadImgs(GROUND_HOLE_SVGS);
   }
 
   startGame(): void {
@@ -166,7 +161,6 @@ export class Game {
     }
     if (this.currentLevel === LEVEL_CONFIG.length - 1) {
       this.groundErosionActive = true;
-      this.drawGroundErosion();
       if (!this.gameSong.muted) {
         this.electricSfx.play();
       }
@@ -215,15 +209,21 @@ export class Game {
           this.bombs.splice(i, 1);
           if (this.groundErosionActive) {
             this.erosionCounter++;
-            this.addCrackMark(bomb.dx + bomb.dWidth / 2);
-            this.addProgressiveHole();
+            const impactX = bomb.dx + bomb.dWidth / 2;
+            if (this.erosionCounter <= EARLY_CRACK_MISSES) {
+              this.stampCrack(impactX, 0); // crack-mark-1/2
+            } else if (this.erosionCounter <= LATE_CRACK_MISSES) {
+              this.stampCrack(impactX, 2); // crack-mark-3/4
+            } else {
+              this.stampHole(impactX);
+            }
             this.drawGroundErosion();
             this.triggerGroundShake();
             if (!this.gameSong.muted) {
               this.bangSfx.currentTime = 0;
               this.bangSfx.play();
             }
-            if (this.erosionCounter >= EROSION_CAPACITY) {
+            if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
               this.triggerTunnelWorld();
               return;
             }
@@ -262,78 +262,71 @@ export class Game {
   }
 
   private drawGroundErosion(): void {
-    let imgIndex = 0;
-    if (this.erosionCounter >= 15) imgIndex = 3;
-    else if (this.erosionCounter >= 10) imgIndex = 2;
-    else if (this.erosionCounter >= 5) imgIndex = 1;
+    if (!this.erosionCtx) return; // canvas 2d context unavailable (e.g. jsdom)
+    this.erosionCtx.clearRect(0, 0, this.erosionCanvas.width, this.erosionCanvas.height);
+    this.drawStamps(this.holeStamps);
+    this.drawStamps(this.crackStamps);
+  }
 
-    const img = this.erosionImgs[imgIndex];
-    const render = () => {
-      this.erosionCtx.clearRect(0, 0, this.erosionCanvas.width, this.erosionCanvas.height);
-      this.erosionCtx.drawImage(img, 0, 0, this.erosionCanvas.width, this.erosionCanvas.height);
-      this.drawCrackMarks();
-      this.drawHoleMarks();
-    };
+  /** Aspect ratio (w/h) from the image's intrinsic size, so resized assets keep their shape. */
+  private static imgAspect(img: HTMLImageElement, fallback: number): number {
+    return img.naturalWidth > 0 && img.naturalHeight > 0
+      ? img.naturalWidth / img.naturalHeight
+      : fallback;
+  }
 
-    if (img.complete) {
-      render();
-    } else {
-      img.addEventListener('load', render, { once: true });
+  /** Stamps a crack mark centered under the impact point, alternating between the
+   *  two variants of the given pair (offset 0 → marks 1/2, offset 2 → marks 3/4). */
+  private stampCrack(impactX: number, variantOffset: number): void {
+    const img = this.crackImgs[variantOffset + (this.crackStamps.length % 2)];
+    const h = this.canvas.height * (0.16 + Math.random() * 0.08);
+    const w = h * Game.imgAspect(img, 1 / 3);
+    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
+    const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
+    const y = bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
+    this.crackStamps.push({ img, x, y, w, h });
+  }
+
+  /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage. */
+  private stampHole(impactX: number): void {
+    const img = this.holeImgs[this.holeStamps.length % this.holeImgs.length];
+    const w = this.canvas.width * (0.2 + Math.random() * 0.08);
+    const h = w / Game.imgAspect(img, 1 / 0.6);
+    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
+    const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
+    const y = bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
+    this.holeStamps.push({ img, x, y, w, h });
+    this.markCovered(x, y, w, h);
+  }
+
+  /** Marks every coverage-grid cell the given stamp rect touches. */
+  private markCovered(x: number, y: number, w: number, h: number): void {
+    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
+    const cellW = this.canvas.width / COVERAGE_COLS;
+    const cellH = (this.canvas.height - bandTop) / COVERAGE_ROWS;
+    const c0 = Math.max(0, Math.floor(x / cellW));
+    const c1 = Math.min(COVERAGE_COLS - 1, Math.floor((x + w) / cellW));
+    const r0 = Math.max(0, Math.floor((y - bandTop) / cellH));
+    const r1 = Math.min(COVERAGE_ROWS - 1, Math.floor((y - bandTop + h) / cellH));
+    for (let r = r0; r <= r1; r++) {
+      for (let c = c0; c <= c1; c++) {
+        this.coveredCells[r * COVERAGE_COLS + c] = true;
+      }
     }
   }
 
-  /** Adds one jagged crack mark centered under where a bomb just hit the ground. */
-  private addCrackMark(x: number): void {
-    const groundTop = this.canvas.height * 0.71;
-    const groundBottom = this.canvas.height * 0.85;
-    this.crackMarks.push({
-      x,
-      y: groundTop + Math.random() * (groundBottom - groundTop),
-      angle: (Math.random() - 0.5) * 1.4,
-      length: this.canvas.height * (0.10 + Math.random() * 0.08),
-      jitter: (Math.random() - 0.5) * this.canvas.width * 0.03,
-    });
+  /** Fraction of the ground band currently covered by hole stamps. */
+  private groundCoverage(): number {
+    let covered = 0;
+    for (const cell of this.coveredCells) if (cell) covered++;
+    return covered / this.coveredCells.length;
   }
 
-  /** Punches an extra big hole through the ground at scripted erosion counts. */
-  private addProgressiveHole(): void {
-    const hole = PROGRESSIVE_HOLES.find((h) => h.atCount === this.erosionCounter);
-    if (!hole) return;
-    this.holeMarks.push({
-      cx: this.canvas.width * hole.xFrac,
-      cy: this.canvas.height * hole.yFrac,
-      rx: this.canvas.width * hole.rxFrac,
-      ry: this.canvas.height * hole.ryFrac,
-    });
-  }
-
-  private drawCrackMarks(): void {
-    const ctx = this.erosionCtx;
-    ctx.strokeStyle = '#070503';
-    ctx.lineWidth = 4;
-    for (const crack of this.crackMarks) {
-      const dx = Math.sin(crack.angle) * crack.length;
-      const dy = Math.cos(crack.angle) * crack.length;
-      ctx.beginPath();
-      ctx.moveTo(crack.x, crack.y);
-      ctx.lineTo(crack.x + dx * 0.5 + crack.jitter, crack.y + dy * 0.5);
-      ctx.lineTo(crack.x + dx, crack.y + dy);
-      ctx.stroke();
-    }
-  }
-
-  private drawHoleMarks(): void {
-    const ctx = this.erosionCtx;
-    for (const hole of this.holeMarks) {
-      ctx.fillStyle = '#020208';
-      ctx.beginPath();
-      ctx.ellipse(hole.cx, hole.cy, hole.rx, hole.ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(1, 1, 5, 0.7)';
-      ctx.beginPath();
-      ctx.ellipse(hole.cx, hole.cy, hole.rx * 0.65, hole.ry * 0.65, 0, 0, Math.PI * 2);
-      ctx.fill();
+  private drawStamps(stamps: GroundStamp[]): void {
+    for (const stamp of stamps) {
+      if (stamp.img.complete) {
+        this.erosionCtx.drawImage(stamp.img, stamp.x, stamp.y, stamp.w, stamp.h);
+      }
     }
   }
 

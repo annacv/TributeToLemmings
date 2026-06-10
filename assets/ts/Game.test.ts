@@ -288,6 +288,16 @@ describe('Game — ground erosion', () => {
     expect(game.erosionCounter).toBe(0);
   });
 
+  it('does not stamp cracks or holes while erosion is inactive', () => {
+    const game = makeGame();
+    const bomb = new Bomb(canvas, 100);
+    bomb.dy = canvas.height + 1;
+    game.bombs.push(bomb);
+    game.update();
+    expect(game['crackStamps']).toHaveLength(0);
+    expect(game['holeStamps']).toHaveLength(0);
+  });
+
   it('increments erosionCounter each time a bomb exits at level 3', () => {
     const game = makeGame();
     game.groundErosionActive = true;
@@ -338,18 +348,19 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('adds a crack mark for each bomb that hits the ground', () => {
+  it('adds a crack stamp for each bomb that hits the ground', () => {
     const game = makeGame();
     dropBomb(game);
-    expect(game['crackMarks']).toHaveLength(1);
+    expect(game['crackStamps']).toHaveLength(1);
     dropBomb(game);
-    expect(game['crackMarks']).toHaveLength(2);
+    expect(game['crackStamps']).toHaveLength(2);
   });
 
-  it('centers the crack mark under the bomb that fell', () => {
+  it('centers the crack stamp under the bomb that fell', () => {
     const game = makeGame();
     const bomb = dropBomb(game, 100);
-    expect(game['crackMarks'][0].x).toBe(100 + bomb.dWidth / 2);
+    const stamp = game['crackStamps'][0];
+    expect(stamp.x + stamp.w / 2).toBeCloseTo(100 + bomb.dWidth / 2);
   });
 
   it('triggers a light shake on the canvas for each ground hit', () => {
@@ -358,37 +369,57 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
     expect(canvas.classList.contains('shake-light')).toBe(true);
   });
 
-  it('adds progressive holes at erosion counts 5, 7, 9, 11 and 13', () => {
+  it('stamps only crack-mark-1/2 during the first four misses', () => {
     const game = makeGame();
     for (let i = 0; i < 4; i++) dropBomb(game);
-    expect(game['holeMarks']).toHaveLength(0);
+    const cracks = game['crackStamps'];
+    expect(cracks).toHaveLength(4);
+    expect(game['holeStamps']).toHaveLength(0);
+    expect(cracks[0].img).toBe(game['crackImgs'][0]);
+    expect(cracks[1].img).toBe(game['crackImgs'][1]);
+    expect(cracks[2].img).toBe(game['crackImgs'][0]);
+    expect(cracks[3].img).toBe(game['crackImgs'][1]);
+  });
 
-    dropBomb(game); // 5th hit
-    expect(game['holeMarks']).toHaveLength(1);
+  it('stamps only crack-mark-3/4 during misses five to eight', () => {
+    const game = makeGame();
+    for (let i = 0; i < 8; i++) dropBomb(game);
+    const cracks = game['crackStamps'];
+    expect(cracks).toHaveLength(8);
+    expect(game['holeStamps']).toHaveLength(0);
+    expect(cracks[4].img).toBe(game['crackImgs'][2]);
+    expect(cracks[5].img).toBe(game['crackImgs'][3]);
+    expect(cracks[6].img).toBe(game['crackImgs'][2]);
+    expect(cracks[7].img).toBe(game['crackImgs'][3]);
+  });
 
-    dropBomb(game); // 6th hit
-    expect(game['holeMarks']).toHaveLength(1);
+  it('stamps holes (cycling all four variants) from the ninth miss on', () => {
+    const game = makeGame();
+    for (let i = 0; i < 13; i++) dropBomb(game);
+    const holes = game['holeStamps'];
+    expect(game['crackStamps']).toHaveLength(8);
+    expect(holes).toHaveLength(5);
+    expect(holes[0].img).not.toBe(holes[1].img);
+    expect(holes[4].img).toBe(holes[0].img);
+  });
 
-    dropBomb(game); // 7th hit
-    expect(game['holeMarks']).toHaveLength(2);
+  it('keeps stamps inside the ground band', () => {
+    const game = makeGame();
+    for (let i = 0; i < 10; i++) dropBomb(game, i % 2 === 0 ? 0 : canvas.width - 10);
+    for (const stamp of [...game['crackStamps'], ...game['holeStamps']]) {
+      expect(stamp.x).toBeGreaterThanOrEqual(0);
+      expect(stamp.x + stamp.w).toBeLessThanOrEqual(canvas.width);
+      expect(stamp.y).toBeGreaterThanOrEqual(canvas.height * 0.71);
+      expect(stamp.y + stamp.h).toBeLessThanOrEqual(canvas.height);
+    }
+  });
 
-    dropBomb(game); // 8th hit
-    expect(game['holeMarks']).toHaveLength(2);
-
-    dropBomb(game); // 9th hit
-    expect(game['holeMarks']).toHaveLength(3);
-
-    dropBomb(game); // 10th hit
-    expect(game['holeMarks']).toHaveLength(3);
-
-    dropBomb(game); // 11th hit
-    expect(game['holeMarks']).toHaveLength(4);
-
-    dropBomb(game); // 12th hit
-    expect(game['holeMarks']).toHaveLength(4);
-
-    dropBomb(game); // 13th hit
-    expect(game['holeMarks']).toHaveLength(5);
+  it('grows ground coverage once holes start landing', () => {
+    const game = makeGame();
+    for (let i = 0; i < 8; i++) dropBomb(game);
+    expect(game['groundCoverage']()).toBe(0);
+    dropBomb(game); // 9th miss: first hole
+    expect(game['groundCoverage']()).toBeGreaterThan(0);
   });
 });
 
@@ -397,29 +428,29 @@ describe('Game — erosion canvas drawing', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('strokes a jagged line for each crack mark', () => {
+  it('draws each loaded stamp onto the erosion canvas', () => {
     const game = new Game(canvas);
     const ctx = makeCtx();
     game['erosionCtx'] = ctx as unknown as CanvasRenderingContext2D;
-    game['crackMarks'] = [{ x: 100, y: 350, angle: 0.2, length: 30, jitter: 2 }];
+    const img = { complete: true } as HTMLImageElement;
+    game['crackStamps'] = [{ img, x: 100, y: 350, w: 30, h: 90 }];
 
-    game['drawCrackMarks']();
+    game['drawStamps'](game['crackStamps']);
 
-    expect(ctx.beginPath).toHaveBeenCalledTimes(1);
-    expect(ctx.moveTo).toHaveBeenCalledWith(100, 350);
-    expect(ctx.stroke).toHaveBeenCalledTimes(1);
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    expect(ctx.drawImage).toHaveBeenCalledWith(img, 100, 350, 30, 90);
   });
 
-  it('fills a void and an inner shadow ellipse for each hole mark', () => {
+  it('skips stamps whose image has not loaded yet', () => {
     const game = new Game(canvas);
     const ctx = makeCtx();
     game['erosionCtx'] = ctx as unknown as CanvasRenderingContext2D;
-    game['holeMarks'] = [{ cx: 200, cy: 380, rx: 30, ry: 24 }];
+    const img = { complete: false } as HTMLImageElement;
+    game['holeStamps'] = [{ img, x: 50, y: 360, w: 80, h: 48 }];
 
-    game['drawHoleMarks']();
+    game['drawStamps'](game['holeStamps']);
 
-    expect(ctx.ellipse).toHaveBeenCalledTimes(2);
-    expect(ctx.fill).toHaveBeenCalledTimes(2);
+    expect(ctx.drawImage).not.toHaveBeenCalled();
   });
 });
 
@@ -445,7 +476,7 @@ describe('Game — tunnel world transition', () => {
 
   it('sets isGameOver on tunnel transition', () => {
     const game = makeGame();
-    game.erosionCounter = 14;
+    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -455,7 +486,7 @@ describe('Game — tunnel world transition', () => {
 
   it('sets isTunnelTransition flag to prevent onGameOver firing', () => {
     const game = makeGame();
-    game.erosionCounter = 14;
+    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -469,7 +500,7 @@ describe('Game — tunnel world transition', () => {
     const gameOverCb = vi.fn();
     game.tunnelWorldCallback(tunnelCb);
     game.gameOverCallback(gameOverCb);
-    game.erosionCounter = 14;
+    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
 
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
@@ -484,7 +515,7 @@ describe('Game — tunnel world transition', () => {
     const game = makeGame();
     const gameOverCb = vi.fn();
     game.gameOverCallback(gameOverCb);
-    game.erosionCounter = 14;
+    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
 
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
