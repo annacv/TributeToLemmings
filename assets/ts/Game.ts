@@ -156,18 +156,19 @@ export class Game {
     }
   }
 
+  private playSfx(sfx: HTMLAudioElement): void {
+    if (this.gameSong.muted) return;
+    sfx.currentTime = 0;
+    sfx.play();
+  }
+
   private handleLevelUp(): void {
     this.updateLevel();
     this.showLevelUpEffect();
-    if (!this.gameSong.muted) {
-      this.levelUpSfx.currentTime = 0;
-      this.levelUpSfx.play();
-    }
+    this.playSfx(this.levelUpSfx);
     if (this.currentLevel === LEVEL_CONFIG.length - 1) {
       this.groundErosionActive = true;
-      if (!this.gameSong.muted) {
-        this.electricSfx.play();
-      }
+      this.playSfx(this.electricSfx);
       this.triggerEarthquake();
     }
   }
@@ -222,12 +223,8 @@ export class Game {
             }
             this.drawGroundErosion();
             this.triggerGroundShake();
-            
-            if (!this.gameSong.muted) {
-              this.bangSfx.currentTime = 0;
-              this.bangSfx.play();
-            }
-            
+            this.playSfx(this.bangSfx);
+
             if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
               this.triggerTunnelWorld();
               return;
@@ -365,10 +362,7 @@ export class Game {
         bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionFramesLeft = EXPLOSION_FRAMES;
-        if (!this.gameSong.muted) {
-          this.bombHitSfx.currentTime = 0;
-          this.bombHitSfx.play();
-        }
+        this.playSfx(this.bombHitSfx);
       }
     }
   }
