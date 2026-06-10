@@ -1,10 +1,12 @@
 import { Game } from './Game';
-import { drawLemmingMascot } from './Player';
+import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
-import { DIE_SFX, RANKING_MUSIC } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, GROUND_EROSION_SVGS } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
+const TBC_FALL_DURATION_MS = 900;
+const TBC_TRANSITION_MS = 2600;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -157,6 +159,7 @@ function main(): void {
       <section class="section-container play">
         <div class="crt-frame">
           <canvas class="game-canvas"></canvas>
+          <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
               <span class="hud-item">
@@ -165,10 +168,16 @@ function main(): void {
               </span>
               <div class="lives-icons"></div>
             </div>
-            <span class="hud-item">
-              <span class="hud-value seconds-value">0</span>
-              <span class="hud-label">sec</span>
-            </span>
+            <div class="hud-score">
+              <span class="hud-item">
+                <span class="hud-value seconds-value">0</span>
+                <span class="hud-label">sec</span>
+              </span>
+              <span class="hud-item">
+                <span class="hud-label">level</span>
+                <span class="hud-value level-value">1</span>
+              </span>
+            </div>
           </div>
           <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
@@ -186,6 +195,7 @@ function main(): void {
 
     const game = new Game(canvas);
     game.gameOverCallback(createGameOverScreen);
+    game.tunnelWorldCallback(createToBeContiniuedScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -207,6 +217,67 @@ function main(): void {
     });
 
     showInfoModal(() => game.startGame());
+  }
+
+  function createToBeContiniuedScreen(score: number): void {
+    const size = getCanvasSize();
+    const screen = buildDom(`
+      <section class="section-container to-be-continued-screen">
+        <div class="crt-frame">
+          <canvas class="tbc-canvas"></canvas>
+          <div class="tbc-overlay">
+            <p class="tbc-line">TO BE</p>
+            <p class="tbc-line">CONTINUED...</p>
+          </div>
+        </div>
+      </section>
+    `);
+
+    const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+
+    const groundImg = new Image();
+    groundImg.src = GROUND_EROSION_SVGS[3];
+
+    if (localStorage.getItem('audio-muted') !== '1') {
+      new Audio(FALLING_SFX).play();
+    }
+
+    const lemmingSize = size * 0.18;
+    const holeX = size * 0.5 - lemmingSize / 2;
+    const holeY = size * 0.78;
+
+    function drawScene(lemmingY: number | null): void {
+      ctx.clearRect(0, 0, size, size);
+      if (groundImg.complete) ctx.drawImage(groundImg, 0, 0, size, size);
+      if (lemmingY !== null) {
+        ctx.save();
+        ctx.translate(holeX, lemmingY);
+        ctx.scale(lemmingSize / 142, lemmingSize / 142);
+        drawLemmingShape(ctx, '#FFFFFF', 0);
+        ctx.restore();
+      }
+    }
+
+    function animate(startTime: number, now: number): void {
+      const t = Math.min((now - startTime) / TBC_FALL_DURATION_MS, 1);
+      const lemmingY = -lemmingSize + t * (holeY - -lemmingSize);
+      if (t < 1) {
+        drawScene(lemmingY);
+        requestAnimationFrame((n) => animate(startTime, n));
+      } else {
+        drawScene(null);
+        screen.querySelector('.tbc-overlay')?.classList.add('show');
+      }
+    }
+
+    const start = () => requestAnimationFrame((now) => animate(now, now));
+    if (groundImg.complete) start();
+    else groundImg.addEventListener('load', start, { once: true });
+
+    setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
   }
 
   function createGameOverScreen(score: number): void {

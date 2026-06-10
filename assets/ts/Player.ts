@@ -80,7 +80,7 @@ function getHairLevel(frameCount: number): number {
   return 1;
 }
 
-function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: string, hairLevel: number): void {
+export function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: string, hairLevel: number): void {
   const { body, hair, hairExtras, clothes } = getPaths();
   ctx.fillStyle = bodyColor;
   ctx.fill(body);
