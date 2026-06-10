@@ -63,6 +63,7 @@ export class Game {
   private crackStamps: GroundStamp[];
   private holeStamps: GroundStamp[];
   private coveredCells: boolean[];
+  private hudEls: Map<string, HTMLElement | null>;
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -82,6 +83,7 @@ export class Game {
     this.crackStamps = [];
     this.holeStamps = [];
     this.coveredCells = new Array(COVERAGE_COLS * COVERAGE_ROWS).fill(false);
+    this.hudEls = new Map();
 
     this.gameSong = new Audio(GAME_SONG);
     this.bombHitSfx = new Audio(FIRE_SFX);
@@ -117,6 +119,7 @@ export class Game {
 
       if (this.count % 60 === 0) {
         this.score++;
+        this.updateScore();
       }
 
       this.checkLevelUp();
@@ -132,7 +135,6 @@ export class Game {
       this.draw();
       this.checkCollisions();
       this.displayLives();
-      this.updateScore();
 
       if (!this.isGameOver) {
         requestAnimationFrame(loop);
@@ -367,19 +369,30 @@ export class Game {
     }
   }
 
+  /** Memoized HUD lookup — the HUD is static for the lifetime of a game screen,
+      so each selector hits the DOM once instead of every frame. */
+  private hudEl(selector: string): HTMLElement | null {
+    let el = this.hudEls.get(selector);
+    if (el === undefined) {
+      el = document.querySelector<HTMLElement>(selector);
+      this.hudEls.set(selector, el);
+    }
+    return el;
+  }
+
   updateScore(): void {
-    const scoreDisplay = document.querySelector('.seconds-value');
+    const scoreDisplay = this.hudEl('.seconds-value');
     if (scoreDisplay) scoreDisplay.textContent = String(this.score);
   }
 
   updateLevel(): void {
-    const levelDisplay = document.querySelector('.level-value');
+    const levelDisplay = this.hudEl('.level-value');
     if (levelDisplay) levelDisplay.textContent = String(this.currentLevel + 1);
     this.blinkHudItem('.level-item');
   }
 
   private blinkHudItem(selector: string): void {
-    const item = document.querySelector(selector) as HTMLElement | null;
+    const item = this.hudEl(selector);
     if (item) {
       item.classList.remove('blink');
       void item.offsetWidth; // restart animation if still running
@@ -388,7 +401,7 @@ export class Game {
   }
 
   initLivesIcons(): void {
-    const container = document.querySelector('.lives-icons');
+    const container = this.hudEl('.lives-icons');
     if (!container || !this.player) return;
     container.innerHTML = '';
     for (let i = 0; i < this.player.lives; i++) {
@@ -401,10 +414,10 @@ export class Game {
   }
 
   displayLives(): void {
-    const livesDisplay = document.querySelector('.lives-value');
+    const livesDisplay = this.hudEl('.lives-value');
     if (livesDisplay && this.player) livesDisplay.textContent = String(this.player.lives);
 
-    const container = document.querySelector('.lives-icons');
+    const container = this.hudEl('.lives-icons');
     if (!container || !this.player) return;
     const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
     const excess = activeIcons.length - Math.max(0, this.player.lives);
