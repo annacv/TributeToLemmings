@@ -201,8 +201,17 @@ function main(): void {
     canvas.height = size;
 
     const game = new Game(canvas);
-    game.gameOverCallback(createGameOverScreen);
-    game.tunnelWorldCallback(createToBeContiniuedScreen);
+    /* Aborted on game end so stale keydown listeners don't stack up (and retain
+       dead Game instances) across play-again cycles */
+    const keyboardController = new AbortController();
+    game.gameOverCallback((score) => {
+      keyboardController.abort();
+      createGameOverScreen(score);
+    });
+    game.tunnelWorldCallback((score) => {
+      keyboardController.abort();
+      createToBeContiniuedScreen(score);
+    });
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -221,7 +230,12 @@ function main(): void {
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') game.player?.setDirection(1);
       else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    });
+    }, { signal: keyboardController.signal });
+
+    /* Screen swaps blow away the focused element; re-anchor focus so keyboard
+       and screen-reader users aren't dropped to <body> */
+    canvas.tabIndex = -1;
+    canvas.focus();
 
     showInfoModal(() => game.startGame());
   }
@@ -242,6 +256,8 @@ function main(): void {
     const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
+    canvas.tabIndex = -1;
+    canvas.focus();
     const ctx = canvas.getContext('2d')!;
 
     /* The surface backdrop and the collapse shaft (erosion + interspersed hole
@@ -372,6 +388,10 @@ function main(): void {
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
 
+    const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
+    title.tabIndex = -1;
+    title.focus();
+
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
       dieSfx.addEventListener('ended', () => {
@@ -419,7 +439,9 @@ function main(): void {
       (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
     );
 
-    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', () => {
+    const playAgainBtn = mainElement.querySelector('.ranking-play-again') as HTMLButtonElement;
+    playAgainBtn.focus();
+    playAgainBtn.addEventListener('click', () => {
       if (rankingMusic) {
         rankingMusic.pause();
         rankingMusic.src = '';

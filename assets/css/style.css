@@ -52,6 +52,11 @@ p {
   padding: 0;
 }
 
+/* Programmatic focus anchors for screen swaps; not Tab-reachable, so no ring */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
 /* ---- LAYOUT ---- */
 
 body {
