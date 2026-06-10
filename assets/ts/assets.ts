@@ -11,6 +11,7 @@ import bangSfxWav from '../sounds/BANG.WAV';
 import tentonSfxWav from '../sounds/TENTON.WAV';
 import fallingSfxMp3 from '../sounds/intro-falling-sound-effect.mp3';
 import groundErosionSvg from '../images/backgrounds/ground-erosion.svg';
+import backgroundGameSvg from '../images/backgrounds/background-game.svg';
 import crackMark1Svg from '../images/backgrounds/crack-mark-1.svg';
 import crackMark2Svg from '../images/backgrounds/crack-mark-2.svg';
 import crackMark3Svg from '../images/backgrounds/crack-mark-3.svg';
@@ -35,15 +36,16 @@ export const ELECTRIC_SFX = electricSfxWav;
 export const BANG_SFX = bangSfxWav;
 export const TENTON_SFX = tentonSfxWav;
 export const FALLING_SFX = fallingSfxMp3;
-/* Collapsed-ground frame shown behind the "TO BE CONTINUED" interstitial */
 export const GROUND_EROSION_COLLAPSE_SVG = groundErosionSvg;
+export const GAME_BACKGROUND_SVG = backgroundGameSvg;
+
 export const CRACK_MARK_SVGS = [
   crackMark1Svg,
   crackMark2Svg,
   crackMark3Svg,
   crackMark4Svg,
 ] as const;
-/* Star-burst impacts (1-2) alternate with ragged voids (3-4) */
+
 export const GROUND_HOLE_SVGS = [
   groundHole1Svg,
   groundHole3Svg,

@@ -19,7 +19,7 @@ const LEVEL_THRESHOLDS = [0, 18, 36];
 const GROUND_TOP_FRAC = 0.71;
 const COVERAGE_COLS = 8;
 const COVERAGE_ROWS = 3;
-const COLLAPSE_COVERAGE = 0.95;
+const COLLAPSE_COVERAGE = 0.98;
 const EARLY_CRACK_MISSES = 4;
 const LATE_CRACK_MISSES = 14;
 
@@ -291,7 +291,7 @@ export class Game {
   /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage. */
   private stampHole(impactX: number): void {
     const img = this.holeImgs[this.holeStamps.length % this.holeImgs.length];
-    const w = this.canvas.width * (0.12 + Math.random() * 0.06);
+    const w = this.canvas.width * (0.25 + Math.random() * 0.08);
     const h = w / Game.imgAspect(img, 1 / 0.6);
     const bandTop = this.canvas.height * GROUND_TOP_FRAC;
     const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
