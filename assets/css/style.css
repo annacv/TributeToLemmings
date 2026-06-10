@@ -57,6 +57,18 @@ p {
   outline: none;
 }
 
+/* Near-zero duration instead of animation: none, so 'animationend' handlers
+   (life-icon removal) and 'forwards' fills (TBC overlay) still complete */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ---- LAYOUT ---- */
 
 body {
@@ -918,6 +930,15 @@ button:active {
 }
 
 /* ---- SPLASH NAME INPUT ---- */
+
+/* Mirrors the .splash-hero column so the form wrapper is invisible to the layout */
+.splash-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  width: 100%;
+}
 
 .splash-name-wrap {
   display: flex;

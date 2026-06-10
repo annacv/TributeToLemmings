@@ -100,35 +100,59 @@ function main(): void {
     document.body.appendChild(backdrop);
 
     const checkbox = backdrop.querySelector('#modal-no-show') as HTMLInputElement;
+    const closeBtn = backdrop.querySelector('.info-modal-close') as HTMLButtonElement;
+    const confirmBtn = backdrop.querySelector('.info-modal-btn') as HTMLButtonElement;
 
     function closeModal(): void {
+      document.removeEventListener('keydown', onModalKeydown);
       if (checkbox.checked) localStorage.setItem('info-modal-dismissed', '1');
       backdrop.remove();
       onClose();
     }
 
-    backdrop.querySelector('.info-modal-close')!.addEventListener('click', closeModal);
-    backdrop.querySelector('.info-modal-btn')!.addEventListener('click', closeModal);
+    /* aria-modal promises focus stays inside: Escape closes, Tab wraps over the
+       three focusables (close button, checkbox, confirm button) */
+    function onModalKeydown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        closeModal();
+      } else if (event.key === 'Tab') {
+        if (event.shiftKey && document.activeElement === closeBtn) {
+          event.preventDefault();
+          confirmBtn.focus();
+        } else if (!event.shiftKey && document.activeElement === confirmBtn) {
+          event.preventDefault();
+          closeBtn.focus();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', onModalKeydown);
+    closeBtn.addEventListener('click', closeModal);
+    confirmBtn.addEventListener('click', closeModal);
+    confirmBtn.focus();
   }
 
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
-        <canvas class="splash-mascot" aria-label="Lemming mascot"></canvas>
+        <canvas class="splash-mascot" role="img" aria-label="Lemming mascot"></canvas>
         <h1 class="splash-title">Tribute to<br>Lemmings</h1>
         <p class="splash-tagline">&gt; skip the bombs. stay alive.</p>
-        <div class="splash-name-wrap">
-          <input
-            class="splash-name-input"
-            type="text"
-            maxlength="20"
-            placeholder="Enter your name"
-            autocomplete="off"
-            spellcheck="false"
-          >
-          <p class="splash-name-notice">&gt; your nickname &amp; score will be saved to a public leaderboard.</p>
-        </div>
-        <button class="splash-start">Start</button>
+        <form class="splash-form">
+          <div class="splash-name-wrap">
+            <input
+              class="splash-name-input"
+              type="text"
+              maxlength="20"
+              placeholder="Enter your name"
+              aria-label="Your nickname"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <p class="splash-name-notice">&gt; your nickname &amp; score will be saved to a public leaderboard.</p>
+          </div>
+          <button class="splash-start" type="submit">Start</button>
+        </form>
       </section>
     `);
 
@@ -152,10 +176,13 @@ function main(): void {
       startBtn.focus();
     }
 
-    startBtn.addEventListener('click', () => {
+    /* Form submit covers both the Start button and Enter in the name input
+       (incl. the mobile keyboard's Go key); an empty name falls back to a guest handle */
+    const form = mainElement.querySelector('.splash-form') as HTMLFormElement;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
       cancelAnimationFrame(mascotRafId);
-      const input = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
-      playerName = input.value.trim() || generateGuestHandle();
+      playerName = nameInput.value.trim() || generateGuestHandle();
       createGameScreen();
     });
   }
@@ -165,7 +192,7 @@ function main(): void {
     const gameScreen = buildDom(`
       <section class="section-container play">
         <div class="crt-frame">
-          <canvas class="game-canvas"></canvas>
+          <canvas class="game-canvas" role="img" aria-label="Game area — dodge the falling bombs"></canvas>
           <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
@@ -237,7 +264,10 @@ function main(): void {
     canvas.tabIndex = -1;
     canvas.focus();
 
-    showInfoModal(() => game.startGame());
+    showInfoModal(() => {
+      canvas.focus();
+      game.startGame();
+    });
   }
 
   function createToBeContiniuedScreen(score: number): void {
@@ -245,7 +275,7 @@ function main(): void {
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
         <div class="crt-frame">
-          <canvas class="tbc-canvas"></canvas>
+          <canvas class="tbc-canvas" aria-hidden="true"></canvas>
           <div class="tbc-overlay">
             <p class="tbc-line">TO BE CONTINUED...</p>
           </div>
@@ -368,7 +398,7 @@ function main(): void {
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="crt-frame">
-          <canvas class="game-over-canvas"></canvas>
+          <canvas class="game-over-canvas" aria-hidden="true"></canvas>
           <div class="game-over-overlay">
             <p class="go-boom">BOOOM!!!</p>
             <h1 class="go-title">GAME OVER</h1>
@@ -414,7 +444,7 @@ function main(): void {
     buildDom(`
       <section class="section-container ranking-screen">
         <div class="crt-frame">
-          <canvas class="ranking-canvas"></canvas>
+          <canvas class="ranking-canvas" aria-hidden="true"></canvas>
           <div class="ranking-overlay">
             <h1 class="ranking-title">Hall of Fame</h1>
             <div class="ranking-list">

@@ -6,6 +6,7 @@ interface MockGame {
   gameSong: { muted: boolean };
   onGameOver: ((score: number) => void) | null;
   onTunnelWorld: ((score: number) => void) | null;
+  startGame: ReturnType<typeof vi.fn>;
 }
 
 const { gameInstances } = vi.hoisted(() => ({
@@ -24,10 +25,10 @@ vi.mock('./Game', () => ({
     gameSong = { muted: false };
     onGameOver: ((score: number) => void) | null = null;
     onTunnelWorld: ((score: number) => void) | null = null;
+    startGame = vi.fn();
     constructor() { gameInstances.push(this); }
     gameOverCallback(cb: (score: number) => void): void { this.onGameOver = cb; }
     tunnelWorldCallback(cb: (score: number) => void): void { this.onTunnelWorld = cb; }
-    startGame(): void {}
   },
 }));
 
@@ -115,5 +116,31 @@ describe('game screen keyboard wiring', () => {
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
     activeGame().onGameOver!(7);
     expect((document.activeElement as HTMLElement).classList.contains('go-title')).toBe(true);
+  });
+
+  it('starts the game on name-form submit (Enter in the input), even without a name', () => {
+    window.dispatchEvent(new Event('load'));
+    const form = document.querySelector('.splash-form') as HTMLFormElement;
+    expect((document.querySelector('.splash-name-input') as HTMLInputElement).value).toBe('');
+
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+
+    expect(document.querySelector('.game-canvas')).not.toBeNull();
+  });
+
+  it('focuses the how-to modal; Escape closes it and starts the game', () => {
+    localStorage.removeItem('info-modal-dismissed');
+    window.dispatchEvent(new Event('load'));
+    (document.querySelector('.splash-start') as HTMLButtonElement).click();
+
+    const confirmBtn = document.querySelector('.info-modal-btn') as HTMLButtonElement;
+    expect(document.activeElement).toBe(confirmBtn);
+    expect(activeGame().startGame).not.toHaveBeenCalled();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(document.querySelector('.info-modal-backdrop')).toBeNull();
+    expect(activeGame().startGame).toHaveBeenCalledTimes(1);
+    expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
   });
 });
