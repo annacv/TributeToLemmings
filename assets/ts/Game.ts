@@ -436,9 +436,11 @@ export class Game {
     this.gameSong.pause();
 
     let fired = false;
+    let watchdog: ReturnType<typeof setTimeout> | undefined;
     const fireCallback = () => {
       if (fired) return;
       fired = true;
+      clearTimeout(watchdog);
       if (this.onTunnelWorld) {
         this.onTunnelWorld(this.score);
       } else {
@@ -455,7 +457,7 @@ export class Game {
     stalled playback) */
     this.tentonSfx.addEventListener('ended', fireCallback, { once: true });
     this.tentonSfx.addEventListener('error', fireCallback, { once: true });
-    setTimeout(fireCallback, TUNNEL_STING_WATCHDOG_MS);
+    watchdog = setTimeout(fireCallback, TUNNEL_STING_WATCHDOG_MS);
     const playAttempt: Promise<void> | undefined = this.tentonSfx.play();
     playAttempt?.catch(fireCallback);
   }
