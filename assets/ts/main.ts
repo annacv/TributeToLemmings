@@ -454,31 +454,32 @@ function main(): void {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
-    try {
-      const scores = await fetchTopScores(10);
-
-      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-
-      // Give submission up to 1 s after scores arrive; fall back to failed if still pending
-      const { error: submissionError, docId: submittedDocId } = await Promise.race([
+    /* Bounded wait for the submission; falls back to failed if still pending */
+    const resolveSubmission = (): Promise<{ error: boolean; docId: string | null }> =>
+      Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
           setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
-      if (!mainElement.querySelector('.ranking-list')) return;
+    function showSaveErrorBanner(): void {
+      if (mainElement.querySelector('.ranking-save-error')) return;
+      const overlay = mainElement.querySelector('.ranking-overlay');
+      const title = overlay?.querySelector('.ranking-title');
+      if (!overlay || !title) return;
+      const banner = document.createElement('p');
+      banner.className = 'ranking-save-error';
+      banner.textContent = '> score could not be saved.';
+      overlay.insertBefore(banner, title);
+    }
 
-      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
-        const overlay = mainElement.querySelector('.ranking-overlay');
-        const title = overlay?.querySelector('.ranking-title');
-        if (overlay && title) {
-          const banner = document.createElement('p');
-          banner.className = 'ranking-save-error';
-          banner.textContent = '> score could not be saved.';
-          overlay.insertBefore(banner, title);
-        }
-      }
+    try {
+      const scores = await fetchTopScores(10);
+      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+      const { error: submissionError, docId: submittedDocId } = await resolveSubmission();
+      if (!mainElement.querySelector('.ranking-list')) return;
+      if (submissionError) showSaveErrorBanner();
 
       if (scores.length === 0) {
         let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
@@ -530,23 +531,9 @@ function main(): void {
       listEl.innerHTML = html;
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
-      const { error: submissionError } = await Promise.race([
-        submission,
-        new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
-        ),
-      ]);
+      const { error: submissionError } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
-      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
-        const overlay = mainElement.querySelector('.ranking-overlay');
-        const title = overlay?.querySelector('.ranking-title');
-        if (overlay && title) {
-          const banner = document.createElement('p');
-          banner.className = 'ranking-save-error';
-          banner.textContent = '> score could not be saved.';
-          overlay.insertBefore(banner, title);
-        }
-      }
+      if (submissionError) showSaveErrorBanner();
       listEl.innerHTML = `
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
