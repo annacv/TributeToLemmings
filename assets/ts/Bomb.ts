@@ -7,7 +7,6 @@ export class Bomb {
   dy: number;
   dWidth: number;
   dHeight: number;
-  direction: number;
   speed: number;
   isExploding: boolean;
   explosionFramesLeft: number;
@@ -20,14 +19,13 @@ export class Bomb {
     this.dy = -45;
     this.dWidth = 28;
     this.dHeight = 32;
-    this.direction = 1;
     this.speed = speed;
     this.isExploding = false;
     this.explosionFramesLeft = 0;
   }
 
   move(): void {
-    this.dy = this.dy + this.direction * this.speed;
+    this.dy = this.dy + this.speed;
   }
 
   drawImage(): void {

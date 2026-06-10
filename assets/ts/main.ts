@@ -260,9 +260,6 @@ function main(): void {
     canvas.focus();
     const ctx = canvas.getContext('2d')!;
 
-    /* The surface backdrop and the collapse shaft (erosion + interspersed hole
-       frames) are baked into this single strip via svg defs/use — no per-row
-       compositing in JS */
     const undergroundImg = new Image();
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 

@@ -234,47 +234,6 @@ main {
   }
 }
 
-/* ---- LEGACY SECTION STYLES (other screens) ---- */
-
-.section-title {
-  width: 100%;
-  font-size: 2.5rem;
-  line-height: 1;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .section-title {
-    font-size: 3rem;
-  }
-}
-
-.section-description {
-  width: 100%;
-  font-size: 1.05rem;
-  line-height: 1.4;
-  font-weight: 200;
-  margin-bottom: 2.5rem;
-}
-
-.description-highlighted {
-  padding: .25rem .25rem .115rem .25rem;
-  font-size: .875rem;
-  font-weight: 900;
-  color: var(--text-white);
-  background-color: var(--brand);
-}
-
-@media (min-width: 768px) {
-  .section-description {
-    font-size: 1.125rem;
-  }
-
-  .description-highlighted {
-    font-size: 1rem;
-  }
-}
-
 /* ---- CANVAS ---- */
 
 canvas {
@@ -691,12 +650,6 @@ canvas {
 
 .go-score-value {
   color: var(--brand);
-}
-
-/* Restart button lives inside the overlay — needs pointer events */
-.go-restart {
-  pointer-events: auto;
-  margin-top: .5rem;
 }
 
 @media (max-width: 767px) {
