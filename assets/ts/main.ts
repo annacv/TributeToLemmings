@@ -2,6 +2,7 @@ import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay } from './lib/audio';
+import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
 import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
@@ -79,17 +80,6 @@ function main(): void {
       btn.setAttribute('aria-label', nowMuted ? 'Unmute sound' : 'Mute sound');
       onToggle(nowMuted);
     });
-  }
-
-  function getCanvasSize(): number {
-    const isDesktop = window.innerWidth >= 768;
-    const frameVPad = isDesktop ? 44 : 0;
-    const frameHPad = isDesktop ? 44 : 32;
-    const uiHeight = 256;
-    const maxByHeight = window.innerHeight - uiHeight - frameVPad;
-    const viewportWidth = document.documentElement.clientWidth;
-    const maxByWidth = viewportWidth - frameHPad;
-    return Math.max(280, Math.min(maxByWidth, maxByHeight, 580));
   }
 
   function showInfoModal(onClose: () => void): void {
@@ -312,20 +302,16 @@ function main(): void {
       safePlay(new Audio(FALLING_SFX));
     }
 
-    const lemmingSize = size * 0.14;
-    const HOLE_CENTER_Y_FRAC = 0.435;
-    const GROUND_EROSION_ASPECT = 299 / 400;
-    const BG_ZOOM = 1.5;
-    const BG_CROP_TOP_FRAC = 547 / 800;
-    const bgSize = size * BG_ZOOM;
-    const surfaceBottomY = bgSize * (1 - BG_CROP_TOP_FRAC);
-    /* Mirrors the shaft geometry baked into background-underground.svg (slot top
-       at canvas 0.02, erosion slot 0.85 wide) so the lemming lands in row 0's hole */
-    const erosionFrameW = size * 0.85;
-    const erosionFrameH = erosionFrameW * GROUND_EROSION_ASPECT;
-    const erosionStackTop = size * 0.02;
+    const lemmingSize = size * LEMMING_SIZE_FRAC;
+    const bgSize = size * TBC_GEOMETRY.BG_ZOOM;
+    const surfaceBottomY = bgSize * (1 - TBC_GEOMETRY.BG_CROP_TOP_FRAC);
+    /* Mirrors the shaft geometry baked into background-underground.svg so the
+       lemming lands in row 0's hole */
+    const erosionFrameW = size * TBC_GEOMETRY.EROSION_SLOT_W_FRAC;
+    const erosionFrameH = erosionFrameW * TBC_GEOMETRY.GROUND_EROSION_ASPECT;
+    const erosionStackTop = size * TBC_GEOMETRY.EROSION_STACK_TOP_FRAC;
     const SCROLL_DISTANCE = surfaceBottomY + 2 * size;
-    const holeCenterY = erosionStackTop + erosionFrameH * HOLE_CENTER_Y_FRAC;
+    const holeCenterY = erosionStackTop + erosionFrameH * TBC_GEOMETRY.HOLE_CENTER_Y_FRAC;
     const holeX = size * 0.5 - lemmingSize / 2;
     const holeY = holeCenterY - lemmingSize / 2;
 

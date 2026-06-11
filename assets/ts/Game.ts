@@ -1,7 +1,11 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { GameLoop } from './lib/GameLoop';
-import { safePlay } from './lib/audio';
+import { RunLifecycle } from './lib/RunLifecycle';
+import { Hud } from './lib/Hud';
+import { restartAnimation } from './lib/fx';
+import { BOMB_WIDTH } from './lib/geometry';
+import * as audio from './lib/audio';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
@@ -66,11 +70,9 @@ export class Game {
   private crackStamps: GroundStamp[];
   private holeStamps: GroundStamp[];
   private coveredCells: boolean[];
-  private hudEls: Map<string, HTMLElement | null>;
+  private hud: Hud;
   private gameLoop: GameLoop;
-  /* One run per Game instance; endRun() aborts this when the run halts */
-  private runController = new AbortController();
-  private runEnded = false;
+  private run = new RunLifecycle();
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -90,7 +92,7 @@ export class Game {
     this.crackStamps = [];
     this.holeStamps = [];
     this.coveredCells = new Array(COVERAGE_COLS * COVERAGE_ROWS).fill(false);
-    this.hudEls = new Map();
+    this.hud = new Hud();
 
     this.gameSong = new Audio(GAME_SONG);
     this.bombHitSfx = new Audio(FIRE_SFX);
@@ -124,22 +126,19 @@ export class Game {
     this.updateLevel();
     this.showLevelUpEffect();
     this.gameSong.loop = true;
-    safePlay(this.gameSong);
+    audio.safePlay(this.gameSong);
 
-    /* A hidden tab freezes the game (rAF stops) but audio keeps playing.
-       Pause the song while hidden; resume only if the run is still alive,
-       so a dead game can't talk over the ranking music. */
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.gameSong.pause();
-      else if (!this.isGameOver) safePlay(this.gameSong);
-    }, { signal: this.runController.signal });
+    audio.pauseWhileHidden(this.gameSong, {
+      signal: this.run.signal,
+      shouldResume: () => !this.isGameOver,
+    });
 
     this.gameLoop.start();
   }
 
   /** Aborts when the run ends — attach run-scoped listeners with this signal. */
   get runSignal(): AbortSignal {
-    return this.runController.signal;
+    return this.run.signal;
   }
 
   /** One fixed 1/60 s simulation step; returns false when the run has ended. */
@@ -154,7 +153,7 @@ export class Game {
     this.checkLevelUp();
 
     if (this.count - this.lastSpawnFrame >= LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
-      const randomX = Math.random() * (this.canvas.width - 28);
+      const randomX = Math.random() * (this.canvas.width - BOMB_WIDTH);
       this.bombs.push(new Bomb(this.canvas, randomX, LEVEL_CONFIG[this.currentLevel].bombSpeed));
       this.lastSpawnFrame = this.count;
     }
@@ -170,16 +169,12 @@ export class Game {
     this.clear();
     this.draw();
     /* Extra frames can draw after the halt — the teardown must fire only once */
-    if (this.isGameOver && !this.runEnded) {
-      this.runEnded = true;
-      this.endRun();
-    }
+    this.run.settle(this.isGameOver, () => this.endRun());
   }
 
-  /** Drops run-scoped listeners, stops the song, and hands off to game over
-      (unless the tunnel transition takes it from here). */
+  /** Stops the song and hands off to game over (unless the tunnel transition
+      takes it from here); run-scoped listeners were already dropped by settle. */
   private endRun(): void {
-    this.runController.abort();
     this.gameSong.pause();
     if (!this.isTunnelTransition) {
       this.onGameOver?.(this.score);
@@ -196,9 +191,7 @@ export class Game {
   }
 
   private playSfx(sfx: HTMLAudioElement): void {
-    if (this.gameSong.muted) return;
-    sfx.currentTime = 0;
-    safePlay(sfx);
+    audio.playSfx(sfx, this.gameSong.muted);
   }
 
   private handleLevelUp(): void {
@@ -214,29 +207,15 @@ export class Game {
 
   private showLevelUpEffect(): void {
     const banner = document.querySelector('.level-up-banner') as HTMLElement | null;
-    if (banner) {
-      banner.textContent = `Level ${this.currentLevel + 1}`;
-      banner.classList.remove('show');
-      void banner.offsetWidth; // restart animation if still running
-      banner.classList.add('show');
-    }
-
-    const frame = document.querySelector('.crt-frame') as HTMLElement | null;
-    if (frame) {
-      frame.classList.remove('flash-active');
-      void frame.offsetWidth; // restart animation if still running
-      frame.classList.add('flash-active');
-    }
+    if (banner) banner.textContent = `Level ${this.currentLevel + 1}`;
+    restartAnimation(banner, 'show');
+    restartAnimation(document.querySelector('.crt-frame'), 'flash-active');
   }
 
   private triggerEarthquake(): void {
     const frame = document.querySelector('.crt-frame') as HTMLElement | null;
     if (!frame) return;
-    setTimeout(() => {
-      frame.classList.remove('shake-quake');
-      void frame.offsetWidth; // restart animation if still running
-      frame.classList.add('shake-quake');
-    }, 300);
+    setTimeout(() => restartAnimation(frame, 'shake-quake'), 300);
   }
 
   update(): void {
@@ -325,6 +304,9 @@ export class Game {
    *  two variants of the given pair (offset 0 → marks 1/2, offset 2 → marks 3/4). */
   private stampCrack(impactX: number, variantOffset: number): void {
     const img = this.crackImgs[variantOffset + (this.crackStamps.length % 2)];
+    /* An asset-list edit can leave this slot empty; a missing variant must not
+       take the whole run down via imgAspect on undefined */
+    if (!img) return;
     const h = this.canvas.height * (0.16 + Math.random() * 0.08);
     const w = h * Game.imgAspect(img, 1 / 3);
     const bandTop = this.canvas.height * GROUND_TOP_FRAC;
@@ -381,9 +363,7 @@ export class Game {
 
   /** Brief, subtle shake on the canvas itself for each individual ground hit. */
   private triggerGroundShake(): void {
-    this.canvas.classList.remove('shake-light');
-    void this.canvas.offsetWidth; // restart animation if still running
-    this.canvas.classList.add('shake-light');
+    restartAnimation(this.canvas, 'shake-light');
   }
 
   checkCollisions(): void {
@@ -414,64 +394,22 @@ export class Game {
     }
   }
 
-  /** Memoized HUD lookup — the HUD is static for the lifetime of a game screen,
-      so each selector hits the DOM once instead of every frame. */
-  private hudEl(selector: string): HTMLElement | null {
-    let el = this.hudEls.get(selector);
-    if (el === undefined) {
-      el = document.querySelector<HTMLElement>(selector);
-      this.hudEls.set(selector, el);
-    }
-    return el;
-  }
-
   updateScore(): void {
-    const scoreDisplay = this.hudEl('.seconds-value');
-    if (scoreDisplay) scoreDisplay.textContent = String(this.score);
+    this.hud.setScore(this.score);
   }
 
   updateLevel(): void {
-    const levelDisplay = this.hudEl('.level-value');
-    if (levelDisplay) levelDisplay.textContent = String(this.currentLevel + 1);
-    this.blinkHudItem('.level-item');
-  }
-
-  private blinkHudItem(selector: string): void {
-    const item = this.hudEl(selector);
-    if (item) {
-      item.classList.remove('blink');
-      void item.offsetWidth; // restart animation if still running
-      item.classList.add('blink');
-    }
+    this.hud.setLevel(String(this.currentLevel + 1));
   }
 
   initLivesIcons(): void {
-    const container = this.hudEl('.lives-icons');
-    if (!container || !this.player) return;
-    container.innerHTML = '';
-    for (let i = 0; i < this.player.lives; i++) {
-      const img = document.createElement('img');
-      img.src = SPRITES.lemming;
-      img.className = 'life-icon';
-      img.alt = '';
-      container.appendChild(img);
-    }
+    if (!this.player) return;
+    this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
   }
 
   displayLives(): void {
-    const livesDisplay = this.hudEl('.lives-value');
-    if (livesDisplay && this.player) livesDisplay.textContent = String(this.player.lives);
-
-    const container = this.hudEl('.lives-icons');
-    if (!container || !this.player) return;
-    const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
-    const excess = activeIcons.length - Math.max(0, this.player.lives);
-    for (let i = 0; i < excess; i++) {
-      const icon = activeIcons[activeIcons.length - 1 - i] as HTMLElement;
-      icon.classList.add('life-losing');
-      icon.addEventListener('animationend', () => icon.remove(), { once: true });
-    }
-    if (excess > 0) this.blinkHudItem('.lives-item');
+    if (!this.player) return;
+    this.hud.displayLives(this.player.lives);
   }
 
   gameOverCallback(callback: (score: number) => void): void {
