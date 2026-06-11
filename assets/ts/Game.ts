@@ -68,6 +68,9 @@ export class Game {
   private coveredCells: boolean[];
   private hudEls: Map<string, HTMLElement | null>;
   private gameLoop: GameLoop;
+  /* One run per Game instance; endRun() aborts this when the run halts */
+  private runController = new AbortController();
+  private runEnded = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -122,7 +125,21 @@ export class Game {
     this.showLevelUpEffect();
     this.gameSong.loop = true;
     safePlay(this.gameSong);
+
+    /* A hidden tab freezes the game (rAF stops) but audio keeps playing.
+       Pause the song while hidden; resume only if the run is still alive,
+       so a dead game can't talk over the ranking music. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.gameSong.pause();
+      else if (!this.isGameOver) safePlay(this.gameSong);
+    }, { signal: this.runController.signal });
+
     this.gameLoop.start();
+  }
+
+  /** Aborts when the run ends — attach run-scoped listeners with this signal. */
+  get runSignal(): AbortSignal {
+    return this.runController.signal;
   }
 
   /** One fixed 1/60 s simulation step; returns false when the run has ended. */
@@ -152,12 +169,20 @@ export class Game {
   private renderFrame(): void {
     this.clear();
     this.draw();
-    /* The halting step's render is the loop's last callback, so this fires once */
-    if (this.isGameOver) {
-      this.gameSong.pause();
-      if (!this.isTunnelTransition) {
-        this.onGameOver?.(this.score);
-      }
+    /* Extra frames can draw after the halt — the teardown must fire only once */
+    if (this.isGameOver && !this.runEnded) {
+      this.runEnded = true;
+      this.endRun();
+    }
+  }
+
+  /** Drops run-scoped listeners, stops the song, and hands off to game over
+      (unless the tunnel transition takes it from here). */
+  private endRun(): void {
+    this.runController.abort();
+    this.gameSong.pause();
+    if (!this.isTunnelTransition) {
+      this.onGameOver?.(this.score);
     }
   }
 

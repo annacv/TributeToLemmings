@@ -26,9 +26,16 @@ vi.mock('./Game', () => ({
     onGameOver: ((score: number) => void) | null = null;
     onTunnelWorld: ((score: number) => void) | null = null;
     startGame = vi.fn();
+    private runController = new AbortController();
+    get runSignal(): AbortSignal { return this.runController.signal; }
     constructor() { gameInstances.push(this); }
-    gameOverCallback(cb: (score: number) => void): void { this.onGameOver = cb; }
-    tunnelWorldCallback(cb: (score: number) => void): void { this.onTunnelWorld = cb; }
+    /* The real Game aborts runSignal before firing these — keep the mock honest */
+    gameOverCallback(cb: (score: number) => void): void {
+      this.onGameOver = (score) => { this.runController.abort(); cb(score); };
+    }
+    tunnelWorldCallback(cb: (score: number) => void): void {
+      this.onTunnelWorld = (score) => { this.runController.abort(); cb(score); };
+    }
   },
 }));
 

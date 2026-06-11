@@ -46,6 +46,13 @@ function main(): void {
     ? new URLSearchParams(window.location.search).get('screen')
     : null;
 
+  /* Same rule as the game song: no music in a hidden tab */
+  document.addEventListener('visibilitychange', () => {
+    if (!rankingMusic) return;
+    if (document.hidden) rankingMusic.pause();
+    else safePlay(rankingMusic);
+  });
+
   function consumeDebugScreen(): void {
     if (!debugScreen) return;
     debugScreen = null;
@@ -238,17 +245,8 @@ function main(): void {
     canvas.height = size;
 
     const game = new Game(canvas);
-    /* Aborted on game end so stale keydown listeners don't stack up (and retain
-       dead Game instances) across play-again cycles */
-    const keyboardController = new AbortController();
-    game.gameOverCallback((score) => {
-      keyboardController.abort();
-      createGameOverScreen(score);
-    });
-    game.tunnelWorldCallback((score) => {
-      keyboardController.abort();
-      createToBeContinuedScreen(score);
-    });
+    game.gameOverCallback(createGameOverScreen);
+    game.tunnelWorldCallback(createToBeContinuedScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -264,10 +262,12 @@ function main(): void {
     arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
     arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
 
+    /* Dies with the run (runSignal aborts at halt), so listeners don't
+       stack up across play-again cycles */
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') game.player?.setDirection(1);
       else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    }, { signal: keyboardController.signal });
+    }, { signal: game.runSignal });
 
     /* Screen swaps blow away the focused element; re-anchor focus so keyboard
        and screen-reader users aren't dropped to <body> */
@@ -434,7 +434,9 @@ function main(): void {
       rankingMusic = new Audio(RANKING_MUSIC);
       rankingMusic.loop = true;
       rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
-      safePlay(rankingMusic);
+      /* The die SFX can finish while the tab is hidden — start paused and
+         let the visibility listener resume on return */
+      if (!document.hidden) safePlay(rankingMusic);
     };
 
     if (localStorage.getItem('audio-muted') !== '1') {

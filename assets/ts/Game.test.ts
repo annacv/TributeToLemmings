@@ -774,3 +774,70 @@ describe('Game — fixed-timestep score', () => {
     expect(h.game.count).toBe(61);
   });
 });
+
+describe('Game — background-tab audio', () => {
+  let canvas: HTMLCanvasElement;
+  const callbacks: FrameRequestCallback[] = [];
+
+  function setHidden(hidden: boolean): void {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+
+  beforeEach(() => {
+    canvas = makeCanvas(468, 468);
+    callbacks.length = 0;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+      callbacks.push(cb);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    vi.unstubAllGlobals();
+  });
+
+  function startGameWithSpies() {
+    const game = new Game(canvas);
+    game.gameSong.muted = true;
+    const playSpy = vi.fn().mockResolvedValue(undefined);
+    const pauseSpy = vi.fn();
+    game.gameSong.play = playSpy;
+    game.gameSong.pause = pauseSpy;
+    game.startGame();
+    playSpy.mockClear();
+    pauseSpy.mockClear();
+    return { game, playSpy, pauseSpy };
+  }
+
+  it('pauses the game song when the tab hides and resumes on return', () => {
+    const { playSpy, pauseSpy } = startGameWithSpies();
+    setHidden(true);
+    expect(pauseSpy).toHaveBeenCalledTimes(1);
+    setHidden(false);
+    expect(playSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not resume the song once the run has ended (dead instance stays silent)', () => {
+    const { game, playSpy } = startGameWithSpies();
+    game.isGameOver = true;
+    callbacks.shift()?.(1000); // the halting render runs the teardown
+    playSpy.mockClear();
+    setHidden(true);
+    setHidden(false);
+    expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  it('runs the end-of-run teardown exactly once across extra post-halt frames', () => {
+    const { game } = startGameWithSpies();
+    const gameOverCb = vi.fn();
+    game.gameOverCallback(gameOverCb);
+    game.isGameOver = true;
+    callbacks.shift()?.(1000);
+    callbacks.shift()?.(1008);
+    callbacks.shift()?.(1012);
+    expect(gameOverCb).toHaveBeenCalledTimes(1);
+  });
+});
