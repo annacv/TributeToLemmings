@@ -683,18 +683,47 @@ describe('Game — level-up visual effects', () => {
   });
 });
 
-describe('Game — score increments', () => {
-  it('score matches seconds elapsed at 60 fps', () => {
-    const canvas = makeCanvas(468, 468);
-    const game = new Game(canvas);
-    game.score = 0;
-    game.count = 0;
+describe('Game — fixed-timestep score', () => {
+  /* Captures rAF callbacks so the test drives Game's loop with chosen timestamps */
+  function startWithHarness() {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+      callbacks.push(cb);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
 
-    for (let i = 0; i < 180; i++) {
-      game.count++;
-      if (game.count % 60 === 0) game.score++;
-    }
+    const game = new Game(makeCanvas(468, 468));
+    game.gameSong.muted = true;
+    game.startGame(); // synchronous first step → count is already 1 here
+    return {
+      game,
+      pump(timestamp: number): void {
+        callbacks.shift()?.(timestamp);
+      },
+    };
+  }
 
-    expect(game.score).toBe(3);
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /* Cadences sit a hair above the exact refresh period so the 60th-step float
+     boundary is decisively crossed instead of flaking at ulp precision */
+
+  it('120 Hz: one real second yields exactly score +1 (~60 steps)', () => {
+    const h = startWithHarness();
+    h.pump(1000); // anchors the clock, zero steps
+    for (let i = 1; i <= 120; i++) h.pump(1000 + i * 8.34);
+    expect(h.game.score).toBe(1);
+    expect(h.game.count).toBe(61); // 1 synchronous + 60 stepped
+  });
+
+  it('30 Hz: one real second still yields exactly score +1 (~2 steps per callback)', () => {
+    const h = startWithHarness();
+    h.pump(1000);
+    for (let i = 1; i <= 30; i++) h.pump(1000 + i * 33.4);
+    expect(h.game.score).toBe(1);
+    expect(h.game.count).toBe(61);
   });
 });

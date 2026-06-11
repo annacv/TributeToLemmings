@@ -1,5 +1,6 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
+import { GameLoop } from './lib/GameLoop';
 import { safePlay } from './lib/audio';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
@@ -65,6 +66,7 @@ export class Game {
   private holeStamps: GroundStamp[];
   private coveredCells: boolean[];
   private hudEls: Map<string, HTMLElement | null>;
+  private gameLoop: GameLoop;
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
@@ -98,6 +100,11 @@ export class Game {
     this.erosionCanvas.height = canvas.height;
     this.erosionCtx = this.erosionCanvas.getContext('2d')!;
 
+    this.gameLoop = new GameLoop({
+      step: () => this.step(),
+      render: () => this.renderFrame(),
+    });
+
     const loadImgs = (srcs: readonly string[]) => srcs.map((src) => {
       const img = new Image();
       img.src = src;
@@ -114,40 +121,43 @@ export class Game {
     this.showLevelUpEffect();
     this.gameSong.loop = true;
     safePlay(this.gameSong);
+    this.gameLoop.start();
+  }
 
-    const loop = () => {
-      this.count++;
+  /** One fixed 1/60 s simulation step; returns false when the run has ended. */
+  private step(): boolean {
+    this.count++;
 
-      if (this.count % 60 === 0) {
-        this.score++;
-        this.updateScore();
+    if (this.count % 60 === 0) {
+      this.score++;
+      this.updateScore();
+    }
+
+    this.checkLevelUp();
+
+    if (this.count - this.lastSpawnFrame >= LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
+      const randomX = Math.random() * (this.canvas.width - 28);
+      this.bombs.push(new Bomb(this.canvas, randomX, LEVEL_CONFIG[this.currentLevel].bombSpeed));
+      this.lastSpawnFrame = this.count;
+    }
+
+    this.update();
+    this.checkCollisions();
+    this.displayLives();
+
+    return !this.isGameOver;
+  }
+
+  private renderFrame(): void {
+    this.clear();
+    this.draw();
+    /* The halting step's render is the loop's last callback, so this fires once */
+    if (this.isGameOver) {
+      this.gameSong.pause();
+      if (!this.isTunnelTransition) {
+        this.onGameOver?.(this.score);
       }
-
-      this.checkLevelUp();
-
-      if (this.count - this.lastSpawnFrame >= LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
-        const randomX = Math.random() * (this.canvas.width - 28);
-        this.bombs.push(new Bomb(this.canvas, randomX, LEVEL_CONFIG[this.currentLevel].bombSpeed));
-        this.lastSpawnFrame = this.count;
-      }
-
-      this.update();
-      this.clear();
-      this.draw();
-      this.checkCollisions();
-      this.displayLives();
-
-      if (!this.isGameOver) {
-        requestAnimationFrame(loop);
-      } else {
-        this.gameSong.pause();
-        if (!this.isTunnelTransition) {
-          this.onGameOver?.(this.score);
-        }
-      }
-    };
-
-    loop();
+    }
   }
 
   private checkLevelUp(): void {
@@ -205,6 +215,7 @@ export class Game {
 
   update(): void {
     this.player?.move();
+    this.player?.tickBlink();
 
     const preLives = this.player?.lives;
 
