@@ -512,20 +512,7 @@ function main(): void {
       if (submissionError) showSaveErrorBanner();
 
       if (scores.length === 0) {
-        let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
-        if (currentScore > 0 && submittedDocId !== null) {
-          const rank = await getPlayerRank(currentScore);
-          if (!mainElement.querySelector('.ranking-list')) return;
-          html += `
-            <hr class="ranking-divider">
-            <div class="ranking-row ranking-row--current">
-              <span class="ranking-rank">${rank}.</span>
-              <span class="ranking-name">${escapeHtml(playerName)}</span>
-              <span class="ranking-score">${currentScore}s</span>
-            </div>
-          `;
-        }
-        listEl.innerHTML = html;
+        listEl.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
         return;
       }
 
