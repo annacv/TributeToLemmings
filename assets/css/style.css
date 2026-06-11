@@ -251,6 +251,12 @@ main {
 canvas {
   display: block;
   max-width: 100%;
+}
+
+.game-canvas,
+.game-over-canvas,
+.ranking-canvas,
+.tbc-canvas {
   border-radius: 0.25rem;
   box-shadow: inset 0 0 1.125rem rgba(var(--black-rgb), 0.7);
 }
