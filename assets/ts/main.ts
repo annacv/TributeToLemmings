@@ -1,6 +1,7 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
-import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
+import { safePlay } from './lib/audio';
 import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
@@ -23,9 +24,11 @@ const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" heig
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let id = '';
-  for (let i = 0; i < 3; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return `Lemming #${id}`;
 }
+
+type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
 
 function escapeHtml(str: string): string {
   return str
@@ -41,9 +44,24 @@ function main(): void {
   let rankingMusic: HTMLAudioElement | null = null;
 
   /* Dev-only shortcut (?screen=tbc) to replay the interstitial; skips score submission */
-  const debugScreen = import.meta.env.DEV
+  let debugScreen = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('screen')
     : null;
+
+  /* Same rule as the game song: no music in a hidden tab */
+  document.addEventListener('visibilitychange', () => {
+    if (!rankingMusic) return;
+    if (document.hidden) rankingMusic.pause();
+    else safePlay(rankingMusic);
+  });
+
+  function consumeDebugScreen(): void {
+    if (!debugScreen) return;
+    debugScreen = null;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('screen');
+    history.replaceState(null, '', url);
+  }
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -183,11 +201,15 @@ function main(): void {
       event.preventDefault();
       cancelAnimationFrame(mascotRafId);
       playerName = nameInput.value.trim() || generateGuestHandle();
+      consumeDebugScreen();
       createGameScreen();
     });
   }
 
   function createGameScreen(): void {
+    
+    preloadLeaderboard();
+
     const size = getCanvasSize();
     const gameScreen = buildDom(`
       <section class="section-container play">
@@ -228,17 +250,8 @@ function main(): void {
     canvas.height = size;
 
     const game = new Game(canvas);
-    /* Aborted on game end so stale keydown listeners don't stack up (and retain
-       dead Game instances) across play-again cycles */
-    const keyboardController = new AbortController();
-    game.gameOverCallback((score) => {
-      keyboardController.abort();
-      createGameOverScreen(score);
-    });
-    game.tunnelWorldCallback((score) => {
-      keyboardController.abort();
-      createToBeContiniuedScreen(score);
-    });
+    game.gameOverCallback(createGameOverScreen);
+    game.tunnelWorldCallback(createToBeContinuedScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -254,10 +267,12 @@ function main(): void {
     arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
     arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
 
+    /* Dies with the run (runSignal aborts at halt), so listeners don't
+       stack up across play-again cycles */
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') game.player?.setDirection(1);
       else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    }, { signal: keyboardController.signal });
+    }, { signal: game.runSignal });
 
     /* Screen swaps blow away the focused element; re-anchor focus so keyboard
        and screen-reader users aren't dropped to <body> */
@@ -270,7 +285,7 @@ function main(): void {
     });
   }
 
-  function createToBeContiniuedScreen(score: number): void {
+  function createToBeContinuedScreen(score: number): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
@@ -294,7 +309,7 @@ function main(): void {
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 
     if (localStorage.getItem('audio-muted') !== '1') {
-      new Audio(FALLING_SFX).play();
+      safePlay(new Audio(FALLING_SFX));
     }
 
     const lemmingSize = size * 0.14;
@@ -419,27 +434,34 @@ function main(): void {
     title.tabIndex = -1;
     title.focus();
 
+    const startRankingMusic = (): void => {
+      if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
+      rankingMusic = new Audio(RANKING_MUSIC);
+      rankingMusic.loop = true;
+      rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
+      /* The die SFX can finish while the tab is hidden — start paused and
+         let the visibility listener resume on return */
+      if (!document.hidden) safePlay(rankingMusic);
+    };
+
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
-      dieSfx.addEventListener('ended', () => {
-        if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
-        rankingMusic = new Audio(RANKING_MUSIC);
-        rankingMusic.loop = true;
-        rankingMusic.play();
-      });
-      dieSfx.play();
+      dieSfx.addEventListener('ended', startRankingMusic);
+      safePlay(dieSfx);
+    } else {
+      startRankingMusic();
     }
 
-    const submission: Promise<{ error: boolean; docId: string | null }> = debugScreen
-      ? Promise.resolve({ error: false, docId: null })
+    const submission: Promise<SubmissionResult> = debugScreen
+      ? Promise.resolve({ error: false, docId: null, bestScore: null })
       : submitScore(playerName, score)
-        .then((docId) => ({ error: false, docId }))
-        .catch(() => ({ error: true, docId: null }));
+        .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
+        .catch(() => ({ error: true, docId: null, bestScore: null }));
 
     setTimeout(() => createRankingScreen(score, submission), GAME_OVER_TRANSITION_MS);
   }
 
-  function createRankingScreen(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): void {
+  function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
     const size = getCanvasSize();
     buildDom(`
       <section class="section-container ranking-screen">
@@ -480,16 +502,16 @@ function main(): void {
     loadRanking(currentScore, submission);
   }
 
-  async function loadRanking(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): Promise<void> {
+  async function loadRanking(currentScore: number, submission: Promise<SubmissionResult>): Promise<void> {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
     /* Bounded wait for the submission; falls back to failed if still pending */
-    const resolveSubmission = (): Promise<{ error: boolean; docId: string | null }> =>
+    const resolveSubmission = (): Promise<SubmissionResult> =>
       Promise.race([
         submission,
-        new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
+        new Promise<SubmissionResult>((resolve) =>
+          setTimeout(() => resolve({ error: true, docId: null, bestScore: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
@@ -507,35 +529,28 @@ function main(): void {
     try {
       const scores = await fetchTopScores(10);
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-      const { error: submissionError, docId: submittedDocId } = await resolveSubmission();
+      const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
 
       if (scores.length === 0) {
-        let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
-        if (currentScore > 0 && submittedDocId !== null) {
-          const rank = await getPlayerRank(currentScore);
-          if (!mainElement.querySelector('.ranking-list')) return;
-          html += `
-            <hr class="ranking-divider">
-            <div class="ranking-row ranking-row--current">
-              <span class="ranking-rank">${rank}.</span>
-              <span class="ranking-name">${escapeHtml(playerName)}</span>
-              <span class="ranking-score">${currentScore}s</span>
-            </div>
-          `;
-        }
-        listEl.innerHTML = html;
+        listEl.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
         return;
       }
 
-      const playerInTop10 = submittedDocId !== null && scores.some((s) => s.id === submittedDocId);
+      /* The leaderboard keeps one record per name (the personal best), so a name
+         match means this row IS the player's entry — highlight it in place and
+         never append a duplicate row with this run's lower score below */
+      const isPlayerRow = (s: { id: string; name: string }): boolean =>
+        (submittedDocId !== null && s.id === submittedDocId)
+        || (playerName !== '' && s.name === playerName);
+      const playerInTop10 = scores.some(isPlayerRow);
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
       scores.forEach((s, i) => {
         if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
-        const isCurrent = submittedDocId !== null && s.id === submittedDocId;
+        const isCurrent = isPlayerRow(s);
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
           <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
@@ -545,17 +560,20 @@ function main(): void {
       html += '</ol>';
 
       if (!playerInTop10) {
-        const rank = await getPlayerRank(currentScore);
+        const effectiveScore = bestScore ?? currentScore;
+        const rank = await getPlayerRank(effectiveScore).catch(() => null);
         if (!mainElement.querySelector('.ranking-list')) return;
-        html += `
-          <hr class="ranking-divider">
-          ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
-          <div class="ranking-row ranking-row--current">
-            <span class="ranking-rank">${rank}.</span>
-            <span class="ranking-name">${escapeHtml(playerName)}</span>
-            <span class="ranking-score">${currentScore}s</span>
-          </div>
-        `;
+        if (rank !== null) {
+          html += `
+            <hr class="ranking-divider">
+            ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
+            <div class="ranking-row ranking-row--current">
+              <span class="ranking-rank">${rank}.</span>
+              <span class="ranking-name">${escapeHtml(playerName)}</span>
+              <span class="ranking-score">${effectiveScore}s</span>
+            </div>
+          `;
+        }
       }
 
       listEl.innerHTML = html;
@@ -576,7 +594,7 @@ function main(): void {
     }
   }
 
-  if (debugScreen === 'tbc') createToBeContiniuedScreen(42);
+  if (debugScreen === 'tbc') createToBeContinuedScreen(42);
   else createStartScreen();
 }
 

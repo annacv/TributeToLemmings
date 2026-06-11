@@ -125,6 +125,45 @@ describe('Player', () => {
     expect(mockCtx.fill).not.toHaveBeenCalled();
   });
 
+  it('blink duration elapses per simulation step (tickBlink), not per draw', () => {
+    const player = new Player(canvas);
+    player.triggerBlink();
+    player.drawImage(0);
+    player.drawImage(0);
+    expect(player.blinkFramesLeft).toBe(BLINK_TOTAL_FRAMES);
+    player.tickBlink();
+    expect(player.blinkFramesLeft).toBe(BLINK_TOTAL_FRAMES - 1);
+  });
+
+  it('re-triggering a blink makes the next rendered frame visible again', () => {
+    const player = new Player(canvas);
+    player.triggerBlink();
+    player.drawImage(0); // visible, toggles to hidden
+    player.triggerBlink();
+    mockCtx.fill.mockClear();
+    player.drawImage(0);
+    expect(mockCtx.fill).toHaveBeenCalled();
+  });
+
+  it('blink flickers at 30 Hz cadence (2 steps per rendered frame) — never aliases away', () => {
+    const player = new Player(canvas);
+    player.triggerBlink();
+    let visibleFrames = 0;
+    let hiddenFrames = 0;
+    while (player.blinkFramesLeft > 0) {
+      player.tickBlink();
+      player.tickBlink();
+      mockCtx.fill.mockClear();
+      player.drawImage(0);
+      if (player.blinkFramesLeft > 0) {
+        if (mockCtx.fill.mock.calls.length > 0) visibleFrames++;
+        else hiddenFrames++;
+      }
+    }
+    expect(visibleFrames).toBeGreaterThan(0);
+    expect(hiddenFrames).toBeGreaterThan(0);
+  });
+
   it('drawImage uses blinkColor (pre-damage) on visible blink frames', () => {
     const player = new Player(canvas);
     player.triggerBlink();

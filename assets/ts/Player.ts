@@ -120,6 +120,7 @@ export class Player {
   speed: number;
   blinkFramesLeft: number;
   blinkColor: string;
+  blinkVisible: boolean;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -133,6 +134,7 @@ export class Player {
     this.speed = 1;
     this.blinkFramesLeft = 0;
     this.blinkColor = '#FFFFFF';
+    this.blinkVisible = true;
   }
 
   move(): void {
@@ -149,17 +151,28 @@ export class Player {
   triggerBlink(livesSnapshot?: number): void {
     this.blinkColor = getBodyColor(livesSnapshot ?? this.lives);
     this.blinkFramesLeft = BLINK_TOTAL_FRAMES;
+    this.blinkVisible = true; // first rendered frame after a hit IS the hit feedback
+  }
+
+  /** Advances the blink duration by one simulation step (real-time on any refresh rate). */
+  tickBlink(): void {
+    if (this.blinkFramesLeft > 0) this.blinkFramesLeft--;
   }
 
   drawImage(frameCount: number): void {
-    if (this.blinkFramesLeft > 0) {
-      this.blinkFramesLeft--;
-      if (this.blinkFramesLeft % 2 === 0) return;
+    /* Duration counts simulation steps (tickBlink), but visibility alternates per
+       rendered frame: deriving it from the step count aliases at 30 Hz, where ~2
+       steps per render can sample the player as hidden for the entire blink */
+    const blinking = this.blinkFramesLeft > 0;
+    if (blinking) {
+      const visible = this.blinkVisible;
+      this.blinkVisible = !this.blinkVisible;
+      if (!visible) return;
     }
 
     const { ctx, dx, dy, dWidth, direction } = this;
     const scale = dWidth / SVG_SIZE;
-    const bodyColor = this.blinkFramesLeft > 0 ? this.blinkColor : getBodyColor(this.lives);
+    const bodyColor = blinking ? this.blinkColor : getBodyColor(this.lives);
 
     ctx.save();
     if (direction < 0) {

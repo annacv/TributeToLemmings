@@ -556,7 +556,8 @@ describe('Game — tunnel world transition', () => {
     expect(game['isTunnelTransition']).toBe(true);
   });
 
-  it('fires onTunnelWorld callback (not onGameOver) when muted and erosion completes', () => {
+  it('fires onTunnelWorld callback (not onGameOver) after the muted hold elapses', () => {
+    vi.useFakeTimers();
     const game = makeGame();
     const tunnelCb = vi.fn();
     const gameOverCb = vi.fn();
@@ -569,11 +570,15 @@ describe('Game — tunnel world transition', () => {
     game.bombs.push(bomb);
     game.update();
 
+    expect(tunnelCb).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(500);
     expect(tunnelCb).toHaveBeenCalledWith(game.score);
     expect(gameOverCb).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('falls back to onGameOver when onTunnelWorld is null (muted)', () => {
+    vi.useFakeTimers();
     const game = makeGame();
     const gameOverCb = vi.fn();
     game.gameOverCallback(gameOverCb);
@@ -583,8 +588,50 @@ describe('Game — tunnel world transition', () => {
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
+    vi.advanceTimersByTime(500);
 
     expect(gameOverCb).toHaveBeenCalledWith(game.score);
+    vi.useRealTimers();
+  });
+
+  it('collapses at 23/24 covered cells, not before', () => {
+    const below = makeGame();
+    below['coveredCells'].fill(true);
+    below['coveredCells'][0] = false;
+    below['coveredCells'][1] = false; // 22/24 ≈ 0.917 < 0.95
+    const bombA = new Bomb(canvas, 100);
+    bombA.dy = canvas.height + 1;
+    below.bombs.push(bombA);
+    below.update();
+    expect(below.isGameOver).toBe(false);
+
+    const at = makeGame();
+    at['coveredCells'].fill(true);
+    at['coveredCells'][0] = false; // 23/24 ≈ 0.958 >= 0.95
+    const bombB = new Bomb(canvas, 100);
+    bombB.dy = canvas.height + 1;
+    at.bombs.push(bombB);
+    at.update();
+    expect(at.isGameOver).toBe(true);
+  });
+
+  it('force-stamps the final hole under the lemming at collapse', () => {
+    const game = makeGame();
+    game['coveredCells'].fill(true);
+    game['coveredCells'][0] = false;
+    game.player!.dx = 200;
+
+    const bomb = new Bomb(canvas, 100);
+    bomb.dy = canvas.height + 1;
+    game.bombs.push(bomb);
+    game.update();
+
+    const holes = game['holeStamps'];
+    expect(holes).toHaveLength(1);
+    const stamp = holes[0];
+    const playerCenter = 200 + game.player!.dWidth / 2;
+    expect(stamp.x + stamp.w / 2).toBeCloseTo(playerCenter, 5);
+    expect(stamp.y + stamp.h).toBeCloseTo(canvas.height, 5);
   });
 });
 
@@ -683,18 +730,114 @@ describe('Game — level-up visual effects', () => {
   });
 });
 
-describe('Game — score increments', () => {
-  it('score matches seconds elapsed at 60 fps', () => {
-    const canvas = makeCanvas(468, 468);
+describe('Game — fixed-timestep score', () => {
+  /* Captures rAF callbacks so the test drives Game's loop with chosen timestamps */
+  function startWithHarness() {
+    const callbacks: FrameRequestCallback[] = [];
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+      callbacks.push(cb);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+
+    const game = new Game(makeCanvas(468, 468));
+    game.gameSong.muted = true;
+    game.startGame(); // synchronous first step → count is already 1 here
+    return {
+      game,
+      pump(timestamp: number): void {
+        callbacks.shift()?.(timestamp);
+      },
+    };
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /* Cadences sit a hair above the exact refresh period so the 60th-step float
+     boundary is decisively crossed instead of flaking at ulp precision */
+
+  it('120 Hz: one real second yields exactly score +1 (~60 steps)', () => {
+    const h = startWithHarness();
+    h.pump(1000); // anchors the clock, zero steps
+    for (let i = 1; i <= 120; i++) h.pump(1000 + i * 8.34);
+    expect(h.game.score).toBe(1);
+    expect(h.game.count).toBe(61); // 1 synchronous + 60 stepped
+  });
+
+  it('30 Hz: one real second still yields exactly score +1 (~2 steps per callback)', () => {
+    const h = startWithHarness();
+    h.pump(1000);
+    for (let i = 1; i <= 30; i++) h.pump(1000 + i * 33.4);
+    expect(h.game.score).toBe(1);
+    expect(h.game.count).toBe(61);
+  });
+});
+
+describe('Game — background-tab audio', () => {
+  let canvas: HTMLCanvasElement;
+  const callbacks: FrameRequestCallback[] = [];
+
+  function setHidden(hidden: boolean): void {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }
+
+  beforeEach(() => {
+    canvas = makeCanvas(468, 468);
+    callbacks.length = 0;
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
+      callbacks.push(cb);
+      return callbacks.length;
+    }));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    vi.unstubAllGlobals();
+  });
+
+  function startGameWithSpies() {
     const game = new Game(canvas);
-    game.score = 0;
-    game.count = 0;
+    game.gameSong.muted = true;
+    const playSpy = vi.fn().mockResolvedValue(undefined);
+    const pauseSpy = vi.fn();
+    game.gameSong.play = playSpy;
+    game.gameSong.pause = pauseSpy;
+    game.startGame();
+    playSpy.mockClear();
+    pauseSpy.mockClear();
+    return { game, playSpy, pauseSpy };
+  }
 
-    for (let i = 0; i < 180; i++) {
-      game.count++;
-      if (game.count % 60 === 0) game.score++;
-    }
+  it('pauses the game song when the tab hides and resumes on return', () => {
+    const { playSpy, pauseSpy } = startGameWithSpies();
+    setHidden(true);
+    expect(pauseSpy).toHaveBeenCalledTimes(1);
+    setHidden(false);
+    expect(playSpy).toHaveBeenCalledTimes(1);
+  });
 
-    expect(game.score).toBe(3);
+  it('does not resume the song once the run has ended (dead instance stays silent)', () => {
+    const { game, playSpy } = startGameWithSpies();
+    game.isGameOver = true;
+    callbacks.shift()?.(1000); // the halting render runs the teardown
+    playSpy.mockClear();
+    setHidden(true);
+    setHidden(false);
+    expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  it('runs the end-of-run teardown exactly once across extra post-halt frames', () => {
+    const { game } = startGameWithSpies();
+    const gameOverCb = vi.fn();
+    game.gameOverCallback(gameOverCb);
+    game.isGameOver = true;
+    callbacks.shift()?.(1000);
+    callbacks.shift()?.(1008);
+    callbacks.shift()?.(1012);
+    expect(gameOverCb).toHaveBeenCalledTimes(1);
   });
 });
