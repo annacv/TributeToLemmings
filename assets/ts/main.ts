@@ -419,15 +419,20 @@ function main(): void {
     title.tabIndex = -1;
     title.focus();
 
+    const startRankingMusic = (): void => {
+      if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
+      rankingMusic = new Audio(RANKING_MUSIC);
+      rankingMusic.loop = true;
+      rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
+      rankingMusic.play();
+    };
+
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
-      dieSfx.addEventListener('ended', () => {
-        if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
-        rankingMusic = new Audio(RANKING_MUSIC);
-        rankingMusic.loop = true;
-        rankingMusic.play();
-      });
+      dieSfx.addEventListener('ended', startRankingMusic);
       dieSfx.play();
+    } else {
+      startRankingMusic();
     }
 
     const submission: Promise<{ error: boolean; docId: string | null }> = debugScreen
@@ -516,13 +521,19 @@ function main(): void {
         return;
       }
 
-      const playerInTop10 = submittedDocId !== null && scores.some((s) => s.id === submittedDocId);
+      /* The leaderboard keeps one record per name (the personal best), so a name
+         match means this row IS the player's entry — highlight it in place and
+         never append a duplicate row with this run's lower score below */
+      const isPlayerRow = (s: { id: string; name: string }): boolean =>
+        (submittedDocId !== null && s.id === submittedDocId)
+        || (playerName !== '' && s.name === playerName);
+      const playerInTop10 = scores.some(isPlayerRow);
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
       scores.forEach((s, i) => {
         if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
-        const isCurrent = submittedDocId !== null && s.id === submittedDocId;
+        const isCurrent = isPlayerRow(s);
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
           <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
