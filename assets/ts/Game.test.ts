@@ -556,7 +556,8 @@ describe('Game — tunnel world transition', () => {
     expect(game['isTunnelTransition']).toBe(true);
   });
 
-  it('fires onTunnelWorld callback (not onGameOver) when muted and erosion completes', () => {
+  it('fires onTunnelWorld callback (not onGameOver) after the muted hold elapses', () => {
+    vi.useFakeTimers();
     const game = makeGame();
     const tunnelCb = vi.fn();
     const gameOverCb = vi.fn();
@@ -569,11 +570,15 @@ describe('Game — tunnel world transition', () => {
     game.bombs.push(bomb);
     game.update();
 
+    expect(tunnelCb).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(500);
     expect(tunnelCb).toHaveBeenCalledWith(game.score);
     expect(gameOverCb).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('falls back to onGameOver when onTunnelWorld is null (muted)', () => {
+    vi.useFakeTimers();
     const game = makeGame();
     const gameOverCb = vi.fn();
     game.gameOverCallback(gameOverCb);
@@ -583,8 +588,50 @@ describe('Game — tunnel world transition', () => {
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
+    vi.advanceTimersByTime(500);
 
     expect(gameOverCb).toHaveBeenCalledWith(game.score);
+    vi.useRealTimers();
+  });
+
+  it('collapses at 23/24 covered cells, not before', () => {
+    const below = makeGame();
+    below['coveredCells'].fill(true);
+    below['coveredCells'][0] = false;
+    below['coveredCells'][1] = false; // 22/24 ≈ 0.917 < 0.95
+    const bombA = new Bomb(canvas, 100);
+    bombA.dy = canvas.height + 1;
+    below.bombs.push(bombA);
+    below.update();
+    expect(below.isGameOver).toBe(false);
+
+    const at = makeGame();
+    at['coveredCells'].fill(true);
+    at['coveredCells'][0] = false; // 23/24 ≈ 0.958 >= 0.95
+    const bombB = new Bomb(canvas, 100);
+    bombB.dy = canvas.height + 1;
+    at.bombs.push(bombB);
+    at.update();
+    expect(at.isGameOver).toBe(true);
+  });
+
+  it('force-stamps the final hole under the lemming at collapse', () => {
+    const game = makeGame();
+    game['coveredCells'].fill(true);
+    game['coveredCells'][0] = false;
+    game.player!.dx = 200;
+
+    const bomb = new Bomb(canvas, 100);
+    bomb.dy = canvas.height + 1;
+    game.bombs.push(bomb);
+    game.update();
+
+    const holes = game['holeStamps'];
+    expect(holes).toHaveLength(1);
+    const stamp = holes[0];
+    const playerCenter = 200 + game.player!.dWidth / 2;
+    expect(stamp.x + stamp.w / 2).toBeCloseTo(playerCenter, 5);
+    expect(stamp.y + stamp.h).toBeCloseTo(canvas.height, 5);
   });
 });
 

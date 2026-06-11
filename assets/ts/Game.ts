@@ -24,7 +24,8 @@ const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs ne
 const GROUND_TOP_FRAC = 0.71;
 const COVERAGE_COLS = 8;
 const COVERAGE_ROWS = 3;
-const COLLAPSE_COVERAGE = 0.98;
+const COLLAPSE_COVERAGE = 0.95;
+const COLLAPSE_HOLD_MS = 500;
 const EARLY_CRACK_MISSES = 4;
 const LATE_CRACK_MISSES = 14;
 const TUNNEL_STING_WATCHDOG_MS = 4000;
@@ -240,6 +241,11 @@ export class Game {
             this.playSfx(this.bangSfx);
 
             if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
+              // force a hole under the lemming so the fall always lines up
+              if (this.player) {
+                this.stampHole(this.player.dx + this.player.dWidth / 2, true);
+                this.drawGroundErosion();
+              }
               this.triggerTunnelWorld();
               return;
             }
@@ -302,14 +308,17 @@ export class Game {
     this.crackStamps.push({ img, x, y, w, h });
   }
 
-  /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage. */
-  private stampHole(impactX: number): void {
+  /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage.
+   *  `bottomAligned` pins the stamp to the canvas bottom (under the player's feet) instead of a random band y. */
+  private stampHole(impactX: number, bottomAligned = false): void {
     const img = this.holeImgs[this.holeStamps.length % this.holeImgs.length];
     const w = this.canvas.width * (0.25 + Math.random() * 0.08);
     const h = w / Game.imgAspect(img, 1 / 0.6);
     const bandTop = this.canvas.height * GROUND_TOP_FRAC;
     const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
-    const y = bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
+    const y = bottomAligned
+      ? this.canvas.height - h
+      : bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
     this.holeStamps.push({ img, x, y, w, h });
     this.markCovered(x, y, w, h);
   }
@@ -467,7 +476,9 @@ export class Game {
     };
 
     if (this.gameSong.muted) {
-      fireCallback();
+      /* No sting hold when muted: a brief pause lets the final stamped frame
+         (the hole under the lemming) land before the cut */
+      watchdog = setTimeout(fireCallback, COLLAPSE_HOLD_MS);
       return;
     }
 
