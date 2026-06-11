@@ -52,6 +52,23 @@ p {
   padding: 0;
 }
 
+/* Programmatic focus anchors for screen swaps; not Tab-reachable, so no ring */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* Near-zero duration instead of animation: none, so 'animationend' handlers
+   (life-icon removal) and 'forwards' fills (TBC overlay) still complete */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *:before,
+  *:after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ---- LAYOUT ---- */
 
 body {
@@ -226,47 +243,6 @@ main {
 
   .footer-nav {
     gap: 2rem;
-  }
-}
-
-/* ---- LEGACY SECTION STYLES (other screens) ---- */
-
-.section-title {
-  width: 100%;
-  font-size: 2.5rem;
-  line-height: 1;
-  margin-bottom: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .section-title {
-    font-size: 3rem;
-  }
-}
-
-.section-description {
-  width: 100%;
-  font-size: 1.05rem;
-  line-height: 1.4;
-  font-weight: 200;
-  margin-bottom: 2.5rem;
-}
-
-.description-highlighted {
-  padding: .25rem .25rem .115rem .25rem;
-  font-size: .875rem;
-  font-weight: 900;
-  color: var(--text-white);
-  background-color: var(--brand);
-}
-
-@media (min-width: 768px) {
-  .section-description {
-    font-size: 1.125rem;
-  }
-
-  .description-highlighted {
-    font-size: 1rem;
   }
 }
 
@@ -688,12 +664,6 @@ canvas {
   color: var(--brand);
 }
 
-/* Restart button lives inside the overlay — needs pointer events */
-.go-restart {
-  pointer-events: auto;
-  margin-top: .5rem;
-}
-
 @media (max-width: 767px) {
   .game-over-overlay {
     top:  0.25rem;
@@ -960,6 +930,15 @@ button:active {
 }
 
 /* ---- SPLASH NAME INPUT ---- */
+
+/* Mirrors the .splash-hero column so the form wrapper is invisible to the layout */
+.splash-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  width: 100%;
+}
 
 .splash-name-wrap {
   display: flex;

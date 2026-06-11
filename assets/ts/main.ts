@@ -100,35 +100,59 @@ function main(): void {
     document.body.appendChild(backdrop);
 
     const checkbox = backdrop.querySelector('#modal-no-show') as HTMLInputElement;
+    const closeBtn = backdrop.querySelector('.info-modal-close') as HTMLButtonElement;
+    const confirmBtn = backdrop.querySelector('.info-modal-btn') as HTMLButtonElement;
 
     function closeModal(): void {
+      document.removeEventListener('keydown', onModalKeydown);
       if (checkbox.checked) localStorage.setItem('info-modal-dismissed', '1');
       backdrop.remove();
       onClose();
     }
 
-    backdrop.querySelector('.info-modal-close')!.addEventListener('click', closeModal);
-    backdrop.querySelector('.info-modal-btn')!.addEventListener('click', closeModal);
+    /* aria-modal promises focus stays inside: Escape closes, Tab wraps over the
+       three focusables (close button, checkbox, confirm button) */
+    function onModalKeydown(event: KeyboardEvent): void {
+      if (event.key === 'Escape') {
+        closeModal();
+      } else if (event.key === 'Tab') {
+        if (event.shiftKey && document.activeElement === closeBtn) {
+          event.preventDefault();
+          confirmBtn.focus();
+        } else if (!event.shiftKey && document.activeElement === confirmBtn) {
+          event.preventDefault();
+          closeBtn.focus();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', onModalKeydown);
+    closeBtn.addEventListener('click', closeModal);
+    confirmBtn.addEventListener('click', closeModal);
+    confirmBtn.focus();
   }
 
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
-        <canvas class="splash-mascot" aria-label="Lemming mascot"></canvas>
+        <canvas class="splash-mascot" role="img" aria-label="Lemming mascot"></canvas>
         <h1 class="splash-title">Tribute to<br>Lemmings</h1>
         <p class="splash-tagline">&gt; skip the bombs. stay alive.</p>
-        <div class="splash-name-wrap">
-          <input
-            class="splash-name-input"
-            type="text"
-            maxlength="20"
-            placeholder="Enter your name"
-            autocomplete="off"
-            spellcheck="false"
-          >
-          <p class="splash-name-notice">&gt; your nickname &amp; score will be saved to a public leaderboard.</p>
-        </div>
-        <button class="splash-start">Start</button>
+        <form class="splash-form">
+          <div class="splash-name-wrap">
+            <input
+              class="splash-name-input"
+              type="text"
+              maxlength="20"
+              placeholder="Enter your name"
+              aria-label="Your nickname"
+              autocomplete="off"
+              spellcheck="false"
+            >
+            <p class="splash-name-notice">&gt; your nickname &amp; score will be saved to a public leaderboard.</p>
+          </div>
+          <button class="splash-start" type="submit">Start</button>
+        </form>
       </section>
     `);
 
@@ -152,10 +176,13 @@ function main(): void {
       startBtn.focus();
     }
 
-    startBtn.addEventListener('click', () => {
+    /* Form submit covers both the Start button and Enter in the name input
+       (incl. the mobile keyboard's Go key); an empty name falls back to a guest handle */
+    const form = mainElement.querySelector('.splash-form') as HTMLFormElement;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
       cancelAnimationFrame(mascotRafId);
-      const input = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
-      playerName = input.value.trim() || generateGuestHandle();
+      playerName = nameInput.value.trim() || generateGuestHandle();
       createGameScreen();
     });
   }
@@ -165,7 +192,7 @@ function main(): void {
     const gameScreen = buildDom(`
       <section class="section-container play">
         <div class="crt-frame">
-          <canvas class="game-canvas"></canvas>
+          <canvas class="game-canvas" role="img" aria-label="Game area — dodge the falling bombs"></canvas>
           <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
@@ -201,8 +228,17 @@ function main(): void {
     canvas.height = size;
 
     const game = new Game(canvas);
-    game.gameOverCallback(createGameOverScreen);
-    game.tunnelWorldCallback(createToBeContiniuedScreen);
+    /* Aborted on game end so stale keydown listeners don't stack up (and retain
+       dead Game instances) across play-again cycles */
+    const keyboardController = new AbortController();
+    game.gameOverCallback((score) => {
+      keyboardController.abort();
+      createGameOverScreen(score);
+    });
+    game.tunnelWorldCallback((score) => {
+      keyboardController.abort();
+      createToBeContiniuedScreen(score);
+    });
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -221,9 +257,17 @@ function main(): void {
     document.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') game.player?.setDirection(1);
       else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    });
+    }, { signal: keyboardController.signal });
 
-    showInfoModal(() => game.startGame());
+    /* Screen swaps blow away the focused element; re-anchor focus so keyboard
+       and screen-reader users aren't dropped to <body> */
+    canvas.tabIndex = -1;
+    canvas.focus();
+
+    showInfoModal(() => {
+      canvas.focus();
+      game.startGame();
+    });
   }
 
   function createToBeContiniuedScreen(score: number): void {
@@ -231,7 +275,7 @@ function main(): void {
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
         <div class="crt-frame">
-          <canvas class="tbc-canvas"></canvas>
+          <canvas class="tbc-canvas" aria-hidden="true"></canvas>
           <div class="tbc-overlay">
             <p class="tbc-line">TO BE CONTINUED...</p>
           </div>
@@ -242,11 +286,10 @@ function main(): void {
     const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
+    canvas.tabIndex = -1;
+    canvas.focus();
     const ctx = canvas.getContext('2d')!;
 
-    /* The surface backdrop and the collapse shaft (erosion + interspersed hole
-       frames) are baked into this single strip via svg defs/use — no per-row
-       compositing in JS */
     const undergroundImg = new Image();
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 
@@ -355,7 +398,7 @@ function main(): void {
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="crt-frame">
-          <canvas class="game-over-canvas"></canvas>
+          <canvas class="game-over-canvas" aria-hidden="true"></canvas>
           <div class="game-over-overlay">
             <p class="go-boom">BOOOM!!!</p>
             <h1 class="go-title">GAME OVER</h1>
@@ -371,6 +414,10 @@ function main(): void {
 
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     if (scoreEl) scoreEl.textContent = String(score);
+
+    const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
+    title.tabIndex = -1;
+    title.focus();
 
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
@@ -397,7 +444,7 @@ function main(): void {
     buildDom(`
       <section class="section-container ranking-screen">
         <div class="crt-frame">
-          <canvas class="ranking-canvas"></canvas>
+          <canvas class="ranking-canvas" aria-hidden="true"></canvas>
           <div class="ranking-overlay">
             <h1 class="ranking-title">Hall of Fame</h1>
             <div class="ranking-list">
@@ -419,7 +466,9 @@ function main(): void {
       (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
     );
 
-    mainElement.querySelector('.ranking-play-again')!.addEventListener('click', () => {
+    const playAgainBtn = mainElement.querySelector('.ranking-play-again') as HTMLButtonElement;
+    playAgainBtn.focus();
+    playAgainBtn.addEventListener('click', () => {
       if (rankingMusic) {
         rankingMusic.pause();
         rankingMusic.src = '';
@@ -435,31 +484,32 @@ function main(): void {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
-    try {
-      const scores = await fetchTopScores(10);
-
-      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-
-      // Give submission up to 1 s after scores arrive; fall back to failed if still pending
-      const { error: submissionError, docId: submittedDocId } = await Promise.race([
+    /* Bounded wait for the submission; falls back to failed if still pending */
+    const resolveSubmission = (): Promise<{ error: boolean; docId: string | null }> =>
+      Promise.race([
         submission,
         new Promise<{ error: boolean; docId: string | null }>((resolve) =>
           setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
-      if (!mainElement.querySelector('.ranking-list')) return;
+    function showSaveErrorBanner(): void {
+      if (mainElement.querySelector('.ranking-save-error')) return;
+      const overlay = mainElement.querySelector('.ranking-overlay');
+      const title = overlay?.querySelector('.ranking-title');
+      if (!overlay || !title) return;
+      const banner = document.createElement('p');
+      banner.className = 'ranking-save-error';
+      banner.textContent = '> score could not be saved.';
+      overlay.insertBefore(banner, title);
+    }
 
-      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
-        const overlay = mainElement.querySelector('.ranking-overlay');
-        const title = overlay?.querySelector('.ranking-title');
-        if (overlay && title) {
-          const banner = document.createElement('p');
-          banner.className = 'ranking-save-error';
-          banner.textContent = '> score could not be saved.';
-          overlay.insertBefore(banner, title);
-        }
-      }
+    try {
+      const scores = await fetchTopScores(10);
+      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+      const { error: submissionError, docId: submittedDocId } = await resolveSubmission();
+      if (!mainElement.querySelector('.ranking-list')) return;
+      if (submissionError) showSaveErrorBanner();
 
       if (scores.length === 0) {
         let html = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
@@ -511,23 +561,9 @@ function main(): void {
       listEl.innerHTML = html;
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
-      const { error: submissionError } = await Promise.race([
-        submission,
-        new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
-        ),
-      ]);
+      const { error: submissionError } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
-      if (submissionError && !mainElement.querySelector('.ranking-save-error')) {
-        const overlay = mainElement.querySelector('.ranking-overlay');
-        const title = overlay?.querySelector('.ranking-title');
-        if (overlay && title) {
-          const banner = document.createElement('p');
-          banner.className = 'ranking-save-error';
-          banner.textContent = '> score could not be saved.';
-          overlay.insertBefore(banner, title);
-        }
-      }
+      if (submissionError) showSaveErrorBanner();
       listEl.innerHTML = `
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
