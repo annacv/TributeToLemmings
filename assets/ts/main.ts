@@ -1,6 +1,7 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+import { safePlay } from './lib/audio';
 import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
@@ -23,7 +24,7 @@ const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" heig
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let id = '';
-  for (let i = 0; i < 3; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return `Lemming #${id}`;
 }
 
@@ -41,9 +42,17 @@ function main(): void {
   let rankingMusic: HTMLAudioElement | null = null;
 
   /* Dev-only shortcut (?screen=tbc) to replay the interstitial; skips score submission */
-  const debugScreen = import.meta.env.DEV
+  let debugScreen = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('screen')
     : null;
+
+  function consumeDebugScreen(): void {
+    if (!debugScreen) return;
+    debugScreen = null;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('screen');
+    history.replaceState(null, '', url);
+  }
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -183,6 +192,7 @@ function main(): void {
       event.preventDefault();
       cancelAnimationFrame(mascotRafId);
       playerName = nameInput.value.trim() || generateGuestHandle();
+      consumeDebugScreen();
       createGameScreen();
     });
   }
@@ -237,7 +247,7 @@ function main(): void {
     });
     game.tunnelWorldCallback((score) => {
       keyboardController.abort();
-      createToBeContiniuedScreen(score);
+      createToBeContinuedScreen(score);
     });
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
@@ -270,7 +280,7 @@ function main(): void {
     });
   }
 
-  function createToBeContiniuedScreen(score: number): void {
+  function createToBeContinuedScreen(score: number): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
@@ -294,7 +304,7 @@ function main(): void {
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
 
     if (localStorage.getItem('audio-muted') !== '1') {
-      new Audio(FALLING_SFX).play();
+      safePlay(new Audio(FALLING_SFX));
     }
 
     const lemmingSize = size * 0.14;
@@ -424,13 +434,13 @@ function main(): void {
       rankingMusic = new Audio(RANKING_MUSIC);
       rankingMusic.loop = true;
       rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
-      rankingMusic.play();
+      safePlay(rankingMusic);
     };
 
     if (localStorage.getItem('audio-muted') !== '1') {
       const dieSfx = new Audio(DIE_SFX);
       dieSfx.addEventListener('ended', startRankingMusic);
-      dieSfx.play();
+      safePlay(dieSfx);
     } else {
       startRankingMusic();
     }
@@ -543,17 +553,19 @@ function main(): void {
       html += '</ol>';
 
       if (!playerInTop10) {
-        const rank = await getPlayerRank(currentScore);
+        const rank = await getPlayerRank(currentScore).catch(() => null);
         if (!mainElement.querySelector('.ranking-list')) return;
-        html += `
-          <hr class="ranking-divider">
-          ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
-          <div class="ranking-row ranking-row--current">
-            <span class="ranking-rank">${rank}.</span>
-            <span class="ranking-name">${escapeHtml(playerName)}</span>
-            <span class="ranking-score">${currentScore}s</span>
-          </div>
-        `;
+        if (rank !== null) {
+          html += `
+            <hr class="ranking-divider">
+            ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
+            <div class="ranking-row ranking-row--current">
+              <span class="ranking-rank">${rank}.</span>
+              <span class="ranking-name">${escapeHtml(playerName)}</span>
+              <span class="ranking-score">${currentScore}s</span>
+            </div>
+          `;
+        }
       }
 
       listEl.innerHTML = html;
@@ -574,7 +586,7 @@ function main(): void {
     }
   }
 
-  if (debugScreen === 'tbc') createToBeContiniuedScreen(42);
+  if (debugScreen === 'tbc') createToBeContinuedScreen(42);
   else createStartScreen();
 }
 

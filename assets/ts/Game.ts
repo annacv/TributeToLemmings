@@ -1,5 +1,6 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
+import { safePlay } from './lib/audio';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
@@ -112,7 +113,7 @@ export class Game {
     this.updateLevel();
     this.showLevelUpEffect();
     this.gameSong.loop = true;
-    this.gameSong.play();
+    safePlay(this.gameSong);
 
     const loop = () => {
       this.count++;
@@ -161,7 +162,7 @@ export class Game {
   private playSfx(sfx: HTMLAudioElement): void {
     if (this.gameSong.muted) return;
     sfx.currentTime = 0;
-    sfx.play();
+    safePlay(sfx);
   }
 
   private handleLevelUp(): void {

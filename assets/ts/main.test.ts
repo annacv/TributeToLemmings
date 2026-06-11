@@ -37,16 +37,16 @@ describe('generateGuestHandle', () => {
     expect(generateGuestHandle()).toMatch(/^Lemming #/);
   });
 
-  it('has exactly 3 characters after the prefix', () => {
+  it('has exactly 5 characters after the prefix', () => {
     const handle = generateGuestHandle();
     const suffix = handle.replace('Lemming #', '');
-    expect(suffix).toHaveLength(3);
+    expect(suffix).toHaveLength(5);
   });
 
   it('suffix contains only uppercase letters and digits', () => {
     for (let i = 0; i < 50; i++) {
       const suffix = generateGuestHandle().replace('Lemming #', '');
-      expect(suffix).toMatch(/^[A-Z0-9]{3}$/);
+      expect(suffix).toMatch(/^[A-Z0-9]{5}$/);
     }
   });
 
