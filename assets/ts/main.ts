@@ -1,6 +1,6 @@
 import { Game } from './Game';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
-import { submitScore, fetchTopScores, getPlayerRank } from './lib/firebase';
+import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay } from './lib/audio';
 import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
@@ -207,6 +207,9 @@ function main(): void {
   }
 
   function createGameScreen(): void {
+    
+    preloadLeaderboard();
+
     const size = getCanvasSize();
     const gameScreen = buildDom(`
       <section class="section-container play">

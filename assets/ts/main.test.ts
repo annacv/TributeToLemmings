@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { generateGuestHandle } from './main';
-import { submitScore, fetchTopScores, getPlayerRank, type ScoreRecord } from './lib/firebase';
+import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
+import type { ScoreRecord } from './lib/firebase';
 
 interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
@@ -14,7 +15,8 @@ const { gameInstances } = vi.hoisted(() => ({
   gameInstances: [] as MockGame[],
 }));
 
-vi.mock('./lib/firebase', () => ({
+vi.mock('./lib/leaderboard', () => ({
+  preloadLeaderboard: vi.fn(),
   submitScore: vi.fn().mockResolvedValue({ docId: 'doc-id', bestScore: 0 }),
   fetchTopScores: vi.fn().mockResolvedValue([]),
   getPlayerRank: vi.fn().mockResolvedValue(1),
