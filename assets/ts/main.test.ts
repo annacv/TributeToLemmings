@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { generateGuestHandle } from './main';
+import { submitScore, fetchTopScores, getPlayerRank, type ScoreRecord } from './lib/firebase';
 
 interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
@@ -14,7 +15,7 @@ const { gameInstances } = vi.hoisted(() => ({
 }));
 
 vi.mock('./lib/firebase', () => ({
-  submitScore: vi.fn().mockResolvedValue('doc-id'),
+  submitScore: vi.fn().mockResolvedValue({ docId: 'doc-id', bestScore: 0 }),
   fetchTopScores: vi.fn().mockResolvedValue([]),
   getPlayerRank: vi.fn().mockResolvedValue(1),
 }));
@@ -149,5 +150,47 @@ describe('game screen keyboard wiring', () => {
     expect(document.querySelector('.info-modal-backdrop')).toBeNull();
     expect(activeGame().startGame).toHaveBeenCalledTimes(1);
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
+  });
+});
+
+describe('ranking row outside the top 10', () => {
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    gameInstances.length = 0;
+    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('audio-muted', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    window.dispatchEvent(new Event('load'));
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('audio-muted');
+    vi.useRealTimers();
+  });
+
+  it('shows the stored personal best, not this run, and ranks by it', async () => {
+    vi.useFakeTimers();
+    (document.querySelector('.splash-name-input') as HTMLInputElement).value = 'Anna';
+    (document.querySelector('.splash-form') as HTMLFormElement)
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+
+    /* This run scored 30, but the leaderboard already holds Anna's best of 50 */
+    vi.mocked(submitScore).mockResolvedValue({ docId: 'me', bestScore: 50 });
+    vi.mocked(fetchTopScores).mockResolvedValue([
+      { id: 'other', name: 'Top', score: 99 } as ScoreRecord,
+    ]);
+    vi.mocked(getPlayerRank).mockResolvedValue(12);
+
+    gameInstances[gameInstances.length - 1].onGameOver!(30);
+    await vi.advanceTimersByTimeAsync(2000); // game-over beat → ranking screen
+    await vi.advanceTimersByTimeAsync(10);   // flush the ranking load
+
+    expect(getPlayerRank).toHaveBeenCalledWith(50);
+    const score = document.querySelector('.ranking-row--current .ranking-score');
+    expect(score?.textContent).toBe('50s');
   });
 });

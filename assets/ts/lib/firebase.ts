@@ -37,20 +37,24 @@ const db = getFirestore(app);
 
 const scoresCol = collection(db, 'scores');
 
-export async function submitScore(name: string, score: number): Promise<string> {
+export async function submitScore(
+  name: string,
+  score: number,
+): Promise<{ docId: string; bestScore: number }> {
   const existing = await getDocs(query(scoresCol, where('name', '==', name), limit(1)));
 
   if (!existing.empty) {
     const existingDoc = existing.docs[0];
-    if (score > (existingDoc.data() as ScoreRecord).score) {
+    const storedBest = (existingDoc.data() as ScoreRecord).score;
+    if (score > storedBest) {
       await updateDoc(existingDoc.ref, { score, createdAt: serverTimestamp() });
     }
-    return existingDoc.id;
+    return { docId: existingDoc.id, bestScore: Math.max(score, storedBest) };
   }
 
   const docRef = doc(scoresCol);
   await setDoc(docRef, { id: docRef.id, name, score, createdAt: serverTimestamp() });
-  return docRef.id;
+  return { docId: docRef.id, bestScore: score };
 }
 
 export async function fetchTopScores(n: number): Promise<ScoreRecord[]> {

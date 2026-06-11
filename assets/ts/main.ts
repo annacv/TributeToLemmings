@@ -28,6 +28,8 @@ export function generateGuestHandle(): string {
   return `Lemming #${id}`;
 }
 
+type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -447,16 +449,16 @@ function main(): void {
       startRankingMusic();
     }
 
-    const submission: Promise<{ error: boolean; docId: string | null }> = debugScreen
-      ? Promise.resolve({ error: false, docId: null })
+    const submission: Promise<SubmissionResult> = debugScreen
+      ? Promise.resolve({ error: false, docId: null, bestScore: null })
       : submitScore(playerName, score)
-        .then((docId) => ({ error: false, docId }))
-        .catch(() => ({ error: true, docId: null }));
+        .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
+        .catch(() => ({ error: true, docId: null, bestScore: null }));
 
     setTimeout(() => createRankingScreen(score, submission), GAME_OVER_TRANSITION_MS);
   }
 
-  function createRankingScreen(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): void {
+  function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
     const size = getCanvasSize();
     buildDom(`
       <section class="section-container ranking-screen">
@@ -497,16 +499,16 @@ function main(): void {
     loadRanking(currentScore, submission);
   }
 
-  async function loadRanking(currentScore: number, submission: Promise<{ error: boolean; docId: string | null }>): Promise<void> {
+  async function loadRanking(currentScore: number, submission: Promise<SubmissionResult>): Promise<void> {
     const listEl = mainElement.querySelector('.ranking-list');
     if (!listEl) return;
 
     /* Bounded wait for the submission; falls back to failed if still pending */
-    const resolveSubmission = (): Promise<{ error: boolean; docId: string | null }> =>
+    const resolveSubmission = (): Promise<SubmissionResult> =>
       Promise.race([
         submission,
-        new Promise<{ error: boolean; docId: string | null }>((resolve) =>
-          setTimeout(() => resolve({ error: true, docId: null }), SUBMISSION_TIMEOUT_MS)
+        new Promise<SubmissionResult>((resolve) =>
+          setTimeout(() => resolve({ error: true, docId: null, bestScore: null }), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
 
@@ -524,7 +526,7 @@ function main(): void {
     try {
       const scores = await fetchTopScores(10);
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-      const { error: submissionError, docId: submittedDocId } = await resolveSubmission();
+      const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
 
@@ -555,7 +557,8 @@ function main(): void {
       html += '</ol>';
 
       if (!playerInTop10) {
-        const rank = await getPlayerRank(currentScore).catch(() => null);
+        const effectiveScore = bestScore ?? currentScore;
+        const rank = await getPlayerRank(effectiveScore).catch(() => null);
         if (!mainElement.querySelector('.ranking-list')) return;
         if (rank !== null) {
           html += `
@@ -564,7 +567,7 @@ function main(): void {
             <div class="ranking-row ranking-row--current">
               <span class="ranking-rank">${rank}.</span>
               <span class="ranking-name">${escapeHtml(playerName)}</span>
-              <span class="ranking-score">${currentScore}s</span>
+              <span class="ranking-score">${effectiveScore}s</span>
             </div>
           `;
         }
