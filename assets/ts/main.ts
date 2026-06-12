@@ -3,6 +3,7 @@ import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
+import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
@@ -275,7 +276,7 @@ function main(): void {
     });
   }
 
-  function createToBeContinuedScreen(score: number): void {
+  function createToBeContinuedScreen(breakdown: ScoreBreakdown): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
@@ -378,7 +379,8 @@ function main(): void {
       if (started) return;
       started = true;
       requestAnimationFrame((now) => animate(now, now));
-      setTimeout(() => createGameOverScreen(score), TBC_TRANSITION_MS);
+      /* Stub/fallback route: the breakdown passes onward unchanged */
+      setTimeout(() => createGameOverScreen(breakdown), TBC_TRANSITION_MS);
     };
     let pendingImgs = [undergroundImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
@@ -394,7 +396,7 @@ function main(): void {
     });
   }
 
-  function createGameOverScreen(score: number): void {
+  function createGameOverScreen(breakdown: ScoreBreakdown): void {
     const size = getCanvasSize();
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
@@ -414,7 +416,7 @@ function main(): void {
     canvas.height = size;
 
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
-    if (scoreEl) scoreEl.textContent = String(score);
+    if (scoreEl) scoreEl.textContent = String(breakdown.total);
 
     const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
     title.tabIndex = -1;
@@ -438,13 +440,14 @@ function main(): void {
       startRankingMusic();
     }
 
+    /* Only the total reaches the leaderboard; the breakdown stays client-side */
     const submission: Promise<SubmissionResult> = debugScreen
       ? Promise.resolve({ error: false, docId: null, bestScore: null })
-      : submitScore(playerName, score)
+      : submitScore(playerName, breakdown.total)
         .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
         .catch(() => ({ error: true, docId: null, bestScore: null }));
 
-    setTimeout(() => createRankingScreen(score, submission), GAME_OVER_TRANSITION_MS);
+    setTimeout(() => createRankingScreen(breakdown.total, submission), GAME_OVER_TRANSITION_MS);
   }
 
   function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
@@ -540,7 +543,7 @@ function main(): void {
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
           <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
-          <span class="ranking-score">${s.score}s</span>
+          <span class="ranking-score">${s.score}</span>
         </li>`;
       });
       html += '</ol>';
@@ -556,7 +559,7 @@ function main(): void {
             <div class="ranking-row ranking-row--current">
               <span class="ranking-rank">${rank}.</span>
               <span class="ranking-name">${escapeHtml(playerName)}</span>
-              <span class="ranking-score">${effectiveScore}s</span>
+              <span class="ranking-score">${effectiveScore}</span>
             </div>
           `;
         }
@@ -580,7 +583,7 @@ function main(): void {
     }
   }
 
-  if (debugScreen === 'tbc') createToBeContinuedScreen(42);
+  if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surface: 42 }));
   else createStartScreen();
 }
 

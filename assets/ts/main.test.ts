@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { generateGuestHandle } from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
+import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import type { ScoreRecord } from './lib/firebase';
 
 interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
   gameSong: { muted: boolean };
-  onGameOver: ((score: number) => void) | null;
-  onTunnelWorld: ((score: number) => void) | null;
+  onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
+  onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
   startGame: ReturnType<typeof vi.fn>;
 }
 
@@ -26,18 +27,18 @@ vi.mock('./Game', () => ({
   Game: class {
     player = { setDirection: vi.fn() };
     gameSong = { muted: false };
-    onGameOver: ((score: number) => void) | null = null;
-    onTunnelWorld: ((score: number) => void) | null = null;
+    onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
+    onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null = null;
     startGame = vi.fn();
     private runController = new AbortController();
     get runSignal(): AbortSignal { return this.runController.signal; }
     constructor() { gameInstances.push(this); }
     /* The real Game aborts runSignal before firing these — keep the mock honest */
-    gameOverCallback(cb: (score: number) => void): void {
-      this.onGameOver = (score) => { this.runController.abort(); cb(score); };
+    gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
+      this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
-    tunnelWorldCallback(cb: (score: number) => void): void {
-      this.onTunnelWorld = (score) => { this.runController.abort(); cb(score); };
+    tunnelWorldCallback(cb: (breakdown: ScoreBreakdown) => void): void {
+      this.onTunnelWorld = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
   },
 }));
@@ -96,7 +97,7 @@ describe('game screen keyboard wiring', () => {
 
   it('detaches the keydown listener once the game is over', () => {
     const game = activeGame();
-    game.onGameOver!(0);
+    game.onGameOver!(makeBreakdown());
     game.player.setDirection.mockClear();
     pressArrowRight();
     expect(game.player.setDirection).not.toHaveBeenCalled();
@@ -104,7 +105,7 @@ describe('game screen keyboard wiring', () => {
 
   it('detaches the keydown listener on the tunnel transition', () => {
     const game = activeGame();
-    game.onTunnelWorld!(0);
+    game.onTunnelWorld!(makeBreakdown());
     game.player.setDirection.mockClear();
     pressArrowRight();
     expect(game.player.setDirection).not.toHaveBeenCalled();
@@ -112,7 +113,7 @@ describe('game screen keyboard wiring', () => {
 
   it('does not steer dead games from previous sessions', () => {
     const firstGame = activeGame();
-    firstGame.onGameOver!(0);
+    firstGame.onGameOver!(makeBreakdown());
     /* Back to splash and into a second game, as 'Play again' does */
     window.dispatchEvent(new Event('load'));
     (document.querySelector('.splash-start') as HTMLButtonElement).click();
@@ -124,7 +125,7 @@ describe('game screen keyboard wiring', () => {
 
   it('moves focus onto each new screen', () => {
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
-    activeGame().onGameOver!(7);
+    activeGame().onGameOver!(makeBreakdown({ surface: 7 }));
     expect((document.activeElement as HTMLElement).classList.contains('go-title')).toBe(true);
   });
 
@@ -187,12 +188,88 @@ describe('ranking row outside the top 10', () => {
     ]);
     vi.mocked(getPlayerRank).mockResolvedValue(12);
 
-    gameInstances[gameInstances.length - 1].onGameOver!(30);
+    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surface: 30 }));
     await vi.advanceTimersByTimeAsync(2000); // game-over beat → ranking screen
     await vi.advanceTimersByTimeAsync(10);   // flush the ranking load
 
     expect(getPlayerRank).toHaveBeenCalledWith(50);
     const score = document.querySelector('.ranking-row--current .ranking-score');
-    expect(score?.textContent).toBe('50s');
+    expect(score?.textContent).toBe('50');
+  });
+});
+
+describe('interstitial routing and score passthrough (seam-test gate)', () => {
+  /* jsdom never loads images: createToBeContinuedScreen waits for the underground
+     SVG to settle before arming its game-over timer. A pre-settled Image stub lets
+     the stub/fallback route run start-to-end under fake timers. */
+  class SettledImage {
+    complete = true;
+    naturalWidth = 1;
+    src = '';
+    addEventListener(): void {}
+  }
+
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal('Image', SettledImage);
+    gameInstances.length = 0;
+    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('audio-muted', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    window.dispatchEvent(new Event('load'));
+    (document.querySelector('.splash-start') as HTMLButtonElement).click();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('audio-muted');
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    /* beforeAll rAF stubs are re-applied for the rest of this suite */
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  function activeGame(): MockGame {
+    return gameInstances[gameInstances.length - 1];
+  }
+
+  it('onTunnelWorld renders the interstitial, then Game Over shows the carried total', () => {
+    vi.useFakeTimers();
+    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42, livesBonus: 20 }));
+
+    expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
+    expect(document.querySelector('.tbc-line')?.textContent).toBe('TO BE CONTINUED...');
+
+    vi.advanceTimersByTime(3000); // image settle is immediate; fall + scroll delay elapses
+    expect(document.querySelector('.game-over-screen')).not.toBeNull();
+    expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
+  });
+
+  it('submits only the breakdown total to the leaderboard', () => {
+    vi.useFakeTimers();
+    vi.mocked(submitScore).mockClear();
+    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42, livesBonus: 20 }));
+    vi.advanceTimersByTime(3000);
+    expect(submitScore).toHaveBeenCalledWith(expect.any(String), 62);
+  });
+
+  it('plays no falling SFX through the interstitial when muted', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
+    activeGame().onTunnelWorld!(makeBreakdown({ surface: 5 }));
+    expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
+    expect(play).not.toHaveBeenCalled();
+    play.mockRestore();
+  });
+
+  it('plays the falling SFX exactly once when unmuted', () => {
+    localStorage.setItem('audio-muted', '0');
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
+    activeGame().onTunnelWorld!(makeBreakdown({ surface: 5 }));
+    expect(play).toHaveBeenCalledTimes(1);
+    play.mockRestore();
   });
 });

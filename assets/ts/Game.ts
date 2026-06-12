@@ -5,6 +5,7 @@ import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH } from './lib/geometry';
+import { makeBreakdown, livesBonusPoints, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
@@ -48,8 +49,8 @@ export class Game {
   isGameOver: boolean;
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  onGameOver: ((score: number) => void) | null;
-  onTunnelWorld: ((score: number) => void) | null;
+  onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
+  onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
   score: number;
   count: number;
   currentLevel: number;
@@ -177,7 +178,7 @@ export class Game {
   private endRun(): void {
     this.gameSong.pause();
     if (!this.isTunnelTransition) {
-      this.onGameOver?.(this.score);
+      this.onGameOver?.(this.currentBreakdown());
     }
   }
 
@@ -412,12 +413,21 @@ export class Game {
     this.hud.displayLives(this.player.lives);
   }
 
-  gameOverCallback(callback: (score: number) => void): void {
+  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
     this.onGameOver = callback;
   }
 
-  tunnelWorldCallback(callback: (score: number) => void): void {
+  tunnelWorldCallback(callback: (breakdown: ScoreBreakdown) => void): void {
     this.onTunnelWorld = callback;
+  }
+
+  /** Snapshot of the run as a breakdown: surface seconds plus the
+      lives-to-points conversion applied at every screen transition. */
+  private currentBreakdown(): ScoreBreakdown {
+    return makeBreakdown({
+      surface: this.score,
+      livesBonus: livesBonusPoints(this.player?.lives ?? 0),
+    });
   }
 
   private triggerTunnelWorld(): void {
@@ -425,6 +435,9 @@ export class Game {
     this.isTunnelTransition = true;
     this.gameSong.pause();
 
+    /* The breakdown snapshots at the moment of collapse: lives convert to
+       points here, at the screen transition, before any teardown touches them */
+    const breakdown = this.currentBreakdown();
     let fired = false;
     let watchdog: ReturnType<typeof setTimeout> | undefined;
     const fireCallback = () => {
@@ -432,9 +445,9 @@ export class Game {
       fired = true;
       clearTimeout(watchdog);
       if (this.onTunnelWorld) {
-        this.onTunnelWorld(this.score);
+        this.onTunnelWorld(breakdown);
       } else {
-        this.onGameOver?.(this.score);
+        this.onGameOver?.(breakdown);
       }
     };
 

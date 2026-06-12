@@ -3,6 +3,7 @@ import { Game } from './Game';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
+import { makeBreakdown } from './lib/score';
 import { makeCanvas, makeCtx } from './test-helpers';
 
 // --- helpers ---
@@ -572,7 +573,8 @@ describe('Game — tunnel world transition', () => {
 
     expect(tunnelCb).not.toHaveBeenCalled();
     vi.advanceTimersByTime(500);
-    expect(tunnelCb).toHaveBeenCalledWith(game.score);
+    /* Lives convert to points at the transition: 3 lives × 10 on top of the surface seconds */
+    expect(tunnelCb).toHaveBeenCalledWith(makeBreakdown({ surface: game.score, livesBonus: 30 }));
     expect(gameOverCb).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
@@ -590,7 +592,7 @@ describe('Game — tunnel world transition', () => {
     game.update();
     vi.advanceTimersByTime(500);
 
-    expect(gameOverCb).toHaveBeenCalledWith(game.score);
+    expect(gameOverCb).toHaveBeenCalledWith(makeBreakdown({ surface: game.score, livesBonus: 30 }));
     vi.useRealTimers();
   });
 
@@ -632,6 +634,91 @@ describe('Game — tunnel world transition', () => {
     const playerCenter = 200 + game.player!.dWidth / 2;
     expect(stamp.x + stamp.w / 2).toBeCloseTo(playerCenter, 5);
     expect(stamp.y + stamp.h).toBeCloseTo(canvas.height, 5);
+  });
+});
+
+describe('Game — unmuted sting exit routes (seam-test gate)', () => {
+  let canvas: HTMLCanvasElement;
+
+  /* Unmuted: triggerTunnelWorld holds on the collapse sting and exits via
+     whichever of ended/error/watchdog/play-rejection resolves first */
+  function collapseUnmuted() {
+    const game = new Game(canvas);
+    game.player = new Player(canvas);
+    game.gameSong.muted = false;
+    game.groundErosionActive = true;
+    const tunnelCb = vi.fn();
+    game.tunnelWorldCallback(tunnelCb);
+    game['coveredCells'].fill(true);
+    const bomb = new Bomb(canvas, 100);
+    bomb.dy = canvas.height + 1;
+    game.bombs.push(bomb);
+    game.update();
+    return { game, tunnelCb };
+  }
+
+  beforeEach(() => {
+    canvas = makeCanvas(468, 468);
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires the callback exactly once when the sting ends', () => {
+    const { game, tunnelCb } = collapseUnmuted();
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires the callback exactly once on a sting decode error', () => {
+    const { game, tunnelCb } = collapseUnmuted();
+    game.tentonSfx.dispatchEvent(new Event('error'));
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires the callback exactly once via the watchdog when no media event arrives', () => {
+    const { game, tunnelCb } = collapseUnmuted();
+    expect(tunnelCb).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(4000);
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+    /* A late 'ended' after the watchdog must not double-fire */
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    vi.advanceTimersByTime(4000);
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires the callback exactly once when play() rejects', async () => {
+    const game = new Game(canvas);
+    game.player = new Player(canvas);
+    game.gameSong.muted = false;
+    game.groundErosionActive = true;
+    const tunnelCb = vi.fn();
+    game.tunnelWorldCallback(tunnelCb);
+    game.tentonSfx.play = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
+    game['coveredCells'].fill(true);
+    const bomb = new Bomb(canvas, 100);
+    bomb.dy = canvas.height + 1;
+    game.bombs.push(bomb);
+    game.update();
+
+    await vi.advanceTimersByTimeAsync(0); // flush the rejection handler
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    expect(tunnelCb).toHaveBeenCalledTimes(1);
+  });
+
+  it('finalized breakdowns satisfy total === sum of parts', () => {
+    const { game, tunnelCb } = collapseUnmuted();
+    game.tentonSfx.dispatchEvent(new Event('ended'));
+    const breakdown = tunnelCb.mock.calls[0][0];
+    expect(breakdown.total).toBe(
+      breakdown.surface + breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus,
+    );
+    expect(breakdown).toEqual(makeBreakdown({ surface: game.score, livesBonus: 30 }));
   });
 });
 
