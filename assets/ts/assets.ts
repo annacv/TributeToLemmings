@@ -15,6 +15,7 @@ import explodeSfxWav from '../sounds/EXPLODE.WAV';
 import chainSfxWav from '../sounds/CHAIN.WAV';
 import scrapeSfxWav from '../sounds/SCRAPE.WAV';
 import tingSfxWav from '../sounds/TING.WAV';
+import mousepreSfxWav from '../sounds/MOUSEPRE.WAV';
 import backgroundUndergroundSvg from '../images/backgrounds/background-underground.svg';
 import backgroundTunnelSvg from '../images/backgrounds/background-tunnel.svg';
 import tunnelCeilingSvg from '../images/backgrounds/tunnel-ceiling.svg';
@@ -45,15 +46,11 @@ export const FALLING_SFX = fallingSfxMp3;
 export const CAVE_LOOP = caveLoopOgg;
 export const EXPLODE_SFX = explodeSfxWav;
 export const CHAIN_SFX = chainSfxWav;
-
 export const SCRAPE_SFX = scrapeSfxWav;
 export const TING_SFX = tingSfxWav;
-
-/* Tally cues both reuse TING (one sound, one meaning: score counts) — a tick
-   per line, one more on the total roll. The code degrades silently if either
-   is set back to null. */
+export const MOUSEPRE_SFX = mousepreSfxWav;
 export const TALLY_TICK_SFX: string | null = tingSfxWav;
-export const TALLY_CHIME_SFX: string | null = tingSfxWav;
+export const TALLY_CHIME_SFX: string | null = mousepreSfxWav;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
 export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
 export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;
