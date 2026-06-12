@@ -451,6 +451,22 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
     expect(rankingStarts()).toBe(1); // exactly once
   });
+
+  it('the cave loop loops, respects the mute gate, and pauses with a hidden tab', () => {
+    localStorage.setItem('audio-muted', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=tunnel');
+    window.dispatchEvent(new Event('load'));
+    const game = tunnels[tunnels.length - 1];
+    expect(game.caveLoop?.loop).toBe(true);
+    expect(game.caveLoop?.muted).toBe(true);
+
+    const pause = vi.spyOn(game.caveLoop!, 'pause');
+    Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(pause).toHaveBeenCalled();
+    Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+  });
 });
 
 describe('leaderboard fetch timeout', () => {
