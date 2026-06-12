@@ -9,6 +9,8 @@ export function makeCtx() {
     translate: vi.fn(),
     scale: vi.fn(),
     fillRect: vi.fn(),
+    fillText: vi.fn(),
+    font: '',
     drawImage: vi.fn(),
     beginPath: vi.fn(),
     moveTo: vi.fn(),

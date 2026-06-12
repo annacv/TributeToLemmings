@@ -1,10 +1,11 @@
 import { Game } from './Game';
+import { TunnelGame } from './TunnelGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
-import { safePlay } from './lib/audio';
+import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
-import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, UNDERGROUND_BACKGROUND_SVG } from './assets';
+import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP, UNDERGROUND_BACKGROUND_SVG } from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const SUBMISSION_TIMEOUT_MS = 2500;
@@ -308,7 +309,7 @@ function main(): void {
     const surfaceBottomY = bgSize * (1 - TBC_GEOMETRY.BG_CROP_TOP_FRAC);
     /* Mirrors the shaft geometry baked into background-underground.svg so the
        lemming lands in row 0's hole */
-    const erosionFrameW = size * TBC_GEOMETRY.EROSION_SLOT_W_FRAC;
+    const erosionFrameW = size * TBC_GEOMETRY.EROSION_SLOT_WIDTH_FRAC;
     const erosionFrameH = erosionFrameW * TBC_GEOMETRY.GROUND_EROSION_ASPECT;
     const erosionStackTop = size * TBC_GEOMETRY.EROSION_STACK_TOP_FRAC;
     const SCROLL_DISTANCE = surfaceBottomY + 2 * size;
@@ -394,6 +395,99 @@ function main(): void {
       img.addEventListener('load', () => onImgSettled(img), { once: true });
       img.addEventListener('error', () => onImgSettled(img), { once: true });
     });
+  }
+
+  function createTunnelScreen(breakdown: ScoreBreakdown): void {
+    const size = getCanvasSize();
+    const screen = buildDom(`
+      <section class="section-container play tunnel">
+        <div class="crt-frame">
+          <canvas class="game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
+          <div class="game-hud">
+            <div class="hud-lives">
+              <span class="hud-item lives-item">
+                <span class="hud-label">lives</span>
+                <span class="hud-value lives-value">3</span>
+              </span>
+              <div class="lives-icons"></div>
+            </div>
+            <div class="hud-score">
+              <span class="hud-item">
+                <span class="hud-value seconds-value">60</span>
+                <span class="hud-label">time</span>
+              </span>
+              <span class="hud-item level-item">
+                <span class="hud-label"></span>
+                <span class="hud-value level-value">depth 1/3</span>
+              </span>
+            </div>
+          </div>
+          <button class="mute-btn" aria-label="Mute sound"></button>
+        </div>
+        <div class="touch-controls">
+          <button class="touch-left" aria-label="Move left">&#x2190;</button>
+          <button class="touch-action" aria-label="Action" disabled>...</button>
+          <button class="touch-right" aria-label="Move right">&#x2192;</button>
+        </div>
+        <p class="game-hint">&gt; find the crack. blast your way out.</p>
+      </section>
+    `);
+
+    const canvas = screen.querySelector('canvas') as HTMLCanvasElement;
+    canvas.width = size;
+    canvas.height = size;
+
+    const game = new TunnelGame(canvas, breakdown);
+    /* Until the win-variant end screen lands (task 7.1b), both exits route to
+       the existing Game Over flow carrying the breakdown */
+    game.completionCallback(createGameOverScreen);
+    game.gameOverCallback(createGameOverScreen);
+
+    /* Cave loop through the channel helper: respects the mute gate, pauses
+       with the hidden tab, dies with the run */
+    const caveLoop = new Audio(CAVE_LOOP);
+    game.caveLoop = caveLoop;
+    playLoop(caveLoop, game.muted);
+    pauseWhileHidden(caveLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
+
+    setupMuteButton(
+      screen.querySelector('.mute-btn') as HTMLButtonElement,
+      (muted) => { game.muted = muted; caveLoop.muted = muted; },
+    );
+
+    /* One verb per state: Space (or the action button) is pick up / place /
+       light; auto-repeat is ignored and a focused control never activates */
+    document.addEventListener('keydown', (event: KeyboardEvent) => {
+      if (game.paused) return;
+      if (event.key === 'ArrowRight') game.player?.setDirection(1);
+      else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
+      else if (event.key === ' ') {
+        event.preventDefault();
+        if (event.repeat) return;
+        game.action();
+      }
+    }, { signal: game.runSignal });
+
+    const arrowRight = screen.querySelector('.touch-right') as HTMLElement;
+    arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
+    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
+    const arrowLeft = screen.querySelector('.touch-left') as HTMLElement;
+    arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
+    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
+
+    /* Contextual action button: label always shows the available verb */
+    const actionBtn = screen.querySelector('.touch-action') as HTMLButtonElement;
+    actionBtn.addEventListener('click', () => game.action());
+    const verbTimer = setInterval(() => {
+      const verb = game.currentVerb();
+      actionBtn.disabled = verb === null;
+      if (verb) actionBtn.textContent = verb;
+    }, 150);
+    game.runSignal.addEventListener('abort', () => clearInterval(verbTimer), { once: true });
+
+    canvas.tabIndex = -1;
+    canvas.focus();
+    game.startGame();
   }
 
   function createGameOverScreen(breakdown: ScoreBreakdown): void {
@@ -584,6 +678,7 @@ function main(): void {
   }
 
   if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surface: 42 }));
+  else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surface: 42, livesBonus: 20 }));
   else createStartScreen();
 }
 

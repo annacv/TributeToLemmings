@@ -10,7 +10,12 @@ import electricSfxWav from '../sounds/ELECTRIC.WAV';
 import bangSfxWav from '../sounds/BANG.WAV';
 import tentonSfxWav from '../sounds/TENTON.WAV';
 import fallingSfxMp3 from '../sounds/intro-falling-sound-effect.mp3';
+import caveLoopOgg from '../sounds/113_-_Lemmings_-_DOS_-_Tim_5.ogg';
+import explodeSfxWav from '../sounds/EXPLODE.WAV';
+import chainSfxWav from '../sounds/CHAIN.WAV';
 import backgroundUndergroundSvg from '../images/backgrounds/background-underground.svg';
+import backgroundTunnelSvg from '../images/backgrounds/background-tunnel.svg';
+import tunnelCeilingSvg from '../images/backgrounds/tunnel-ceiling.svg';
 import crackMark1Svg from '../images/backgrounds/crack-mark-1.svg';
 import crackMark2Svg from '../images/backgrounds/crack-mark-2.svg';
 import crackMark3Svg from '../images/backgrounds/crack-mark-3.svg';
@@ -35,7 +40,12 @@ export const ELECTRIC_SFX = electricSfxWav;
 export const BANG_SFX = bangSfxWav;
 export const TENTON_SFX = tentonSfxWav;
 export const FALLING_SFX = fallingSfxMp3;
+export const CAVE_LOOP = caveLoopOgg;
+export const EXPLODE_SFX = explodeSfxWav;
+export const CHAIN_SFX = chainSfxWav;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
+export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
+export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;
 
 export const CRACK_MARK_SVGS = [
   crackMark1Svg,

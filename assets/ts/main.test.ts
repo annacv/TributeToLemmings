@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { generateGuestHandle } from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
@@ -271,5 +271,76 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     activeGame().onTunnelWorld!(makeBreakdown({ surface: 5 }));
     expect(play).toHaveBeenCalledTimes(1);
     play.mockRestore();
+  });
+});
+
+describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
+  class SettledImage {
+    complete = true;
+    naturalWidth = 1;
+    src = '';
+    addEventListener(): void {}
+  }
+
+  /* One mount for the whole suite: the run-scoped keydown listener lives on
+     document, so re-mounting per test would stack alive listeners and make
+     prototype-spy call counts nondeterministic */
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    vi.stubGlobal('Image', SettledImage);
+    localStorage.setItem('audio-muted', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=tunnel');
+    window.dispatchEvent(new Event('load'));
+  });
+
+  afterAll(() => {
+    history.replaceState(null, '', '/');
+    localStorage.removeItem('audio-muted');
+    vi.unstubAllGlobals();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function pressSpace(init: KeyboardEventInit = {}): KeyboardEvent {
+    const event = new KeyboardEvent('keydown', { key: ' ', cancelable: true, ...init });
+    document.dispatchEvent(event);
+    return event;
+  }
+
+  it('renders the tunnel screen with the contextual action button', () => {
+    expect(document.querySelector('.section-container.tunnel')).not.toBeNull();
+    expect(document.querySelector('.touch-action')).not.toBeNull();
+    expect(document.querySelector('.level-value')?.textContent).toBe('depth 1/3');
+  });
+
+  it('Space fires the game action and is preventDefault-ed', async () => {
+    const { TunnelGame } = await import('./TunnelGame');
+    const action = vi.spyOn(TunnelGame.prototype, 'action');
+    const event = pressSpace();
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('key auto-repeat fires no game action', async () => {
+    const { TunnelGame } = await import('./TunnelGame');
+    const action = vi.spyOn(TunnelGame.prototype, 'action');
+    pressSpace({ repeat: true });
+    expect(action).not.toHaveBeenCalled();
+  });
+
+  it('Space with a focused control still acts on the game, not the control', async () => {
+    const { TunnelGame } = await import('./TunnelGame');
+    const action = vi.spyOn(TunnelGame.prototype, 'action');
+    const muteBtn = document.querySelector('.mute-btn') as HTMLButtonElement;
+    muteBtn.focus();
+    const event = pressSpace();
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true); // prevents the button's Space activation
   });
 });

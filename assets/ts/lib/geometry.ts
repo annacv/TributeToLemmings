@@ -20,7 +20,7 @@ export const TBC_GEOMETRY = {
   /** Fraction of the 800-tall surface art cropped above the grass line. */
   BG_CROP_TOP_FRAC: 547 / 800,
   /** Erosion slot width and stack top as canvas fractions (svg shaft layout). */
-  EROSION_SLOT_W_FRAC: 0.85,
+  EROSION_SLOT_WIDTH_FRAC: 0.85,
   EROSION_STACK_TOP_FRAC: 0.02,
 } as const;
 
