@@ -69,7 +69,7 @@ A new game screen with a puzzle mechanic: the player must blast their way out of
 9. After completing all three cycles, an atmospheric Abyss tease plays (smoke clears sideways frame-right, faint rust spill, the lemming turns/walks right, `> the air grows warm...` stinger, hard cut — never the door or balloon) and routes to the **win variant** of the end screen: headline `TO BE CONTINUED...`, sub-line `> you made it. for now.`, and the full both-worlds score tally. Death keeps today's `GAME OVER` screen; `THE END` is reserved for Iteration VI on the same parameterized screen. Until VI ships, both variants route onward to the ranking.
 10. Scoring — `TOTAL = surface seconds + 10 × lives saved (per screen transition) + seconds left (per underground screen, banked per cycle) + 5 × cycles cleared`. The tunnel runs a visible 60s countdown (tunable, playtested so players normally end with some seconds to bank) that floors at 0 and never kills — the ceiling is the kill source; the countdown survives crush respawns (remaining time carries). Lives reset to 3 at each screen transition; a line-by-line tally renders on the Game Over screen for runs that reached underground. The leaderboard resets at V launch (old pure-seconds scores would rank unfairly against bonus-inclusive ones).
 11. Audio — new looping background track on screen entry (`113_-_Lemmings_-_DOS_-_Tim_5.ogg`): underground/cave mood, distinct from the surface game track. All subsequent audio respects the existing mute gate.
-12. Audio — SFX set: bomb pickup (`EXPLODE.WAV`, one-shot), fuse burn (`FIRE.WAV`, looping tick during three-press countdown, stops on explosion or death), breach explosion (`BANG.WAV` — same meaning as on the surface: a bomb breaks earth), ceiling crush (`TENTON.WAV` on every life lost — the original Lemmings ten-ton squash, shared with the surface collapse sting), ceiling lower between cycles (`CHAIN.WAV`, short grinding rumble). Sound invariant: `DIE.WAV` plays only on *death* Game Over arrival — never per life lost and never on the win path, in either world.
+12. Audio — SFX set: bomb pickup (`EXPLODE.WAV`, one-shot), light presses (`SCRAPE.WAV`, match-strike per press ×3), fuse burn (`FIRE.WAV`, looping tick during the lit fuse, stops on explosion or death), breach explosion (`BANG.WAV` — same meaning as on the surface: a bomb breaks earth), ceiling crush (`TENTON.WAV` on every life lost — the original Lemmings ten-ton squash, shared with the surface collapse sting), ceiling lower between cycles (`CHAIN.WAV`, short grinding rumble), score tally tick and total roll (`TING.WAV`). Sound invariant: `DIE.WAV` plays only on *death* Game Over arrival — never per life lost and never on the win path, in either world.
 
 ##### ITERATION VI — The Abyss: Horizontal Escape
 A horizontal side-scroll escape through an underground corridor toward the exit door.
@@ -211,7 +211,7 @@ npm install
 
 ## Credits
 
-Audio cues are sourced from the original Lemmings DOS OST (fan-tribute posture, tonal and legal consistency with the tribute concept). Iteration V adds the underground cave loop (`113_-_Lemmings_-_DOS_-_Tim_5.ogg`) and reuses the DOS SFX set (`EXPLODE`, `FIRE`, `BANG`, `TENTON`, `CHAIN`, `DIE`).
+Audio cues are sourced from the original Lemmings DOS OST (fan-tribute posture, tonal and legal consistency with the tribute concept). Iteration V adds the underground cave loop (`113_-_Lemmings_-_DOS_-_Tim_5.ogg`) and reuses the DOS SFX set (`EXPLODE`, `SCRAPE`, `FIRE`, `BANG`, `TENTON`, `CHAIN`, `TING`, `DIE`).
 
 ## Links
 

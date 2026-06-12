@@ -161,6 +161,20 @@ describe('TunnelGame — mechanic state machine', () => {
     expect(game.state).toBe('explore');
   });
 
+  it('each light press strikes the scrape; the third ignites the fuse loop', () => {
+    const game = makeTunnel(canvas);
+    const scrape = vi.spyOn(game.scrapeSfx, 'play').mockResolvedValue(undefined);
+    const fuse = vi.spyOn(game.fuseTickSfx, 'play').mockResolvedValue(undefined);
+    game.state = 'placed';
+    game.action();
+    game.action();
+    expect(scrape).toHaveBeenCalledTimes(2);
+    expect(fuse).not.toHaveBeenCalled();
+    game.action();
+    expect(scrape).toHaveBeenCalledTimes(3);
+    expect(fuse).toHaveBeenCalledTimes(1);
+  });
+
   it('fuse expiry breaches: banks a share + the cycle award, then the staged event runs', () => {
     const game = makeTunnel(canvas);
     game.state = 'armed';

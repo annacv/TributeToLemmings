@@ -9,7 +9,7 @@ import {
 } from './lib/score';
 import {
   SPRITES, CRACK_MARK_SVGS,
-  FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX,
+  FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX,
   TUNNEL_BACKGROUND_SVG, TUNNEL_CEILING_SVG,
 } from './assets';
 
@@ -95,6 +95,7 @@ export class TunnelGame {
   crushSfx: HTMLAudioElement;
   pickupSfx: HTMLAudioElement;
   rumbleSfx: HTMLAudioElement;
+  scrapeSfx: HTMLAudioElement;
   muted: boolean;
   private readonly baseBreakdown: ScoreBreakdown;
   private eventStepsLeft: number;
@@ -151,6 +152,7 @@ export class TunnelGame {
     this.crushSfx = new Audio(TENTON_SFX);
     this.pickupSfx = new Audio(EXPLODE_SFX);
     this.rumbleSfx = new Audio(CHAIN_SFX);
+    this.scrapeSfx = new Audio(SCRAPE_SFX);
 
     const loadImg = (src: string) => {
       const img = new Image();
@@ -216,6 +218,8 @@ export class TunnelGame {
       this.lightPresses = 0;
     } else if (this.state === 'placed') {
       this.lightPresses++;
+      /* Match-strike per light press; the third one ignites the fuse loop */
+      audio.playSfx(this.scrapeSfx, this.muted);
       if (this.lightPresses >= LIGHT_PRESSES) {
         this.state = 'armed';
         this.fuseStepsLeft = FUSE_STEPS;
