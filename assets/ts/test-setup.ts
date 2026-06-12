@@ -12,3 +12,11 @@ HTMLMediaElement.prototype.pause = function () {};
 // canvas.getContext is not implemented by jsdom (it errors loudly); return a mock 2d context.
 HTMLCanvasElement.prototype.getContext = (() =>
   makeCtx()) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+// matchMedia is not implemented by jsdom; queries (reduced motion) report no match.
+window.matchMedia ??= ((query: string) => ({
+  matches: false,
+  media: query,
+  addEventListener() {},
+  removeEventListener() {},
+})) as unknown as typeof window.matchMedia;

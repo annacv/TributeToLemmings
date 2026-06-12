@@ -13,6 +13,7 @@ const TBC_FALL_DURATION_MS = 500;
 const TBC_SCROLL_DURATION_MS = 1700;
 const TBC_REST_FADE_MS = 500;
 const TBC_TRANSITION_MS = 3000;
+const TBC_BREATH_MS = 600;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -84,8 +85,36 @@ function main(): void {
     });
   }
 
-  function showInfoModal(onClose: () => void): void {
-    if (localStorage.getItem('info-modal-dismissed')) {
+  /* One info-modal pattern for every world: title, body, and the dismissal
+     storage key are parameters so each screen's controls are taught once,
+     independently (a returning surface player still sees the tunnel modal). */
+  type InfoModalOptions = { title: string; bodyHtml: string; storageKey: string };
+
+  const SURFACE_MODAL: InfoModalOptions = {
+    title: 'How to play',
+    storageKey: 'info-modal-dismissed',
+    bodyHtml: `
+        <p class="info-modal-instruction">
+          Use <kbd class="key-hint">&#x2190;</kbd> <kbd class="key-hint">&#x2192;</kbd> arrow keys<br>
+          to dodge the bombs and stay alive!
+        </p>`,
+  };
+
+  const TUNNEL_MODAL: InfoModalOptions = {
+    title: 'Underground',
+    storageKey: 'tunnel-modal-dismissed',
+    bodyHtml: `
+        <p class="info-modal-instruction info-modal-rows">
+          <kbd class="key-hint">SPACE</kbd> pick up the bomb<br>
+          <kbd class="key-hint">SPACE</kbd> place it at the crack<br>
+          <kbd class="key-hint">SPACE</kbd> &times;3 light the fuse
+        </p>
+        <p class="info-modal-instruction">on touch, the action button is your SPACE</p>
+        <p class="info-modal-instruction">&gt; escape fast. bonus per breakout.</p>`,
+  };
+
+  function showInfoModal(opts: InfoModalOptions, onClose: () => void): void {
+    if (localStorage.getItem(opts.storageKey)) {
       onClose();
       return;
     }
@@ -96,11 +125,8 @@ function main(): void {
     backdrop.innerHTML = `
       <div class="info-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <button class="info-modal-close" aria-label="Close modal">&#x2715;</button>
-        <h2 class="info-modal-title" id="modal-title">How to play</h2>
-        <p class="info-modal-instruction">
-          Use <kbd class="key-hint">&#x2190;</kbd> <kbd class="key-hint">&#x2192;</kbd> arrow keys<br>
-          to dodge the bombs and stay alive!
-        </p>
+        <h2 class="info-modal-title" id="modal-title">${opts.title}</h2>
+        ${opts.bodyHtml}
         <label class="info-modal-checkbox-label">
           <input type="checkbox" id="modal-no-show"> Don't show again
         </label>
@@ -115,7 +141,7 @@ function main(): void {
 
     function closeModal(): void {
       document.removeEventListener('keydown', onModalKeydown);
-      if (checkbox.checked) localStorage.setItem('info-modal-dismissed', '1');
+      if (checkbox.checked) localStorage.setItem(opts.storageKey, '1');
       backdrop.remove();
       onClose();
     }
@@ -271,7 +297,7 @@ function main(): void {
     canvas.tabIndex = -1;
     canvas.focus();
 
-    showInfoModal(() => {
+    showInfoModal(SURFACE_MODAL, () => {
       canvas.focus();
       game.startGame();
     });
@@ -284,7 +310,7 @@ function main(): void {
         <div class="crt-frame">
           <canvas class="tbc-canvas" aria-hidden="true"></canvas>
           <div class="tbc-overlay">
-            <p class="tbc-line">TO BE CONTINUED...</p>
+            <p class="tbc-line">&gt; somewhere underground...</p>
           </div>
         </div>
       </section>
@@ -293,9 +319,12 @@ function main(): void {
     const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
-    canvas.tabIndex = -1;
-    canvas.focus();
+    /* Focus visible content, never the aria-hidden canvas */
+    const overlay = screen.querySelector('.tbc-overlay') as HTMLElement;
+    overlay.tabIndex = -1;
+    overlay.focus();
     const ctx = canvas.getContext('2d')!;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const undergroundImg = new Image();
     undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
@@ -367,21 +396,26 @@ function main(): void {
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
       drawScene(lemmingY, scrollY, veilAlpha);
-      if (scrollT >= 0.45) screen.querySelector('.tbc-overlay')?.classList.add('show');
+      /* No mid-scroll cliffhanger: the arrival stinger fades in at rest */
+      if (scrollT >= 1) screen.querySelector('.tbc-overlay')?.classList.add('show');
       if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS + TBC_REST_FADE_MS) {
         requestAnimationFrame((n) => animate(startTime, n));
       }
     }
 
-    /* The game-over timer arms only once the animation starts, so a slow image
+    /* The handoff timer arms only once the animation starts, so a slow image
        load can't tear the screen down mid-scroll */
     let started = false;
     const start = () => {
       if (started) return;
       started = true;
-      requestAnimationFrame((now) => animate(now, now));
-      /* Stub/fallback route: the breakdown passes onward unchanged */
-      setTimeout(() => createGameOverScreen(breakdown), TBC_TRANSITION_MS);
+      /* Reduced motion: jump straight to the resting frame — the rest-beat
+         fade and the timing of the subsequent beats still resolve */
+      const skipMs = reduceMotion ? TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS : 0;
+      requestAnimationFrame((now) => animate(now - skipMs, now));
+      /* The arrival routes into the tunnel after a short breath; the breakdown
+         passes onward unchanged (surface + lives bonus already applied) */
+      setTimeout(() => createTunnelScreen(breakdown), TBC_TRANSITION_MS + TBC_BREATH_MS);
     };
     let pendingImgs = [undergroundImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
@@ -486,8 +520,14 @@ function main(): void {
     game.runSignal.addEventListener('abort', () => clearInterval(verbTimer), { once: true });
 
     canvas.tabIndex = -1;
-    canvas.focus();
-    game.startGame();
+    /* The simulation starts only when the controls modal closes; the paused
+       flag keeps the run keydown handler inert while it is open */
+    game.paused = true;
+    showInfoModal(TUNNEL_MODAL, () => {
+      game.paused = false;
+      canvas.focus();
+      game.startGame();
+    });
   }
 
   function createGameOverScreen(breakdown: ScoreBreakdown): void {

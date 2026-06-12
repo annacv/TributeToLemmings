@@ -237,23 +237,35 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     return gameInstances[gameInstances.length - 1];
   }
 
-  it('onTunnelWorld renders the interstitial, then Game Over shows the carried total', () => {
+  it('onTunnelWorld renders the arrival interstitial, then routes into the tunnel', () => {
     vi.useFakeTimers();
     activeGame().onTunnelWorld!(makeBreakdown({ surface: 42, livesBonus: 20 }));
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
-    expect(document.querySelector('.tbc-line')?.textContent).toBe('TO BE CONTINUED...');
+    /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
+    expect(document.querySelector('.tbc-line')?.textContent).toBe('> somewhere underground...');
 
-    vi.advanceTimersByTime(3000); // image settle is immediate; fall + scroll delay elapses
-    expect(document.querySelector('.game-over-screen')).not.toBeNull();
-    expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
+    vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + breath elapse
+    expect(document.querySelector('.section-container.tunnel')).not.toBeNull();
   });
 
-  it('submits only the breakdown total to the leaderboard', () => {
+  it('shows the tunnel controls modal once, even for returning surface players', () => {
+    vi.useFakeTimers();
+    /* info-modal-dismissed is already set in beforeEach — the surface key
+       must not suppress the tunnel modal (separate storage key) */
+    localStorage.removeItem('tunnel-modal-dismissed');
+    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42 }));
+    vi.advanceTimersByTime(3600);
+    expect(document.querySelector('.info-modal-backdrop')).not.toBeNull();
+    expect(document.querySelector('.info-modal-title')?.textContent).toBe('Underground');
+    document.querySelector<HTMLElement>('.info-modal-backdrop')?.remove();
+  });
+
+  it('submits only the breakdown total to the leaderboard at Game Over', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
-    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42, livesBonus: 20 }));
-    vi.advanceTimersByTime(3000);
+    activeGame().onGameOver!(makeBreakdown({ surface: 42, livesBonus: 20 }));
+    expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
     expect(submitScore).toHaveBeenCalledWith(expect.any(String), 62);
   });
 
@@ -290,6 +302,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     vi.stubGlobal('Image', SettledImage);
     localStorage.setItem('audio-muted', '1');
+    localStorage.setItem('tunnel-modal-dismissed', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     history.replaceState(null, '', '/?screen=tunnel');
     window.dispatchEvent(new Event('load'));
@@ -298,6 +311,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
   afterAll(() => {
     history.replaceState(null, '', '/');
     localStorage.removeItem('audio-muted');
+    localStorage.removeItem('tunnel-modal-dismissed');
     vi.unstubAllGlobals();
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());

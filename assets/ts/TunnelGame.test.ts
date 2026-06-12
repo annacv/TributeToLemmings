@@ -329,3 +329,58 @@ describe('TunnelGame — completion routing', () => {
     expect(game.player!.lives).toBe(lives);
   });
 });
+
+describe('TunnelGame — HUD countdown and banking pop', () => {
+  let canvas: HTMLCanvasElement;
+
+  beforeEach(() => {
+    canvas = makeCanvas(468, 468);
+    document.body.innerHTML = `
+      <div class="lives-icons"></div>
+      <span class="hud-item lives-item"><span class="hud-value lives-value"></span></span>
+      <div class="hud-score">
+        <span class="hud-item"><span class="hud-value seconds-value">60</span></span>
+        <span class="hud-item level-item"><span class="hud-value level-value"></span></span>
+      </div>
+    `;
+  });
+
+  afterEach(() => { document.body.innerHTML = ''; });
+
+  it('shows the countdown and the depth slot', () => {
+    const game = makeTunnel(canvas);
+    game.step();
+    expect(document.querySelector('.seconds-value')?.textContent).toBe(String(game.secondsLeft()));
+    expect(document.querySelector('.level-value')?.textContent).toBe(`depth 1/${TOTAL_CYCLES}`);
+  });
+
+  it('enters the warning state at 10 seconds left, not before', () => {
+    const game = makeTunnel(canvas);
+    const digits = document.querySelector('.seconds-value') as HTMLElement;
+    game.stepCount = (TUNNEL_TIME_BUDGET_S - 11) * 60;
+    game.step();
+    expect(digits.classList.contains('time-warning')).toBe(false);
+    game.stepCount = (TUNNEL_TIME_BUDGET_S - 10) * 60;
+    game.step();
+    expect(digits.classList.contains('time-warning')).toBe(true);
+  });
+
+  it('pops "+N" with the banked share plus the cycle award at breakout', () => {
+    const game = makeTunnel(canvas);
+    game.state = 'armed';
+    game.fuseStepsLeft = 1;
+    const expected = Math.floor(game.secondsLeft() / TOTAL_CYCLES) + 5;
+    game.step();
+    const pop = document.querySelector('.bank-pop');
+    expect(pop?.textContent).toBe(`+${expected}`);
+  });
+
+  it('advances the depth slot after the staged event', () => {
+    const game = makeTunnel(canvas);
+    game.state = 'armed';
+    game.fuseStepsLeft = 1;
+    game.step();
+    for (let i = 0; i < 48; i++) game.step();
+    expect(document.querySelector('.level-value')?.textContent).toBe(`depth 2/${TOTAL_CYCLES}`);
+  });
+});

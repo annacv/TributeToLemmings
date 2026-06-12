@@ -168,6 +168,9 @@ export class TunnelGame {
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
     this.hud.setText('.lives-value', String(this.player.lives));
     this.hud.setLevel(`depth 1/${TOTAL_CYCLES}`);
+    /* Entry signals the rule change: the score slot now counts down */
+    this.hud.setScore(this.secondsLeft());
+    this.hud.blinkItem('.hud-score');
     this.beginCycle(0);
     this.gameLoop.start();
   }
@@ -285,10 +288,11 @@ export class TunnelGame {
   private breach(): void {
     audio.stopLoop(this.fuseTickSfx);
     audio.playSfx(this.breachSfx, this.muted);
-    this.bankedSeconds += this.bankShare();
+    const share = this.bankShare();
+    this.bankedSeconds += share;
     this.cyclesCleared++;
     this.hud.setScore(this.secondsLeft());
-    this.hud.blinkItem('.hud-score');
+    this.showBankPop(share + CYCLE_CLEAR_POINTS);
 
     if (this.cyclesCleared >= TOTAL_CYCLES) {
       /* Drift stays suspended from here through the tease: the win cannot be
@@ -304,6 +308,17 @@ export class TunnelGame {
     this.eventFromFrac = this.ceilingFrac;
     audio.playSfx(this.rumbleSfx, this.muted);
     restartAnimation(this.canvas, 'shake-light');
+  }
+
+  /** "+N" pop at the banking moment, near the score slot. */
+  private showBankPop(points: number): void {
+    const slot = this.hud.el('.hud-score');
+    if (!slot) return;
+    const pop = document.createElement('span');
+    pop.className = 'bank-pop';
+    pop.textContent = `+${points}`;
+    slot.appendChild(pop);
+    pop.addEventListener('animationend', () => pop.remove(), { once: true });
   }
 
   private handleCrush(): void {
@@ -350,6 +365,9 @@ export class TunnelGame {
 
     this.stepCount++;
     this.hud.setScore(this.secondsLeft());
+    /* ≤10 s warning: color + 1 Hz pulse (the global reduced-motion clamp
+       collapses the pulse to color-only) */
+    this.hud.el('.seconds-value')?.classList.toggle('time-warning', this.secondsLeft() <= 10);
 
     if (this.state === 'event') {
       /* Staged lowering: interpolate to the next cycle's start, then begin it */

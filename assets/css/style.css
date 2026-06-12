@@ -633,6 +633,75 @@ canvas {
   color: var(--bg-black);
 }
 
+/* Tunnel HUD: countdown warning (the global reduced-motion clamp collapses
+   the pulse, leaving the color-only state) and the per-bank "+N" pop */
+.hud-score {
+  position: relative;
+}
+
+.seconds-value.time-warning {
+  color: #FEBD00;
+  animation: time-pulse 1s ease-in-out infinite;
+}
+
+@keyframes time-pulse {
+  50% { opacity: .55; }
+}
+
+.bank-pop {
+  position: absolute;
+  right: 0;
+  top: -1.2em;
+  color: #FEBD00;
+  font-size: .8em;
+  pointer-events: none;
+  animation: bank-pop .9s ease-out forwards;
+}
+
+@keyframes bank-pop {
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+/* Contextual action button (tunnel): label is the current verb */
+.touch-action {
+  height: 42px;
+  padding: 0 .75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: .55rem;
+  text-align: center;
+  border: 2px solid var(--brand);
+  color: var(--brand);
+  background-color: var(--bg-black);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .1s ease, color .1s ease, opacity .1s ease;
+}
+
+.touch-action:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.touch-action:active:not(:disabled) {
+  background-color: var(--brand);
+  color: var(--bg-black);
+}
+
+/* Tunnel controls modal: left-aligned verb rows */
+.info-modal-rows {
+  text-align: left;
+  display: inline-block;
+}
+
 @media (min-width: 768px) {
   .touch-controls {
     display: none;
