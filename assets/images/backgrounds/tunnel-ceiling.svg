@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="100%" height="100%" preserveAspectRatio="none">
+
+  <!-- Separable ceiling strip: code anchors the jagged underside at the current
+       ceiling line and lets the solid mass overflow above the canvas top, so the
+       same asset serves all three cycle positions while it lowers. -->
+
+  <!-- Solid earth mass -->
+  <g id="mass">
+    <rect width="800" height="400" fill="#46280E"/>
+    <rect width="800" height="140" fill="#35200C"/>
+    <rect y="140" width="800" height="5" fill="#35200C" opacity="0.65"/>
+    <rect y="236" width="800" height="5" fill="#35200C" opacity="0.55"/>
+    <rect y="318" width="800" height="4" fill="#35200C" opacity="0.5"/>
+    <!-- buried soil-mid fragments, x-jittered like the collapse shaft rows -->
+    <rect x="56" y="178" width="78" height="26" rx="8" fill="#54320F"/>
+    <rect x="228" y="162" width="60" height="22" rx="7" fill="#3A2208"/>
+    <rect x="376" y="186" width="88" height="28" rx="9" fill="#5E3A16"/>
+    <rect x="540" y="168" width="66" height="24" rx="8" fill="#54320F"/>
+    <rect x="678" y="182" width="80" height="26" rx="8" fill="#3A2208"/>
+    <rect x="130" y="264" width="70" height="24" rx="8" fill="#6E4419"/>
+    <rect x="306" y="276" width="58" height="22" rx="7" fill="#54320F"/>
+    <rect x="470" y="258" width="84" height="26" rx="8" fill="#3A2208"/>
+    <rect x="630" y="272" width="62" height="22" rx="7" fill="#5E3A16"/>
+  </g>
+
+  <!-- Jagged underside: chunky teeth at varied depths, dark crevices behind -->
+  <g id="underside">
+    <rect y="356" width="800" height="44" fill="#3A2208"/>
+    <rect x="0" y="372" width="86" height="74" rx="11" fill="#54320F"/>
+    <rect x="78" y="366" width="78" height="48" rx="10" fill="#5E3A16"/>
+    <rect x="148" y="374" width="92" height="92" rx="12" fill="#6E4419"/>
+    <rect x="232" y="368" width="70" height="56" rx="10" fill="#3A2208"/>
+    <rect x="294" y="372" width="88" height="78" rx="11" fill="#54320F"/>
+    <rect x="374" y="366" width="76" height="44" rx="10" fill="#5E3A16"/>
+    <rect x="442" y="374" width="94" height="100" rx="12" fill="#54320F"/>
+    <rect x="528" y="368" width="72" height="60" rx="10" fill="#6E4419"/>
+    <rect x="592" y="372" width="84" height="82" rx="11" fill="#3A2208"/>
+    <rect x="668" y="366" width="66" height="50" rx="10" fill="#5E3A16"/>
+    <rect x="726" y="372" width="74" height="88" rx="11" fill="#54320F"/>
+    <!-- crevice shadows tucked between teeth -->
+    <rect x="138" y="384" width="18" height="24" rx="6" fill="#28221A"/>
+    <rect x="362" y="382" width="20" height="22" rx="6" fill="#28221A"/>
+    <rect x="582" y="386" width="18" height="24" rx="6" fill="#28221A"/>
+  </g>
+
+  <!-- Hanging moss: sparse cool-green drips off the lowest teeth -->
+  <g id="moss">
+    <rect x="186" y="460" width="10" height="26" rx="5" fill="#0C3208"/>
+    <rect x="478" y="468" width="9" height="24" rx="4" fill="#186010"/>
+    <rect x="624" y="448" width="10" height="22" rx="5" fill="#0C3208"/>
+  </g>
+
+  <!-- Rust whispers, never above 0.18 -->
+  <g id="rust">
+    <rect x="262" y="396" width="46" height="13" rx="6" fill="#A85A1C" opacity="0.15"/>
+    <rect x="556" y="388" width="38" height="12" rx="6" fill="#8A3E10" opacity="0.13"/>
+  </g>
+</svg>
