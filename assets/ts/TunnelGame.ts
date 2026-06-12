@@ -43,6 +43,20 @@ export const TUNNEL_LEVELS = [
 
 const STAGED_EVENT_STEPS = 48;                // ~800 ms between-cycle lowering event
 const FUSE_STEPS = 120;                       // ~2 s lit fuse before the breach
+
+/* Abyss tease beat sequence (round-4 ratified, ~3.3 s total): cave loop fades
+   while the smoke hangs, clears sideways frame-right, rust spills in, the
+   lemming walks out right, the stinger breathes, hard cut. Under reduced
+   motion the wipe is skipped: cleared frame + rust + right-facing lemming. */
+const TEASE_FADE_STEPS = 60;
+const TEASE_HANG_STEPS = 24;
+const TEASE_WIPE_STEPS = 54;
+const TEASE_WALK_STEPS = 42;
+const TEASE_REDUCED_HOLD_STEPS = 90;
+const TEASE_STINGER_STEPS = 72;
+const TEASE_CUT_STEPS = 3;
+const TEASE_RUST = '#A85A1C';
+const TEASE_RUST_MAX_ALPHA = 0.18;
 const LIGHT_PRESSES = 3;
 const ACTION_RANGE_FRAC = 0.08;               // how close "near the bomb / at the crack" is
 export const MIN_CRACK_SPAWN_DIST_FRAC = 0.18;
@@ -50,8 +64,9 @@ const PLAYER_SPAWN_X_FRAC = 0.08;
 const CRACK_MIN_X_FRAC = 0.06;
 const CRACK_MAX_X_FRAC = 0.88;
 
-/* One verb per state (D4): what Space (or the touch button) means right now. */
-export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'event';
+/* One verb per state (D4): what Space (or the touch button) means right now.
+   `tease` is the post-victory beat: input inert, countdown frozen, no crush. */
+export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'event' | 'tease';
 export type TunnelVerb = 'pick up' | 'place' | 'light' | null;
 
 export class TunnelGame {
@@ -89,6 +104,8 @@ export class TunnelGame {
   /* The telegraph rumble plays once per descent into the danger band; it
      re-arms whenever the ceiling resets (new cycle, respawn) */
   private telegraphArmed: boolean;
+  private teaseStep: number;
+  private readonly reduceMotion: boolean;
   private hud: Hud;
   private gameLoop: GameLoop;
   private run = new RunLifecycle();
@@ -121,6 +138,8 @@ export class TunnelGame {
     this.hitstopStepsLeft = 0;
     this.crushFlashStepsLeft = 0;
     this.telegraphArmed = true;
+    this.teaseStep = 0;
+    this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.onGameOver = null;
     this.onComplete = null;
     this.caveLoop = null;
@@ -297,7 +316,8 @@ export class TunnelGame {
     if (this.cyclesCleared >= TOTAL_CYCLES) {
       /* Drift stays suspended from here through the tease: the win cannot be
          crushed after the bank latch (round-4 guard) */
-      this.isOver = true;
+      this.state = 'tease';
+      this.teaseStep = 0;
       return;
     }
     /* Staged lowering event into the next cycle: drift suspended, ~800 ms,
@@ -363,6 +383,12 @@ export class TunnelGame {
     }
     if (this.crushFlashStepsLeft > 0) this.crushFlashStepsLeft--;
 
+    /* The tease freezes the countdown and the world; only its beats advance */
+    if (this.state === 'tease') {
+      this.stepTease();
+      return true;
+    }
+
     this.stepCount++;
     this.hud.setScore(this.secondsLeft());
     /* ≤10 s warning: color + 1 Hz pulse (the global reduced-motion clamp
@@ -405,6 +431,35 @@ export class TunnelGame {
       if (this.fuseStepsLeft <= 0) this.breach();
     }
     return true;
+  }
+
+  /** Beat thresholds for the tease, in tease-steps. Reduced motion skips the
+      wipe and holds the cleared frame instead. */
+  private teaseBeats() {
+    const wipeEnd = this.reduceMotion ? 0 : TEASE_HANG_STEPS + TEASE_WIPE_STEPS;
+    const walkEnd = wipeEnd + (this.reduceMotion ? TEASE_REDUCED_HOLD_STEPS : TEASE_WALK_STEPS);
+    const stingerEnd = walkEnd + TEASE_STINGER_STEPS;
+    return { wipeEnd, walkEnd, stingerEnd, cutEnd: stingerEnd + TEASE_CUT_STEPS };
+  }
+
+  private stepTease(): void {
+    this.teaseStep++;
+    const { wipeEnd, walkEnd, cutEnd } = this.teaseBeats();
+    /* Cave loop fades out under the hanging smoke; silence is the held breath */
+    if (this.caveLoop) {
+      this.caveLoop.volume = Math.max(0, 1 - this.teaseStep / TEASE_FADE_STEPS);
+    }
+    if (this.player && this.teaseStep > wipeEnd) {
+      /* He fell in; he walks out under his own power (optional rider, 8.1b) */
+      this.player.direction = 1;
+      if (this.teaseStep <= walkEnd) this.player.dx += this.player.speed * 1.5;
+    }
+    if (this.teaseStep === walkEnd) {
+      this.hud.el('.tbc-overlay')?.classList.add('show');
+    }
+    if (this.teaseStep >= cutEnd) {
+      this.isOver = true;
+    }
   }
 
   private renderFrame(): void {
@@ -468,7 +523,7 @@ export class TunnelGame {
     }
 
     if (this.player) {
-      const crouching = this.inTelegraphBand();
+      const crouching = this.state !== 'tease' && this.inTelegraphBand();
       if (crouching) {
         /* Crouch read: vertical squash anchored at the feet */
         ctx.save();
@@ -494,6 +549,43 @@ export class TunnelGame {
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, canvas.height);
       ctx.globalAlpha = 1;
+    }
+
+    if (this.state === 'tease') this.drawTease();
+  }
+
+  /** Tease overlays: hanging smoke that wipes frame-right, the rust spill
+      bleeding in from the right edge, and the final hard cut to black. */
+  private drawTease(): void {
+    const { ctx, canvas } = this;
+    const size = canvas.width;
+    const { wipeEnd, stingerEnd, cutEnd } = this.teaseBeats();
+
+    if (!this.reduceMotion && this.teaseStep < wipeEnd) {
+      /* Smoke hangs, then clears sideways toward frame-right */
+      const wipeT = Math.max(0, (this.teaseStep - TEASE_HANG_STEPS) / TEASE_WIPE_STEPS);
+      const eased = wipeT * (2 - wipeT); // easeOutQuad
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#28221A';
+      ctx.fillRect(eased * size, 0, size - eased * size, canvas.height);
+      ctx.globalAlpha = 1;
+    }
+
+    /* Faint warm rust spill from frame-right: direction, never destination */
+    const rustT = this.reduceMotion
+      ? 1
+      : Math.min(1, Math.max(0, (this.teaseStep - TEASE_HANG_STEPS) / TEASE_WIPE_STEPS));
+    if (rustT > 0) {
+      ctx.globalAlpha = TEASE_RUST_MAX_ALPHA * rustT;
+      ctx.fillStyle = TEASE_RUST;
+      ctx.fillRect(size * 0.7, 0, size * 0.3, canvas.height);
+      ctx.globalAlpha = 1;
+    }
+
+    if (this.teaseStep >= stingerEnd && this.teaseStep < cutEnd) {
+      /* Hard cut to black, 2–3 frames, brutal and retro */
+      ctx.fillStyle = '#010106';
+      ctx.fillRect(0, 0, size, canvas.height);
     }
   }
 }

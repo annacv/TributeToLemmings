@@ -292,7 +292,12 @@ describe('TunnelGame — completion routing', () => {
     game.state = 'armed';
     game.fuseStepsLeft = 1;
     game.step();
+    /* Victory enters the tease beat sequence; the run ends at the cut */
+    expect(game.state).toBe('tease');
+    const frozen = game.secondsLeft();
+    for (let i = 0; i < 300 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
+    expect(game.secondsLeft()).toBe(frozen); // the countdown froze with the bank
 
     const onGameOver = vi.fn();
     const onComplete = vi.fn();
@@ -314,7 +319,7 @@ describe('TunnelGame — completion routing', () => {
     );
   });
 
-  it('no crush can resolve after the completion bank (drift suspended through the end)', () => {
+  it('no crush can resolve after the completion bank (drift suspended through the tease)', () => {
     const game = makeTunnel(canvas);
     game.cyclesCleared = 2;
     game.cycle = 2;
@@ -323,10 +328,14 @@ describe('TunnelGame — completion routing', () => {
     armCrush(game); // ceiling practically at the kill line as the fuse resolves
     game.ceilingFrac -= TUNNEL_LEVELS[2].driftPerStep * 2; // breach wins the race this step
     game.step();
-    expect(game.isOver).toBe(true);
+    expect(game.state).toBe('tease');
     const lives = game.player!.lives;
-    expect(game.step()).toBe(false); // halted: no further simulation, no crush
-    expect(game.player!.lives).toBe(lives);
+    const ceiling = game.ceilingFrac;
+    for (let i = 0; i < 300 && !game.isOver; i++) game.step();
+    expect(game.isOver).toBe(true);
+    expect(game.player!.lives).toBe(lives);      // no crush through the whole tease
+    expect(game.ceilingFrac).toBe(ceiling);      // drift stayed suspended
+    expect(game.step()).toBe(false);             // halted after the cut
   });
 });
 

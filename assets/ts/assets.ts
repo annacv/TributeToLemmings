@@ -43,6 +43,11 @@ export const FALLING_SFX = fallingSfxMp3;
 export const CAVE_LOOP = caveLoopOgg;
 export const EXPLODE_SFX = explodeSfxWav;
 export const CHAIN_SFX = chainSfxWav;
+
+/* Tally SFX are still-open assets (design.md) — the tally degrades silently
+   while these stay null; point them at imports when Anna supplies the cues. */
+export const TALLY_TICK_SFX: string | null = null;
+export const TALLY_CHIME_SFX: string | null = null;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
 export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
 export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;

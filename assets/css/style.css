@@ -633,6 +633,39 @@ canvas {
   color: var(--bg-black);
 }
 
+/* End-screen tally (round 4): one line per non-zero component, then the
+   total roll; the win variant swaps BOOOM!!! for the lowercase stinger */
+.go-sub {
+  margin: 0 0 .5rem;
+}
+
+.go-tally {
+  list-style: none;
+  padding: 0;
+  margin: .5rem auto;
+  max-width: 260px;
+}
+
+.go-tally-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  font-family: 'Press Start 2P', monospace;
+  font-size: .55rem;
+  line-height: 1.8;
+  color: var(--white, #fff);
+  opacity: 0;
+}
+
+.go-tally-line.show {
+  opacity: 1;
+  transition: opacity .15s steps(2);
+}
+
+.go-tally-value {
+  color: #FEBD00;
+}
+
 /* Tunnel HUD: countdown warning (the global reduced-motion clamp collapses
    the pulse, leaving the color-only state) and the per-bank "+N" pop */
 .hud-score {

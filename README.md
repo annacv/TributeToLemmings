@@ -209,6 +209,10 @@ npm install
 
 > **Note:** Open the game via `npm run dev`, not by double-clicking `index.html` — the file must be served through Vite for ES modules and asset paths to resolve correctly.
 
+## Credits
+
+Audio cues are sourced from the original Lemmings DOS OST (fan-tribute posture, tonal and legal consistency with the tribute concept). Iteration V adds the underground cave loop (`113_-_Lemmings_-_DOS_-_Tim_5.ogg`) and reuses the DOS SFX set (`EXPLODE`, `FIRE`, `BANG`, `TENTON`, `CHAIN`, `DIE`).
+
 ## Links
 
 ### [Link Repo](https://github.com/annacv/TributeToLemmings)

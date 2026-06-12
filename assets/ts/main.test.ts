@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } 
 import { generateGuestHandle } from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
+import { TunnelGame } from './TunnelGame';
 import type { ScoreRecord } from './lib/firebase';
 
 interface MockGame {
@@ -261,12 +262,25 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     document.querySelector<HTMLElement>('.info-modal-backdrop')?.remove();
   });
 
-  it('submits only the breakdown total to the leaderboard at Game Over', () => {
+  it('submits only the breakdown total and rolls the tally up to it', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
     activeGame().onGameOver!(makeBreakdown({ surface: 42, livesBonus: 20 }));
+    /* A multi-component breakdown shows the tally: lines stagger in, then
+       the total rolls; the leaderboard still receives only the total */
+    expect(document.querySelectorAll('.go-tally-line')).toHaveLength(2);
+    vi.advanceTimersByTime(2000);
     expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
     expect(submitScore).toHaveBeenCalledWith(expect.any(String), 62);
+  });
+
+  it('a surface-only death keeps the single-score presentation unchanged', () => {
+    vi.useFakeTimers();
+    activeGame().onGameOver!(makeBreakdown({ surface: 30 }));
+    expect(document.querySelector('.go-tally')).toBeNull();
+    expect(document.querySelector('.go-title')?.textContent).toBe('GAME OVER');
+    expect(document.querySelector('.go-boom')?.textContent).toBe('BOOOM!!!');
+    expect(document.querySelector('.go-score-value')?.textContent).toBe('30');
   });
 
   it('plays no falling SFX through the interstitial when muted', () => {
@@ -356,5 +370,119 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     const event = pressSpace();
     expect(action).toHaveBeenCalledTimes(1);
     expect(event.defaultPrevented).toBe(true); // prevents the button's Space activation
+  });
+});
+
+describe('win variant end screen (tunnel completion)', () => {
+  class SettledImage {
+    complete = true;
+    naturalWidth = 1;
+    src = '';
+    addEventListener(): void {}
+  }
+
+  let audioSrcs: string[] = [];
+  let tunnels: TunnelGame[] = [];
+
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal('Image', SettledImage);
+    /* Track every created audio element by source: the win path must never
+       construct the death knell */
+    audioSrcs = [];
+    const RealAudio = window.Audio;
+    vi.stubGlobal('Audio', function (src?: string) {
+      audioSrcs.push(src ?? '');
+      return new RealAudio(src);
+    });
+    tunnels = [];
+    const origStart = TunnelGame.prototype.startGame;
+    vi.spyOn(TunnelGame.prototype, 'startGame').mockImplementation(function (this: TunnelGame) {
+      tunnels.push(this);
+      origStart.call(this);
+    });
+    localStorage.setItem('audio-muted', '0');
+    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('tunnel-modal-dismissed', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=tunnel');
+    window.dispatchEvent(new Event('load'));
+  });
+
+  afterEach(() => {
+    history.replaceState(null, '', '/');
+    localStorage.removeItem('audio-muted');
+    localStorage.removeItem('info-modal-dismissed');
+    localStorage.removeItem('tunnel-modal-dismissed');
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  it('completion shows TO BE CONTINUED with the tally; DIE.WAV never plays; ranking music starts once', () => {
+    vi.useFakeTimers();
+    const game = tunnels[0];
+    /* Drive the run to the third breach and through the tease to the cut */
+    game.cyclesCleared = 2;
+    game.cycle = 2;
+    game.state = 'armed';
+    game.fuseStepsLeft = 1;
+    game.step();
+    for (let i = 0; i < 300 && !game.isOver; i++) game.step();
+    expect(game.isOver).toBe(true);
+    game['renderFrame'](); // settle fires the completion route
+
+    expect(document.querySelector('.go-title')?.textContent).toBe('TO BE CONTINUED...');
+    expect(document.querySelector('.go-sub')?.textContent).toBe('> you made it. for now.');
+    expect(document.querySelectorAll('.go-tally-line').length).toBeGreaterThan(0);
+    expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
+
+    const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
+    expect(rankingStarts()).toBe(0); // not before the tally completes
+    vi.advanceTimersByTime(2500);    // lines + roll done → music
+    expect(rankingStarts()).toBe(1);
+    expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
+    vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
+    expect(rankingStarts()).toBe(1); // exactly once
+  });
+});
+
+describe('leaderboard fetch timeout', () => {
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    gameInstances.length = 0;
+    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('audio-muted', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    window.dispatchEvent(new Event('load'));
+    (document.querySelector('.splash-form') as HTMLFormElement)
+      .dispatchEvent(new Event('submit', { cancelable: true }));
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('audio-muted');
+    vi.mocked(fetchTopScores).mockResolvedValue([]);
+    vi.useRealTimers();
+  });
+
+  it('shows the error/retry UI when Firestore never responds', async () => {
+    vi.useFakeTimers();
+    vi.mocked(fetchTopScores).mockImplementation(() => new Promise(() => {}));
+    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surface: 10 }));
+    await vi.advanceTimersByTimeAsync(2000); // hold → ranking screen
+    expect(document.querySelector('.ranking-loading')).not.toBeNull();
+    await vi.advanceTimersByTimeAsync(2600); // bounded fetch times out
+    expect(document.querySelector('.ranking-error')).not.toBeNull();
+    expect(document.querySelector('.ranking-retry')).not.toBeNull();
   });
 });

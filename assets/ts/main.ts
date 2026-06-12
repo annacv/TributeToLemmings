@@ -5,9 +5,13 @@ import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from '
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
-import { DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP, UNDERGROUND_BACKGROUND_SVG } from './assets';
+import {
+  DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
+  TALLY_TICK_SFX, TALLY_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG,
+} from './assets';
 
 const GAME_OVER_TRANSITION_MS = 2000;
+const GAME_OVER_TALLY_HOLD_MS = 4200;
 const SUBMISSION_TIMEOUT_MS = 2500;
 const TBC_FALL_DURATION_MS = 500;
 const TBC_SCROLL_DURATION_MS = 1700;
@@ -456,6 +460,9 @@ function main(): void {
               </span>
             </div>
           </div>
+          <div class="tbc-overlay">
+            <p class="tbc-line">&gt; the air grows warm...</p>
+          </div>
           <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
         <div class="touch-controls">
@@ -472,9 +479,9 @@ function main(): void {
     canvas.height = size;
 
     const game = new TunnelGame(canvas, breakdown);
-    /* Until the win-variant end screen lands (task 7.1b), both exits route to
-       the existing Game Over flow carrying the breakdown */
-    game.completionCallback(createGameOverScreen);
+    /* Death keeps the GAME OVER verdict; the tease routes the winner to the
+       TO BE CONTINUED variant of the same end screen (round 4) */
+    game.completionCallback((b) => createGameOverScreen(b, 'win'));
     game.gameOverCallback(createGameOverScreen);
 
     /* Cave loop through the channel helper: respects the mute gate, pauses
@@ -530,15 +537,32 @@ function main(): void {
     });
   }
 
-  function createGameOverScreen(breakdown: ScoreBreakdown): void {
+  /* One end screen, two verdicts (round 4): death keeps GAME OVER + BOOOM +
+     DIE.WAV; the tunnel win reads TO BE CONTINUED... and never plays the
+     death knell — the tally roll carries the verdict. "THE END" reuses this
+     screen in Iteration VI. */
+  function createGameOverScreen(breakdown: ScoreBreakdown, variant: 'death' | 'win' = 'death'): void {
     const size = getCanvasSize();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const tallyLines: Array<[string, number]> = ([
+      ['surface', breakdown.surface],
+      ['lives', breakdown.livesBonus],
+      ['tunnel time', breakdown.tunnelTime],
+      ['cycles', breakdown.cyclesBonus],
+    ] as Array<[string, number]>).filter(([, value]) => value > 0);
+    /* Surface-only runs see today's screen unchanged (skip-if-empty) */
+    const hasTally = breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus > 0;
+
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="crt-frame">
           <canvas class="game-over-canvas" aria-hidden="true"></canvas>
           <div class="game-over-overlay">
-            <p class="go-boom">BOOOM!!!</p>
-            <h1 class="go-title">GAME OVER</h1>
+            ${variant === 'win'
+    ? '<p class="tbc-line go-sub">&gt; you made it. for now.</p>'
+    : '<p class="go-boom">BOOOM!!!</p>'}
+            <h1 class="go-title">${variant === 'win' ? 'TO BE CONTINUED...' : 'GAME OVER'}</h1>
+            ${hasTally ? '<ul class="go-tally"></ul>' : ''}
             <p class="go-score">score <span class="go-score-value"></span></p>
           </div>
         </div>
@@ -549,29 +573,79 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
-    const scoreEl = gameOverScreen.querySelector('.go-score-value');
-    if (scoreEl) scoreEl.textContent = String(breakdown.total);
-
     const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
     title.tabIndex = -1;
     title.focus();
 
     const startRankingMusic = (): void => {
       if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
+      if (rankingMusic) return; // exactly once per arrival, whatever triggered it
       rankingMusic = new Audio(RANKING_MUSIC);
       rankingMusic.loop = true;
       rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
-      /* The die SFX can finish while the tab is hidden — start paused and
+      /* The arrival SFX can finish while the tab is hidden — start paused and
          let the visibility listener resume on return */
       if (!document.hidden) safePlay(rankingMusic);
     };
+    if (rankingMusic) {
+      rankingMusic.pause();
+      rankingMusic = null;
+    }
 
-    if (localStorage.getItem('audio-muted') !== '1') {
+    const muted = localStorage.getItem('audio-muted') === '1';
+    const playOptionalSfx = (src: string | null): void => {
+      /* Tally cues degrade silently while their assets are absent */
+      if (src && !muted) safePlay(new Audio(src));
+    };
+
+    /* Tally: line-by-line reveal inside the hold, then a fast roll to the
+       total; instant under reduced motion */
+    const scoreEl = gameOverScreen.querySelector('.go-score-value');
+    const tallyList = gameOverScreen.querySelector('.go-tally');
+    let tallyDoneMs = 0;
+    if (hasTally && tallyList && scoreEl) {
+      const lineEls = tallyLines.map(([label, value]) => {
+        const li = document.createElement('li');
+        li.className = 'go-tally-line';
+        li.innerHTML = `<span class="go-tally-label">${label}</span><span class="go-tally-value">${value}</span>`;
+        tallyList.appendChild(li);
+        return li;
+      });
+      if (reduceMotion) {
+        lineEls.forEach((li) => li.classList.add('show'));
+        scoreEl.textContent = String(breakdown.total);
+      } else {
+        scoreEl.textContent = '0';
+        lineEls.forEach((li, i) => setTimeout(() => {
+          li.classList.add('show');
+          playOptionalSfx(TALLY_TICK_SFX);
+        }, 300 + i * 250));
+        const rollStartMs = 300 + lineEls.length * 250;
+        const ROLL_MS = 500;
+        setTimeout(() => {
+          playOptionalSfx(TALLY_CHIME_SFX);
+          const rollTimer = setInterval(() => {
+            if (!mainElement.contains(scoreEl)) { clearInterval(rollTimer); return; }
+            const next = Math.min(breakdown.total, Number(scoreEl.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
+            scoreEl.textContent = String(next);
+            if (next >= breakdown.total) clearInterval(rollTimer);
+          }, 40);
+        }, rollStartMs);
+        tallyDoneMs = rollStartMs + ROLL_MS;
+      }
+    } else if (scoreEl) {
+      scoreEl.textContent = String(breakdown.total);
+    }
+
+    if (variant === 'death' && !muted) {
       const dieSfx = new Audio(DIE_SFX);
       dieSfx.addEventListener('ended', startRankingMusic);
       safePlay(dieSfx);
-    } else {
+    } else if (variant === 'death') {
       startRankingMusic();
+    } else {
+      /* Win: no death knell — ranking music starts from the tally completion */
+      setTimeout(startRankingMusic, tallyDoneMs);
     }
 
     /* Only the total reaches the leaderboard; the breakdown stays client-side */
@@ -581,7 +655,9 @@ function main(): void {
         .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
         .catch(() => ({ error: true, docId: null, bestScore: null }));
 
-    setTimeout(() => createRankingScreen(breakdown.total, submission), GAME_OVER_TRANSITION_MS);
+    /* The hold extends to let the tally land; surface-only deaths keep today's beat */
+    const holdMs = hasTally && !reduceMotion ? GAME_OVER_TALLY_HOLD_MS : GAME_OVER_TRANSITION_MS;
+    setTimeout(() => createRankingScreen(breakdown.total, submission), holdMs);
   }
 
   function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
@@ -650,7 +726,14 @@ function main(): void {
     }
 
     try {
-      const scores = await fetchTopScores(10);
+      /* Bounded fetch (mirrors resolveSubmission): an unreachable Firestore
+         surfaces the error/retry UI instead of an indefinite loading state */
+      const scores = await Promise.race([
+        fetchTopScores(10),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('leaderboard fetch timeout')), SUBMISSION_TIMEOUT_MS)
+        ),
+      ]);
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
       const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
