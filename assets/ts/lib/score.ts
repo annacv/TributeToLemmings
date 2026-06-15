@@ -17,7 +17,7 @@ export interface ScoreBreakdown {
   tunnelTime: number;
   /** 5 × cycles cleared, banked with the time slice. */
   cyclesBonus: number;
-  /** Always the sum of the parts — derive via makeBreakdown, never by hand. */
+  /** Total score, derived via makeBreakdown. */
   total: number;
 }
 

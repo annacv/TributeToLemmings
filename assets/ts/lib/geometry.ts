@@ -9,13 +9,13 @@ export const BOMB_HEIGHT = 32;
 /** Lemming draw size as a fraction of the canvas on cinematic screens. */
 export const LEMMING_SIZE_FRAC = 0.14;
 
-/* Composition constants baked to background-underground.svg's geometry (the
-   fall interstitial and the tunnel's establishing shot share this artwork). */
+/* Composition constants baked to background-underground.svg's To Be Continued geometry. */
 export const TBC_GEOMETRY = {
   /** Hole center within the erosion frame the lemming falls into. */
   HOLE_CENTER_Y_FRAC: 0.435,
-  /** ground-erosion.svg intrinsic aspect (h/w). */
+  /** Ground erosion intrinsic aspect (h/w). */
   GROUND_EROSION_ASPECT: 299 / 400,
+  /** Background zoom factor (1.5 = 1.5x original size). */
   BG_ZOOM: 1.5,
   /** Fraction of the 800-tall surface art cropped above the grass line. */
   BG_CROP_TOP_FRAC: 547 / 800,

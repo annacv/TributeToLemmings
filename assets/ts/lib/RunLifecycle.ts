@@ -11,9 +11,9 @@ export class RunLifecycle {
     return this.controller.signal;
   }
 
-  /** Call from the post-render latch: when `over` is true, aborts the signal and
-      runs `onEnd` exactly once; later calls are no-ops. Screen swaps and other
-      side effects belong in `onEnd`, never in the final render itself. */
+  /** Runs this right after each render. Once the run is `over`, we pull the plug:
+      the signal aborts and `onEnd` fires a single time, no matter how many frames
+      sneak in afterward. Cleansup and screen swaps in `onEnd`, not at mid-render. */
   settle(over: boolean, onEnd: () => void): void {
     if (!over || this.ended) return;
     this.ended = true;

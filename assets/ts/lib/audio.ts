@@ -1,10 +1,10 @@
-/* play() rejects under autoplay policy or when the source fails; audio is a
-   nice-to-have here, so swallow instead of surfacing unhandled rejections */
+/* play() rejects under browser's autoplay policy or when the source fails; audio is a
+   nice-to-have here, so swallowing the rejection instead of surfacing unhandled rejections */
 export function safePlay(audio: HTMLAudioElement): void {
   audio.play().catch(() => {});
 }
 
-/** One-shot SFX channel: rewinds and plays unless muted. */
+/** One-shot Sound Effects channel: rewinds and plays unless muted. */
 export function playSfx(sfx: HTMLAudioElement, muted: boolean): void {
   if (muted) return;
   sfx.currentTime = 0;
@@ -19,12 +19,13 @@ export function playLoop(loop: HTMLAudioElement, muted: boolean): void {
   safePlay(loop);
 }
 
+/** Stops the loop and resets the current time to 0. */
 export function stopLoop(loop: HTMLAudioElement): void {
   loop.pause();
   loop.currentTime = 0;
 }
 
-/** A hidden tab freezes the game (rAF stops) but audio keeps playing — pause
+/** A hidden tab freezes the game (requestAnimationFrame stops) but audio keeps playing — pause
     while hidden and resume on return only while `shouldResume` allows it, so a
     dead run can't talk over the next screen's music. */
 export function pauseWhileHidden(

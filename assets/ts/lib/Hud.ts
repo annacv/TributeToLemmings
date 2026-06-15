@@ -1,6 +1,6 @@
 import { restartAnimation } from './fx';
 
-/* Selector-driven HUD controller, world-agnostic: any screen that keeps the
+/* Selector-driven Heads-Up Display controller, world-agnostic: any screen that keeps the
    established HUD class names (.seconds-value, .level-value, .lives-*) can
    reuse it as-is. Lookups are memoized — the HUD is static for the lifetime of
    a game screen, so each selector hits the DOM once instead of every frame. */
@@ -29,7 +29,6 @@ export class Hud {
     this.setText('.seconds-value', String(score));
   }
 
-  /** Updates the level/depth slot value and blinks the item to flag the change. */
   setLevel(label: string): void {
     this.setText('.level-value', label);
     this.blinkItem('.level-item');
