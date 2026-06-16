@@ -106,12 +106,11 @@ export class TunnelGame {
   muted: boolean;
   breachStep: number;
   private readonly baseBreakdown: ScoreBreakdown;
-  private eventStepsLeft: number;
-  private eventShakeStepsLeft: number;
-  private eventFromFrac: number;
-  private eventTargetFrac: number;
-  private hitstopStepsLeft: number;
-  private crushFlashStepsLeft: number;
+  /* Crush feedback: ~250 ms input/world freeze + the white flash overlay */
+  private crush = { hitstop: 0, flash: 0 };
+  /* Ceiling-drop choreography between cycles: hold while the ground shakes,
+     then tween the ceiling from→target over stepsLeft */
+  private drop = { stepsLeft: 0, shakeLeft: 0, fromFrac: 0, targetFrac: 0 };
   private warningArmed: boolean;
   private readonly reduceMotion: boolean;
   private hud: Hud;
@@ -149,12 +148,6 @@ export class TunnelGame {
     this.bankedSeconds = 0;
     this.cyclesCleared = 0;
     this.breachStep = 0;
-    this.eventStepsLeft = 0;
-    this.eventShakeStepsLeft = 0;
-    this.eventFromFrac = 0;
-    this.eventTargetFrac = 0;
-    this.hitstopStepsLeft = 0;
-    this.crushFlashStepsLeft = 0;
     this.warningArmed = true;
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.onGameOver = null;
@@ -224,7 +217,7 @@ export class TunnelGame {
 
   /** Perform the current action verb */
   action(): void {
-    if (this.paused || this.isOver || this.hitstopStepsLeft > 0) return;
+    if (this.paused || this.isOver || this.crush.hitstop > 0) return;
     if (this.state === 'explore') {
       const i = this.nearBombIndex();
       if (i < 0) return;
@@ -409,8 +402,8 @@ export class TunnelGame {
     this.hud.displayLives(this.player.lives);
     audio.stopLoop(this.fuseTickSfx);
     this.playSfx(this.crushSfx);
-    this.hitstopStepsLeft = CRUSH_HITSTOP_STEPS;
-    this.crushFlashStepsLeft = CRUSH_HITSTOP_STEPS;
+    this.crush.hitstop = CRUSH_HITSTOP_STEPS;
+    this.crush.flash = CRUSH_HITSTOP_STEPS;
 
     if (this.player.lives < 1) {
       this.isOver = true;
@@ -429,11 +422,11 @@ export class TunnelGame {
   step(): boolean {
     if (this.isOver) return false;
     if (this.paused) return true;
-    if (this.hitstopStepsLeft > 0) {
-      this.hitstopStepsLeft--;
+    if (this.crush.hitstop > 0) {
+      this.crush.hitstop--;
       return true;
     }
-    if (this.crushFlashStepsLeft > 0) this.crushFlashStepsLeft--;
+    if (this.crush.flash > 0) this.crush.flash--;
 
     /* The breach beat freezes the countdown and the world */
     if (this.state === 'breach') {
@@ -448,18 +441,18 @@ export class TunnelGame {
 
     if (this.state === 'event') {
       /* Hold the ceiling while the ground shakes (rumble fired on entry) */
-      if (this.eventShakeStepsLeft > 0) {
-        this.eventShakeStepsLeft--;
+      if (this.drop.shakeLeft > 0) {
+        this.drop.shakeLeft--;
         return true;
       }
 
       /* Staged drop into the new level, readable even if drift overshot the start */
-      this.eventStepsLeft--;
-      const t = 1 - this.eventStepsLeft / STAGED_EVENT_STEPS;
-      this.ceilingFrac = this.eventFromFrac + (this.eventTargetFrac - this.eventFromFrac) * t;
+      this.drop.stepsLeft--;
+      const t = 1 - this.drop.stepsLeft / STAGED_EVENT_STEPS;
+      this.ceilingFrac = this.drop.fromFrac + (this.drop.targetFrac - this.drop.fromFrac) * t;
 
-      if (this.eventStepsLeft <= 0) {
-        this.ceilingFrac = this.eventTargetFrac;
+      if (this.drop.stepsLeft <= 0) {
+        this.ceilingFrac = this.drop.targetFrac;
         this.warningArmed = true;
         /* The cycle was already laid out on entry; just resume gameplay */
         this.state = 'explore';
@@ -532,10 +525,10 @@ export class TunnelGame {
       /* Stage the new level now so it's in place as the chamber arrives */
       this.setupCycle(this.cyclesCleared);
       /* Warn before the drop: a ground shake + grinding rumble fire now */
-      this.eventShakeStepsLeft = EVENT_SHAKE_STEPS;
-      this.eventStepsLeft = STAGED_EVENT_STEPS;
-      this.eventFromFrac = this.ceilingFrac;
-      this.eventTargetFrac = Math.max(
+      this.drop.shakeLeft = EVENT_SHAKE_STEPS;
+      this.drop.stepsLeft = STAGED_EVENT_STEPS;
+      this.drop.fromFrac = this.ceilingFrac;
+      this.drop.targetFrac = Math.max(
         this.cycleStartCeilingFrac(this.cyclesCleared),
         this.ceilingFrac + MIN_EVENT_DROP_FRAC,
       );
@@ -675,7 +668,7 @@ export class TunnelGame {
       ctx.drawImage(this.ceilingImg, 0, drawY, size, drawH);
     }
 
-    if (this.crushFlashStepsLeft > 0) {
+    if (this.crush.flash > 0) {
       ctx.globalAlpha = 0.55;
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, h);
