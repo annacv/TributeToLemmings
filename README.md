@@ -66,7 +66,7 @@ A new game screen with a puzzle mechanic: the player must blast their way out of
 6. Explosion breaks the crack open — triggers the next escape cycle.
 7. Three escape cycles per screen: after each successful escape, the ceiling lowers — and it keeps lowering throughout each cycle, so it can crush the lemming (the tunnel's only death source). Level differences: level 2 = new crack-mark appearance/placement + lower ceiling starting point; level 3 = the same + faster lowering velocity. Crack position randomizes each cycle to prevent memorization.
 8. Crush death and respawn: with lives remaining, the cycle restarts with the ceiling back at that cycle's starting height, the remaining countdown time, the same crack-mark appearance, and a re-randomized crack position; the fuse is cancelled and carried/placed bombs are cleared. Losing the third life routes to Game Over with the banked score only. Levels 1–2 are tuned to be effectively un-lethal within the countdown budget (guarded by a unit test); only level 3 can crush inside it.
-9. After completing all three cycles, the final breach blasts the floor pit open and the run ends right there (no in-tunnel pan into a new chamber); a Tunnel→Abyss transition screen then plays the collapse-shaft fall down and routes to the **win variant** of the end screen with the full both-worlds score count. Death keeps today's `GAME OVER` screen; `THE END` is reserved for Iteration VI on the same parameterized screen. Until VI ships, both variants route onward to the ranking.
+9. After completing all three cycles, the final breach blasts the floor pit open and the run ends right there (no in-tunnel pan into a new chamber); a Tunnel→Abyss transition screen then plays the collapse-shaft fall down and routes to the **win variant** of the end screen with the full both-worlds score count. Death keeps today's `GAME OVER` screen; `THE END` is reserved for its own later iteration (VII) as a dedicated finale screen. Until then, both variants route onward to the ranking.
 10. Scoring — `TOTAL = surface seconds + tunnel seconds left (banked per cycle) + 5 × levels completed (surface levels completed + tunnel cycles completed)`. Lives are a continue resource only and never score — they reset each game, so a lives bonus would double-count survival, which time already pays for. The tunnel runs a visible 60s countdown that floors at 0 and never kills — the ceiling is the kill source; the countdown survives crush respawns (remaining time carries). A line-by-line count renders on the Game Over screen, each line showing the rule behind its points.
 11. Audio — new looping background track on screen entry, distinct from the surface game track. All subsequent audio respects the existing mute gate.
 12. Audio — SFX set: bomb pickup, light presses (match-strike per press ×3), fuse burn (looping tick during the lit fuse, stops on explosion or death), breach explosion (same meaning as on the surface: a bomb breaks earth), ceiling crush (on every life lost, shared with the surface collapse sting), ceiling lower between cycles (short grinding rumble), score count tick and total roll.
@@ -83,6 +83,12 @@ Art inspiration refs: `assets/images/backgrounds/refs/background-8.png`, `backgr
 7. On reaching the door: a brief (3–5s) non-interactive balloon escape cinematic plays — the lemming is lifted by the hot air balloon from the original Lemmings before the Ranking screen fades in.
 8. Audio — new looping background track on screen entry: faster and more driving than the tunnel track to convey chase energy.
 9. Audio — stalactite collision SFX (one-shot crunch on hit); door reached sting (triumphant one-shot on win condition); balloon cinematic track: the most iconic available Lemmings DOS OST cue, used as the emotional peak and payoff of the full game.
+
+##### ITERATION VII — The End
+A dedicated finale screen: the emotional close and win payoff of the full game. Split out from the Abyss (VI) on purpose so the ending — the screen players carry away — gets its own focus instead of being crammed into VI's plate.
+1. Dedicated `TheEnd` screen with its own background art and dramaturgy (composition, pacing, copy, and likely a dedicated music cue).
+2. Formalises the win ending: today the win routes through the parameterized `GAME OVER` *win* variant; `THE END` becomes a bespoke screen that replaces (or sits just ahead of) it — the exact placement relative to the Abyss balloon cinematic and the ranking is a scope-time decision. Death keeps the `GAME OVER` screen.
+3. Sequencing & gate: ships after the Abyss (VI) — it is the beat the player reaches once the Abyss escape completes — and is blocked on the dedicated background artwork being provided (not generated).
 
 
 ## Data structure
@@ -176,6 +182,11 @@ Definition of the different states and their transition (transition functions)
   * non-interactive cinematic (~3–5s)
   * balloon lift animation
   * transition to rankingScreen
+
+*9. theEndScreen (7th Iteration)*
+  * create dedicated finale screen (own background + dramaturgy)
+  * win-ending payoff (replaces / precedes the parameterized win variant)
+  * route to rankingScreen
 
 
 ## Task
