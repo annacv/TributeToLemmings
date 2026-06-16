@@ -11,6 +11,8 @@ export function makeCtx() {
     fillRect: vi.fn(),
     fillText: vi.fn(),
     font: '',
+    textAlign: 'start' as CanvasTextAlign,
+    createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
     drawImage: vi.fn(),
     beginPath: vi.fn(),
     moveTo: vi.fn(),
