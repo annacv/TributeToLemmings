@@ -3,16 +3,13 @@ import { GameLoop } from './lib/GameLoop';
 import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
-import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
-import { loadImage, loadImages } from './lib/images';
+import { TunnelRenderer } from './TunnelRenderer';
 import * as audio from './lib/audio';
 import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown,
 } from './lib/score';
 import {
-  SPRITES, CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
-  FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX, FALLING_SFX,
-  TUNNEL_BACKGROUND_SVG, TUNNEL_CEILING_SVG,
+  SPRITES, FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX, FALLING_SFX,
 } from './assets';
 
 export const TUNNEL_TIME_BUDGET_S = 60;
@@ -21,16 +18,14 @@ const STEPS_PER_SECOND = 60;
 
 /* World geometry is stored as canvas fractions, not pixels, so nothing jumps
    when the canvas resizes (280–580 px). The numbers come from the artwork. */
-export const FLOOR_FRAC = 690 / 800;  // walkable line in background-tunnel.svg
-const CEILING_ASPECT = 800 / 800;     // tunnel-ceiling.svg strip
-const CEILING_TOOTH_FRAC = 794 / 800; // deepest tooth: the collision line, never per-tooth
+export const FLOOR_FRAC = 690 / 800; // walkable line in background-tunnel.svg
 
-/* Kill line and warning band, both as floor-to-ceiling headroom. The rule:
-   the crouch warning must always show before the crush can fire. */
+/* Kill line and warning band, both as floor-to-ceiling headroom.
+   The rule: the crouch warning must always show before the crush can fire. */
 export const CRUSH_HEADROOM_FRAC = 0.09;
 export const WARNING_HEADROOM_FRAC = 0.17;
 
-const CRUSH_HITSTOP_STEPS = 15;      // ~250 ms freeze so the death beat lands
+const CRUSH_HITSTOP_STEPS = 15; // ~250 ms freeze so the death beat lands
 
 export const TUNNEL_LEVELS = [
   { startHeadroomFrac: 0.62, driftPerStep: 0.00009, crackMark: 2, bombs: 2 },
@@ -38,22 +33,21 @@ export const TUNNEL_LEVELS = [
   { startHeadroomFrac: 0.34, driftPerStep: 0.00013, crackMark: 1, bombs: 4 },
 ] as const;
 
-const EVENT_SHAKE_STEPS = 18;       // ~300 ms ground-shake warning before the ceiling falls
-const STAGED_EVENT_STEPS = 48;      // ~800 ms ceiling drop opening each new level
-const MIN_EVENT_DROP_FRAC = 0.05;   // the drop must read even if drift already passed the next start
-const FUSE_STEPS = 120;             // ~2 s lit fuse before the explosion
+const EVENT_SHAKE_STEPS = 18;     // ~300 ms ground-shake warning before the ceiling falls
+const STAGED_EVENT_STEPS = 48;    // ~800 ms ceiling drop opening each new level
+const MIN_EVENT_DROP_FRAC = 0.05; // the drop must read even if drift already passed the next start
+const FUSE_STEPS = 120;           // ~2 s lit fuse before the explosion
 
 /* Breach sequence between cycles: the booom blasts a floor pit open (frames
    0→3), then the camera drops into the next-deeper chamber, which arrives clean
    (the pit scrolled up and away) for the level announce and ceiling drop. */
 export const BREACH_BOOM_STEPS = 42; // ~0.7 s booom.svg + pit blasting open
-const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
+export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
 export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat: breach ends here
 
-const RUST_ACCENT = '#A85A1C';
 const LIGHT_PRESSES = 3;
-const ACTION_RANGE_FRAC = 0.08; // how close "near a bomb" is
-const CRACK_RANGE_FRAC = 0.1;   // how close "at the floor crack" is
+const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
+export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
 /* Bombs spawn in the middle band, apart from each other, so the route matters */
@@ -64,7 +58,6 @@ const BOMB_MIN_GAP_FRAC = 0.12;
 /* The crack sits at a random floor x, off the spawn point and this cycle's bombs */
 export const CRACK_MIN_X_FRAC = 0.18;
 export const CRACK_MAX_X_FRAC = 0.82;
-const CRACK_MARK_HEIGHT_FRAC = 0.12;
 
 /* Footing-pad one-shots: snap when he reaches the charge, beckon when he strays */
 const PAD_ARRIVE_STEPS = 6;
@@ -72,12 +65,33 @@ const PAD_NUDGE_STEPS = 10;
 
 export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'breach' | 'event';
 
-export class TunnelGame {
+/** The read-only slice of tunnel state the renderer draws from each frame. Keeps
+    the renderer decoupled from gameplay: it reads this view, never mutates it. */
+export interface TunnelView {
+  readonly state: TunnelState;
+  readonly cycle: number;
+  readonly ceilingFrac: number;
+  readonly crackXFrac: number;
+  readonly floorBombs: readonly number[];
+  readonly placedCount: number;
+  readonly breachStep: number;
+  readonly stepCount: number;
+  readonly fuseStepsLeft: number;
+  readonly player: Player | null;
+  readonly crushFlash: number;
+  readonly padArriveSteps: number;
+  readonly padNudgeSteps: number;
+  readonly padNudgeDir: number;
+  readonly reduceMotion: boolean;
+  playerCenterFrac(): number;
+  inWarningBand(): boolean;
+}
+
+export class TunnelGame implements TunnelView {
   player: Player | null;
   isOver: boolean;
   paused: boolean;
   canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
   state: TunnelState;
   cycle: number;        // 0-based index into TUNNEL_LEVELS
   ceilingFrac: number;  // collision line, canvas fraction from the top
@@ -110,27 +124,26 @@ export class TunnelGame {
      then tween the ceiling from→target over stepsLeft */
   private drop = { stepsLeft: 0, shakeLeft: 0, fromFrac: 0, targetFrac: 0 };
   private warningArmed: boolean;
-  private readonly reduceMotion: boolean;
+  readonly reduceMotion: boolean;
   private hud: Hud;
   private gameLoop: GameLoop;
+  private renderer: TunnelRenderer;
   private run = new RunLifecycle();
-  private padArriveSteps = 0;
-  private padNudgeSteps = 0;
-  private padNudgeDir = 1;
+  padArriveSteps = 0;
+  padNudgeSteps = 0;
+  padNudgeDir = 1;
   private wasAtCrack = false;
-  private backgroundImg: HTMLImageElement;
-  private ceilingImg: HTMLImageElement;
-  private crackImgs: HTMLImageElement[];
-  private bombImg: HTMLImageElement;
-  private booomImg: HTMLImageElement;
-  private groundHoleImgs: HTMLImageElement[];
+
+  /** Live flash level for the renderer's crush overlay. */
+  get crushFlash(): number {
+    return this.crush.flash;
+  }
 
   constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
     this.player = null;
     this.isOver = false;
     this.paused = false;
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d')!;
     this.baseBreakdown = baseBreakdown;
     this.state = 'explore';
     this.cycle = 0;
@@ -162,12 +175,7 @@ export class TunnelGame {
     this.scrapeSfx = new Audio(SCRAPE_SFX);
     this.fallingSfx = new Audio(FALLING_SFX);
 
-    this.backgroundImg = loadImage(TUNNEL_BACKGROUND_SVG);
-    this.ceilingImg = loadImage(TUNNEL_CEILING_SVG);
-    this.crackImgs = loadImages(CRACK_MARK_SVGS);
-    this.bombImg = loadImage(SPRITES.bomb);
-    this.booomImg = loadImage(SPRITES.booom);
-    this.groundHoleImgs = loadImages(GROUND_HOLE_SVGS);
+    this.renderer = new TunnelRenderer(canvas);
 
     this.gameLoop = new GameLoop({
       step: () => this.step(),
@@ -262,7 +270,7 @@ export class TunnelGame {
     return FLOOR_FRAC - TUNNEL_LEVELS[cycle].startHeadroomFrac;
   }
 
-  private playerCenterFrac(): number {
+  playerCenterFrac(): number {
     return this.player ? (this.player.dx + this.player.dWidth / 2) / this.canvas.width : 0.5;
   }
 
@@ -513,7 +521,7 @@ export class TunnelGame {
   }
 
   private renderFrame(): void {
-    this.drawScene();
+    this.renderer.render(this);
     /* Frames can still draw after the halt; the latch fires teardown once */
     this.run.settle(this.isOver, () => this.endRun());
   }
@@ -531,174 +539,5 @@ export class TunnelGame {
   /** Near-crush warning: crouch frame + rumble before the kill line. */
   inWarningBand(): boolean {
     return this.headroomFrac() <= WARNING_HEADROOM_FRAC;
-  }
-
-  /** Ground-hole frame for this breach step: opens 0→last (boom), then held open
-      through the pan as it scrolls up and away. Reduced motion snaps open. */
-  private breachHoleFrame(): number {
-    const last = this.groundHoleImgs.length - 1;
-
-    if (this.breachStep > BREACH_BOOM_STEPS) return last; // held open through the pan
-    if (this.reduceMotion) return last;
-
-    const t = this.breachStep / BREACH_BOOM_STEPS;       // blast open (0→last)
-    return Math.min(last, Math.floor(t * (last + 1)));
-  }
-
-  /** Camera drop during the breach: downward Y offset in px, 0 at the boom up to
-      full canvas height on arrival. Reduced motion snaps to the rest frame. */
-  private dropOffsetPx(): number {
-    if (this.state !== 'breach' || this.breachStep <= BREACH_BOOM_STEPS) return 0;
-    
-    const t = Math.min(1, (this.breachStep - BREACH_BOOM_STEPS) / BREACH_PAN_STEPS);
-    const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // easeInOutQuad
-    
-    return (this.reduceMotion ? (t >= 1 ? 1 : 0) : eased) * this.canvas.height;
-  }
-
-  private drawScene(): void {
-    const { ctx, canvas } = this;
-    const size = canvas.width;
-    const h = canvas.height;
-    const drop = this.dropOffsetPx();
-    const floorY = h * FLOOR_FRAC;
-    ctx.clearRect(0, 0, size, h);
-
-    if (this.backgroundImg.complete && this.backgroundImg.naturalWidth > 0) {
-      ctx.drawImage(this.backgroundImg, 0, -drop, size, h);
-      
-      if (drop !== 0) {
-        /* The next-deeper chamber slides up from below */
-        ctx.drawImage(this.backgroundImg, 0, -drop + h, size, h);
-      }
-    }
-
-    if (this.state === 'breach') {
-      this.drawBreachPit(drop);
-    } else {
-      /* The level's crack, in place from the event onward (staged as the chamber arrives) */
-      const crackImg = this.crackImgs[TUNNEL_LEVELS[this.cycle].crackMark];
-      
-      if (crackImg.complete && crackImg.naturalWidth) {
-        const markH = size * CRACK_MARK_HEIGHT_FRAC;
-        const markW = markH * (crackImg.naturalWidth / crackImg.naturalHeight);
-        ctx.drawImage(crackImg, this.crackXFrac * size - markW / 2, floorY, markW, markH);
-      }
-    }
-
-    /* Footing pad, drawn behind the bombs (see drawLightPad) */
-    if (this.state === 'placed') this.drawLightPad(floorY);
-
-    if (this.bombImg.complete && this.bombImg.naturalWidth > 0) {
-      for (const x of this.floorBombs) {
-        ctx.drawImage(this.bombImg, x * size - BOMB_WIDTH / 2, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
-      }
-      
-      /* Bombs stacked on the crack, fanned around its x (none until the player places) */
-      if (this.state !== 'breach') {
-        for (let i = 0; i < this.placedCount; i++) {
-          const stackX = this.crackXFrac * size - BOMB_WIDTH / 2
-            + (i - (this.placedCount - 1) / 2) * BOMB_WIDTH * 0.7;
-          ctx.drawImage(this.bombImg, stackX, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
-        }
-      }
-    }
-
-    /* Visual fuse countdown: code-drawn digits over the armed stack */
-    if (this.state === 'armed') {
-      const fuseSeconds = Math.ceil(this.fuseStepsLeft / 60);
-      ctx.font = `${Math.round(size * 0.05)}px monospace`;
-      ctx.fillStyle = RUST_ACCENT;
-      ctx.textAlign = 'center';
-      ctx.fillText(String(fuseSeconds), this.crackXFrac * size, floorY - BOMB_HEIGHT - 8);
-      ctx.textAlign = 'start';
-    }
-
-    if (this.player) {
-      const crouching = this.state !== 'breach' && this.inWarningBand();
-      
-      if (crouching) {
-        /* Crouch read: vertical squash anchored at the feet */
-        ctx.save();
-        ctx.translate(0, floorY * 0.2);
-        ctx.scale(1, 0.8);
-        this.player.drawImage(this.stepCount);
-        ctx.restore();
-      } else {
-        this.player.drawImage(this.stepCount);
-      }
-    }
-
-    /* Ceiling strip last; it scrolls up with the world during the breach drop */
-    if (this.ceilingImg.complete && this.ceilingImg.naturalWidth > 0) {
-      const drawH = size * CEILING_ASPECT;
-      const drawY = this.ceilingFrac * h - drawH * CEILING_TOOTH_FRAC - drop;
-      ctx.drawImage(this.ceilingImg, 0, drawY, size, drawH);
-    }
-
-    if (this.crush.flash > 0) {
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, size, h);
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  /** The "stand here to light" footing pad on the floor seam: a rust baseline
-      with ticks — a spot to stand on, not a box. It breathes, brightens with
-      proximity, snaps on arrival, and leans toward him on a stray press. */
-  private drawLightPad(floorY: number): void {
-    const { ctx, canvas } = this;
-    const size = canvas.width;
-    const cx = this.crackXFrac * size;
-    const dist = Math.abs(this.playerCenterFrac() - this.crackXFrac);
-    const prox = 1 - Math.min(1, dist / CRACK_RANGE_FRAC);    // 0 far → 1 on the charge
-    const pulse = this.reduceMotion ? 1 : 0.5 + 0.5 * Math.sin(this.stepCount / 8);
-    
-    let alpha = (this.reduceMotion ? 0.7 : 0.4 + 0.35 * pulse) * (0.4 + 0.6 * prox);
-    
-    if (this.padArriveSteps > 0) alpha = 1;                   // "locked in" snap
-    if (this.padNudgeSteps > 0) alpha = Math.max(alpha, 0.9); // beckon on a stray press
-    
-    const lean = this.padNudgeSteps > 0 ? this.padNudgeDir * size * 0.02 : 0;
-
-    const padW = size * 0.16;
-    const tickW = Math.max(3, size * 0.012);
-    const tickH = size * 0.05 * (0.6 + 0.4 * prox) * (this.reduceMotion ? 1 : 0.8 + 0.2 * pulse);
-    
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, alpha);
-    ctx.fillStyle = RUST_ACCENT;
-    ctx.fillRect(cx - padW / 2 + lean, floorY - 2, padW, 3);  // footing baseline
-    
-    for (let i = 0; i < 3; i++) {
-      const tx = cx - padW / 2 + lean + (i + 0.5) * (padW / 3);
-      ctx.fillRect(tx - tickW / 2, floorY - tickH, tickW, tickH);
-    }
-    ctx.restore();
-  }
-
-  /** The floor pit: blasts open (0→3) and scrolls up with the old chamber as the
-      camera drops into the new chamber. */
-  private drawBreachPit(drop: number): void {
-    const { ctx, canvas } = this;
-    const size = canvas.width;
-    const holeImg = this.groundHoleImgs[this.breachHoleFrame()];
-    const holeCx = this.crackXFrac * size;
-    const holeW = size * 0.4;
-
-    if (holeImg?.complete && holeImg.naturalWidth > 0) {
-      /* Opens in the old floor, scrolling up with the chamber */
-      const holeH = holeW * (holeImg.naturalHeight / holeImg.naturalWidth);
-      const holeY = canvas.height * FLOOR_FRAC - drop;
-      ctx.drawImage(holeImg, holeCx - holeW / 2, holeY - holeH * 0.35, holeW, holeH);
-    }
-
-    if (this.breachStep <= BREACH_BOOM_STEPS
-        && this.booomImg.complete && this.booomImg.naturalWidth > 0) {
-      const boomW = size * 0.3;
-      const boomY = canvas.height * FLOOR_FRAC - drop;
-      ctx.drawImage(this.booomImg, holeCx - boomW / 2, boomY - boomW / 2, boomW, boomW);
-    }
   }
 }

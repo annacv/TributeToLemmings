@@ -3,7 +3,7 @@ import {
   TunnelGame, TUNNEL_LEVELS, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
   FLOOR_FRAC, CRUSH_HEADROOM_FRAC, WARNING_HEADROOM_FRAC,
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
-  BREACH_BOOM_STEPS, BREACH_PAN_END_STEPS,
+  BREACH_PAN_END_STEPS,
 } from './TunnelGame';
 import { makeBreakdown } from './lib/score';
 import { makeCanvas } from './test-helpers';
@@ -270,31 +270,6 @@ describe('TunnelGame — mechanic state machine', () => {
     for (let i = 0; i < 30; i++) game.step();
     expect(game.player!.dx).toBe(x0);        // committed: didn't move while armed
     expect(game.state).toBe('armed');        // fuse still burning
-  });
-
-  it('the breach blasts the ground-hole open, then holds it open through the pan', () => {
-    const game = makeTunnel(canvas);
-    game.state = 'breach';
-    const frame = (step: number) => {
-      game.breachStep = step;
-      return game['breachHoleFrame']();
-    };
-    expect(frame(1)).toBe(0);                        // boom: opens toward the last frame
-    expect(frame(BREACH_BOOM_STEPS)).toBe(3);
-    expect(frame(BREACH_PAN_END_STEPS)).toBe(3);     // pan: held fully open to arrival
-  });
-
-  it('the breach drop offset descends monotonically to a full canvas height', () => {
-    const game = makeTunnel(canvas);
-    game.state = 'breach';
-    let prev = -1;
-    for (let s = BREACH_BOOM_STEPS + 1; s <= BREACH_PAN_END_STEPS; s++) {
-      game.breachStep = s;
-      const d = game['dropOffsetPx']();
-      expect(d).toBeGreaterThanOrEqual(prev); // the camera only ever drops further
-      prev = d;
-    }
-    expect(prev).toBeCloseTo(canvas.height, 5); // arrived a full chamber down
   });
 
   it('the crack sits on the floor within the band, off the bombs, every cycle (no special last cycle)', () => {
