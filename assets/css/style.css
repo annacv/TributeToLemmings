@@ -826,6 +826,7 @@ canvas {
   color: var(--text-white);
   text-shadow: 1px 1px 0 var(--bg-black);
   letter-spacing: var(--tracking-pixel-extra-wide);
+  margin-bottom: 1.5rem;
 }
 
 .go-score-value {
@@ -862,12 +863,15 @@ canvas {
 }
 
 .tbc-overlay.show {
-  animation: tbc-fade-in 0.6s ease-out forwards;
+  /* Fade in (~0.3s), hold, then disappear once it's been up for ~1s */
+  animation: tbc-flash 1.3s ease-out forwards;
 }
 
-@keyframes tbc-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes tbc-flash {
+  0%   { opacity: 0; }
+  23%  { opacity: 1; }
+  77%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .tbc-line {
@@ -877,7 +881,16 @@ canvas {
   line-height: var(--leading-pixel);
   letter-spacing: .2em;
   margin: 1.5rem 0 0;
+  padding-inline: 1rem;
   text-shadow: 2px 2px 0 var(--bg-black);
+}
+
+/* Reduced motion can't read a flash; the ~0.01ms animation would land on the
+   opacity-0 end frame, so keep the stinger statically visible instead */
+@media (prefers-reduced-motion: reduce) {
+  .tbc-overlay.show {
+    opacity: 1 !important;
+  }
 }
 
 @media (max-width: 767px) {

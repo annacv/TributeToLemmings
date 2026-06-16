@@ -22,6 +22,8 @@ const TBC_SCROLL_DURATION_MS = 1700;
 const TBC_REST_FADE_MS = 500;
 const TBC_TRANSITION_MS = 3000;
 const TBC_BREATH_MS = 600;
+const TBC_MESSAGE_AT_REST = 1;
+const TBC_MESSAGE_FROM_START = 0.0125;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -300,6 +302,7 @@ function main(): void {
     stingerHtml = '&gt; somewhere underground...',
     onArrive: (b: ScoreBreakdown) => void = createTunnelScreen,
     backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
+    messageScrollT = TBC_MESSAGE_AT_REST,
   ): void {
     const size = getCanvasSize();
     const screen = buildDom(`
@@ -392,8 +395,9 @@ function main(): void {
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
       drawScene(lemmingY, scrollY, veilAlpha);
-      /* No mid-scroll cliffhanger: the arrival stinger fades in at rest */
-      if (scrollT >= 1) screen.querySelector('.tbc-overlay')?.classList.add('show');
+      /* The stinger fades in at its reveal point: at rest for surface→tunnel (no
+         mid-scroll cliffhanger), early for the Abyss handoff (before the reveal) */
+      if (scrollT >= messageScrollT) screen.querySelector('.tbc-overlay')?.classList.add('show');
       if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS + TBC_REST_FADE_MS) {
         requestAnimationFrame((n) => animate(startTime, n));
       }
@@ -475,6 +479,7 @@ function main(): void {
       '&gt; the air grows warm...',
       (bb) => createGameOverScreen(bb, 'win'),
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
+      TBC_MESSAGE_FROM_START,
     ));
     game.gameOverCallback(createGameOverScreen);
 
