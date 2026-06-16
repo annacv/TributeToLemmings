@@ -1062,6 +1062,16 @@ button:active {
   color: var(--bg-black);
 }
 
+.info-modal-screen {
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xs);
+  color: var(--brand);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-pixel-medium);
+  margin: 0 0 1.5rem;
+}
+
 .info-modal-title {
   font-family: var(--font-pixel);
   font-size: clamp(.65rem, 2vw, .85rem);

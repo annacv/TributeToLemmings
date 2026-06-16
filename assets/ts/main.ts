@@ -13,7 +13,7 @@ import {
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
-type InfoModalOptions = { title: string; bodyHtml: string; storageKey: string };
+type InfoModalOptions = { screenName: string; title: string; bodyHtml: string; storageKey: string };
 
 const GAME_OVER_TRANSITION_MS = 2000;
 const GAME_OVER_COUNT_HOLD_MS = 4200;
@@ -83,6 +83,7 @@ function main(): void {
   /* INFO MODALS */
 
   const SURFACE_MODAL: InfoModalOptions = {
+    screenName: 'The Surface',
     title: 'How to play',
     storageKey: 'surface-modal-dismissed',
     bodyHtml: `
@@ -93,6 +94,7 @@ function main(): void {
   };
 
   const TUNNEL_MODAL: InfoModalOptions = {
+    screenName: 'The Tunnel',
     title: 'How to play',
     storageKey: 'tunnel-modal-dismissed',
     bodyHtml: `
@@ -115,6 +117,7 @@ function main(): void {
     backdrop.innerHTML = `
       <div class="info-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <button class="info-modal-close" aria-label="Close modal">&#x2715;</button>
+        <p class="info-modal-screen">-- ${opts.screenName} --</p>
         <h2 class="info-modal-title" id="modal-title">${opts.title}</h2>
         ${opts.bodyHtml}
         <label class="info-modal-checkbox-label">
@@ -163,7 +166,7 @@ function main(): void {
       <section class="splash-hero">
         <canvas class="splash-mascot" role="img" aria-label="Lemming mascot"></canvas>
         <h1 class="splash-title">Tribute to<br>Lemmings</h1>
-        <p class="splash-tagline">&gt; skip the bombs. stay alive.</p>
+        <p class="splash-tagline">&gt; skip and escape. stay alive!</p>
         <form class="splash-form">
           <div class="splash-name-wrap">
             <input
