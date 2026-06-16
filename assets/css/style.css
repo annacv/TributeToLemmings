@@ -310,15 +310,23 @@ canvas {
 }
 
 .game-canvas,
+.tunel-game-canvas,
 .game-over-canvas,
 .ranking-canvas,
-.tbc-canvas {
+.tbc-canvas,
+.win-tunnel-canvas {
   border-radius: var(--radius-sm);
   box-shadow: inset 0 0 1.125rem rgba(var(--black-rgb), 0.7);
 }
 
 .game-canvas {
   background-image: url("../images/backgrounds/background-game.svg");
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
+.tunel-game-canvas {
+  background-image: url("../images/backgrounds/background-tunnel.svg");
   background-position: 50% 50%;
   background-size: cover;
 }
@@ -336,6 +344,12 @@ canvas {
 
 .game-over-canvas {
   background-image: url("../images/backgrounds/background-gameover.svg");
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
+.win-tunnel-canvas {
+  background-image: url("../images/backgrounds/background-tunnel.svg");
   background-position: 50% 50%;
   background-size: cover;
 }
@@ -678,7 +692,6 @@ canvas {
 .go-tally {
   list-style: none;
   padding: 0;
-  margin: .5rem auto;
   max-width: 260px;
 }
 
@@ -742,7 +755,7 @@ canvas {
   align-items: center;
   justify-content: center;
   font-family: var(--font-pixel);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   text-align: center;
   border: var(--border-brand-thick);
   color: var(--brand);
@@ -875,7 +888,7 @@ canvas {
   color: var(--brand);
   line-height: var(--leading-pixel);
   letter-spacing: .2em;
-  margin: 0;
+  margin: 1rem 0 0;
   text-shadow: 2px 2px 0 var(--bg-black);
 }
 

@@ -17,6 +17,7 @@ import scrapeSfxWav from '../sounds/SCRAPE.WAV';
 import tingSfxWav from '../sounds/TING.WAV';
 import mousepreSfxWav from '../sounds/MOUSEPRE.WAV';
 import backgroundUndergroundSvg from '../images/backgrounds/background-underground.svg';
+import backgroundUndergroundAbyssSvg from '../images/backgrounds/background-underground-abyss.svg';
 import backgroundTunnelSvg from '../images/backgrounds/background-tunnel.svg';
 import tunnelCeilingSvg from '../images/backgrounds/tunnel-ceiling.svg';
 import crackMark1Svg from '../images/backgrounds/crack-mark-1.svg';
@@ -52,6 +53,7 @@ export const MOUSEPRE_SFX = mousepreSfxWav;
 export const TALLY_TICK_SFX: string | null = tingSfxWav;
 export const TALLY_CHIME_SFX: string | null = mousepreSfxWav;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
+export const UNDERGROUND_ABYSS_BACKGROUND_SVG = backgroundUndergroundAbyssSvg;
 export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
 export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;
 
