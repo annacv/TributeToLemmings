@@ -188,8 +188,8 @@ describe('TunnelGame — mechanic state machine', () => {
 
   it('each light press strikes the scrape; the third ignites the fuse loop', () => {
     const game = makeTunnel(canvas);
-    const scrape = vi.spyOn(game.scrapeSfx, 'play').mockResolvedValue(undefined);
-    const fuse = vi.spyOn(game.fuseTickSfx, 'play').mockResolvedValue(undefined);
+    const scrape = vi.spyOn(game.sfx.get('scrape')!, 'play').mockResolvedValue(undefined);
+    const fuse = vi.spyOn(game.sfx.get('fuse')!, 'play').mockResolvedValue(undefined);
     game.state = 'placed';
     placePlayerAt(game, game.crackXFrac); // he must stand on the charge to light it
     game.action();
@@ -329,7 +329,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
 
   it('crush mid-fuse cancels the armed state, stops the tick, and restores the bomb layout', () => {
     const game = makeTunnel(canvas);
-    const stopTick = vi.spyOn(game.fuseTickSfx, 'pause');
+    const stopTick = vi.spyOn(game.sfx.get('fuse')!, 'pause');
     game.carrying = false;
     game.placedCount = TUNNEL_LEVELS[0].bombs;
     game.floorBombs = [];
@@ -348,7 +348,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   it('a muted crush plays nothing through the channel helper', () => {
     const game = makeTunnel(canvas);
     game.muted = true;
-    const play = vi.spyOn(game.crushSfx, 'play');
+    const play = vi.spyOn(game.sfx.get('crush')!, 'play');
     armCrush(game);
     game.step();
     expect(game.player?.lives).toBe(2); // the crush itself still happens
@@ -358,7 +358,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   it('an unmuted crush plays the squash exactly once', () => {
     const game = makeTunnel(canvas);
     game.muted = false;
-    const play = vi.spyOn(game.crushSfx, 'play').mockResolvedValue(undefined);
+    const play = vi.spyOn(game.sfx.get('crush')!, 'play').mockResolvedValue(undefined);
     armCrush(game);
     game.step();
     expect(play).toHaveBeenCalledTimes(1);

@@ -8,6 +8,7 @@ import { BOMB_WIDTH } from './lib/geometry';
 import { loadImages } from './lib/images';
 import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
+import { SoundEffectBank } from './lib/SoundEffectBank';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
@@ -59,11 +60,8 @@ export class Game {
   groundErosionActive: boolean;
   erosionCounter: number;
   gameSong: HTMLAudioElement;
-  bombHitSfx: HTMLAudioElement;
-  levelUpSfx: HTMLAudioElement;
-  electricSfx: HTMLAudioElement;
-  bangSfx: HTMLAudioElement;
   tentonSfx: HTMLAudioElement;
+  sfx: SoundEffectBank;
   private isTunnelTransition: boolean;
   private erosionCanvas: HTMLCanvasElement;
   private erosionCtx: CanvasRenderingContext2D;
@@ -97,11 +95,13 @@ export class Game {
     this.hud = new Hud();
 
     this.gameSong = new Audio(GAME_SONG);
-    this.bombHitSfx = new Audio(FIRE_SFX);
-    this.levelUpSfx = new Audio(YIPPEE_SFX);
-    this.electricSfx = new Audio(ELECTRIC_SFX);
-    this.bangSfx = new Audio(BANG_SFX);
     this.tentonSfx = new Audio(TENTON_SFX);
+    this.sfx = new SoundEffectBank({
+      bombHit: FIRE_SFX,
+      levelUp: YIPPEE_SFX,
+      electric: ELECTRIC_SFX,
+      bang: BANG_SFX,
+    }, () => this.gameSong.muted);
 
     this.erosionCanvas = document.createElement('canvas');
     this.erosionCanvas.width = canvas.width;
@@ -187,17 +187,13 @@ export class Game {
     }
   }
 
-  private playSfx(sfx: HTMLAudioElement): void {
-    audio.playSfx(sfx, this.gameSong.muted);
-  }
-
   private handleLevelUp(): void {
     this.updateLevel();
     this.showLevelUpEffect();
-    this.playSfx(this.levelUpSfx);
+    this.sfx.play('levelUp');
     if (this.currentLevel === LEVEL_CONFIG.length - 1) {
       this.groundErosionActive = true;
-      this.playSfx(this.electricSfx);
+      this.sfx.play('electric');
       this.triggerEarthquake();
     }
   }
@@ -237,7 +233,7 @@ export class Game {
             }
             this.drawGroundErosion();
             this.triggerGroundShake();
-            this.playSfx(this.bangSfx);
+            this.sfx.play('bang');
 
             if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
               // force a hole under the lemming so the fall always lines up
@@ -384,7 +380,7 @@ export class Game {
         bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionFramesLeft = EXPLOSION_FRAMES;
-        this.playSfx(this.bombHitSfx);
+        this.sfx.play('bombHit');
       }
     }
   }

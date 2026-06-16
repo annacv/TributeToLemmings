@@ -5,6 +5,7 @@ import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
 import * as audio from './lib/audio';
+import { SoundEffectBank } from './lib/SoundEffectBank';
 import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown,
 } from './lib/score';
@@ -108,13 +109,7 @@ export class TunnelGame implements TunnelView {
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
   onComplete: ((breakdown: ScoreBreakdown) => void) | null;
   caveLoop: HTMLAudioElement | null;
-  fuseTickSfx: HTMLAudioElement;
-  breachSfx: HTMLAudioElement;
-  crushSfx: HTMLAudioElement;
-  pickupSfx: HTMLAudioElement;
-  rumbleSfx: HTMLAudioElement;
-  scrapeSfx: HTMLAudioElement;
-  fallingSfx: HTMLAudioElement;
+  sfx: SoundEffectBank;
   muted: boolean;
   breachStep: number;
   private readonly baseBreakdown: ScoreBreakdown;
@@ -167,13 +162,15 @@ export class TunnelGame implements TunnelView {
     this.muted = localStorage.getItem('audio-muted') === '1';
     this.hud = new Hud();
 
-    this.fuseTickSfx = new Audio(FIRE_SFX);
-    this.breachSfx = new Audio(BANG_SFX);
-    this.crushSfx = new Audio(TENTON_SFX);
-    this.pickupSfx = new Audio(EXPLODE_SFX);
-    this.rumbleSfx = new Audio(CHAIN_SFX);
-    this.scrapeSfx = new Audio(SCRAPE_SFX);
-    this.fallingSfx = new Audio(FALLING_SFX);
+    this.sfx = new SoundEffectBank({
+      pickup: EXPLODE_SFX,
+      scrape: SCRAPE_SFX,
+      fuse: FIRE_SFX,
+      crush: TENTON_SFX,
+      breach: BANG_SFX,
+      rumble: CHAIN_SFX,
+      falling: FALLING_SFX,
+    }, () => this.muted);
 
     this.renderer = new TunnelRenderer(canvas);
 
@@ -217,37 +214,27 @@ export class TunnelGame implements TunnelView {
       this.floorBombs.splice(i, 1);
       this.carrying = true;
       this.state = 'carry';
-      this.playSfx(this.pickupSfx);
+      this.sfx.play('pickup');
     } else if (this.state === 'carry' && this.atCrack()) {
       this.carrying = false;
       this.placedCount++;
-      this.playSfx(this.pickupSfx);
+      this.sfx.play('pickup');
       this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
       this.lightPresses = 0;
     } else if (this.state === 'placed' && this.atCrack()) {
       this.lightPresses++;
-      this.scrapeSfx.volume = 1;
-      this.playSfx(this.scrapeSfx);
+      this.sfx.play('scrape', { volume: 1 });
       if (this.lightPresses >= LIGHT_PRESSES) {
         this.state = 'armed';
         this.fuseStepsLeft = FUSE_STEPS;
         if (this.player) this.player.direction = 0;
-        this.playLoop(this.fuseTickSfx);
+        this.sfx.loop('fuse');
       }
     } else if (this.state === 'placed') {
       this.padNudgeSteps = PAD_NUDGE_STEPS;
       this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
-      this.scrapeSfx.volume = 0.3;
-      this.playSfx(this.scrapeSfx);
+      this.sfx.play('scrape', { volume: 0.3 });
     }
-  }
-
-  private playSfx(sfx: HTMLAudioElement): void {
-    audio.playSfx(sfx, this.muted);
-  }
-
-  private playLoop(loop: HTMLAudioElement): void {
-    audio.playLoop(loop, this.muted);
   }
 
   secondsLeft(): number {
@@ -351,8 +338,8 @@ export class TunnelGame implements TunnelView {
   }
 
   private breach(): void {
-    audio.stopLoop(this.fuseTickSfx);
-    this.playSfx(this.breachSfx);
+    this.sfx.stopLoop('fuse');
+    this.sfx.play('breach');
     const share = this.bankShare();
     this.bankedSeconds += share;
     this.cyclesCleared++;
@@ -370,8 +357,8 @@ export class TunnelGame implements TunnelView {
     if (!this.player) return;
     this.player.lives--;
     this.hud.displayLives(this.player.lives);
-    audio.stopLoop(this.fuseTickSfx);
-    this.playSfx(this.crushSfx);
+    this.sfx.stopLoop('fuse');
+    this.sfx.play('crush');
     this.crush.hitstop = CRUSH_HITSTOP_STEPS;
     this.crush.flash = CRUSH_HITSTOP_STEPS;
 
@@ -439,7 +426,7 @@ export class TunnelGame implements TunnelView {
 
     if (this.warningArmed && this.inWarningBand()) {
       this.warningArmed = false;
-      this.playSfx(this.rumbleSfx);
+      this.sfx.play('rumble');
     }
 
     if (this.headroomFrac() <= CRUSH_HEADROOM_FRAC) {
@@ -484,8 +471,7 @@ export class TunnelGame implements TunnelView {
     if (this.breachStep === BREACH_BOOM_STEPS + 1) {
       /* Collapse cue at 2× so it reads shorter than the final world-boundary
          fall (which plays on the Abyss screen) */
-      this.fallingSfx.playbackRate = 2;
-      this.playSfx(this.fallingSfx);
+      this.sfx.play('falling', { playbackRate: 2 });
     }
     if (this.breachStep >= BREACH_PAN_END_STEPS) {
       /* Landed in the new chamber; announce the level */
@@ -501,7 +487,7 @@ export class TunnelGame implements TunnelView {
         this.cycleStartCeilingFrac(this.cyclesCleared),
         this.ceilingFrac + MIN_EVENT_DROP_FRAC,
       );
-      this.playSfx(this.rumbleSfx);
+      this.sfx.play('rumble');
       restartAnimation(this.canvas, 'shake-light');
     }
   }
@@ -514,7 +500,7 @@ export class TunnelGame implements TunnelView {
 
   private endRun(): void {
     if (this.caveLoop) audio.stopLoop(this.caveLoop);
-    audio.stopLoop(this.fuseTickSfx);
+    this.sfx.stopLoop('fuse');
     if (this.cyclesCleared >= TOTAL_CYCLES) {
       this.onComplete?.(this.currentBreakdown());
     } else {

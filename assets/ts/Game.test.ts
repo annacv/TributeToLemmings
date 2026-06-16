@@ -217,26 +217,28 @@ describe('Game', () => {
     expect(document.querySelectorAll('.life-losing')).toHaveLength(3);
   });
 
-  it('has a bombHitSfx audio element', () => {
-    expect(new Game(canvas).bombHitSfx).toBeInstanceOf(HTMLAudioElement);
+  it('has a bombHit audio element', () => {
+    expect(new Game(canvas).sfx.get('bombHit')).toBeInstanceOf(HTMLAudioElement);
   });
 
-  it('plays bombHitSfx from currentTime=0 on collision when unmuted', () => {
+  it('plays bombHit from currentTime=0 on collision when unmuted', () => {
     const game = makeGameWithPlayer(canvas);
+    const bombHit = game.sfx.get('bombHit')!;
     const playSpy = vi.fn().mockResolvedValue(undefined);
-    game.bombHitSfx.play = playSpy;
+    bombHit.play = playSpy;
     game.gameSong.muted = false;
 
     placeHitBomb(game);
 
-    expect(game.bombHitSfx.currentTime).toBe(0);
+    expect(bombHit.currentTime).toBe(0);
     expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('does not play bombHitSfx when audio is muted', () => {
+  it('does not play bombHit when audio is muted', () => {
     const game = makeGameWithPlayer(canvas);
+    const bombHit = game.sfx.get('bombHit')!;
     const playSpy = vi.fn().mockResolvedValue(undefined);
-    game.bombHitSfx.play = playSpy;
+    bombHit.play = playSpy;
     game.gameSong.muted = true;
 
     placeHitBomb(game);
