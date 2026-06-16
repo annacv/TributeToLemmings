@@ -47,13 +47,13 @@ const FUSE_STEPS = 120;             // ~2 s lit fuse before the explosion
    0→3), then the camera drops into the next-deeper chamber, which arrives clean
    (the pit scrolled up and away) for the level announce and ceiling drop. */
 export const BREACH_BOOM_STEPS = 42; // ~0.7 s booom.svg + pit blasting open
-export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
+const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
 export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat: breach ends here
 
 const RUST_ACCENT = '#A85A1C';
 const LIGHT_PRESSES = 3;
-const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
-export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
+const ACTION_RANGE_FRAC = 0.08; // how close "near a bomb" is
+const CRACK_RANGE_FRAC = 0.1;   // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
 /* Bombs spawn in the middle band, apart from each other, so the route matters */
