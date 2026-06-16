@@ -402,6 +402,10 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
     game.state = 'armed'; // death, not bank, resolves this cycle
     armCrush(game);
     game.step();
+    expect(game.player!.lives).toBe(0);
+    expect(game.isOver).toBe(false);              // the death-beat freeze plays first
+    /* The hit-stop freeze elapses, then the run ends */
+    for (let i = 0; i < 60 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
 
     const onGameOver = vi.fn();

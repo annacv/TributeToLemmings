@@ -386,10 +386,7 @@ export class TunnelGame {
     this.crush.hitstop = CRUSH_HITSTOP_STEPS;
     this.crush.flash = CRUSH_HITSTOP_STEPS;
 
-    if (this.player.lives < 1) {
-      this.isOver = true;
-      return;
-    }
+    if (this.player.lives < 1) return;
 
     this.ceilingFrac = this.cycleStartCeilingFrac(this.cycle);
     this.warningArmed = true;
@@ -405,6 +402,12 @@ export class TunnelGame {
     if (this.paused) return true;
     if (this.crush.hitstop > 0) {
       this.crush.hitstop--;
+      /* A lethal crush plays its full death beat too: the run ends only once the
+         freeze elapses, so the squash + white flash land before the game-over screen */
+      if (this.crush.hitstop === 0 && this.player && this.player.lives < 1) {
+        this.isOver = true;
+        return false;
+      }
       return true;
     }
     if (this.crush.flash > 0) this.crush.flash--;
@@ -456,7 +459,6 @@ export class TunnelGame {
 
     /* Frozen on the charge during the lit fuse: he committed, he stays put */
     if (this.state !== 'armed') this.player?.move();
-    this.player?.tickBlink();
 
     /* Tick the pad one-shots; snap on first arrival at the charge while placed */
     if (this.padArriveSteps > 0) this.padArriveSteps--;
