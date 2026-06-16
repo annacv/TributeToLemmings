@@ -679,7 +679,7 @@ canvas {
   color: var(--bg-black);
 }
 
-/* Contextual action button (tunnel): label is the current verb */
+/* Touch action button (tunnel): static SPACE label, press ≡ Space */
 .touch-action {
   height: 42px;
   padding: 0 .75rem;

@@ -340,7 +340,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     return event;
   }
 
-  it('renders the tunnel screen with the contextual action button', () => {
+  it('renders the tunnel screen with the touch action button', () => {
     expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
     expect(document.querySelector('.touch-action')?.textContent).toBe('SPACE');
     expect(document.querySelector('.level-value')?.textContent).toBe('1');
