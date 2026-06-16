@@ -78,4 +78,19 @@ describe('SoundEffectBank', () => {
     expect(() => bank.stopLoop('nope')).not.toThrow();
     expect(bank.get('nope')).toBeUndefined();
   });
+
+  it('applyMute toggles a live loop, leaving one-shots to the predicate', () => {
+    const { bank } = makeBank();
+    const fuse = bank.get('fuse')!;
+    const pop = bank.get('pop')!;
+    vi.spyOn(fuse, 'play').mockResolvedValue(undefined);
+    bank.loop('fuse'); // marks fuse as a looping channel
+
+    bank.applyMute(true);
+    expect(fuse.muted).toBe(true);   // live loop silenced on the spot
+    expect(pop.loop).toBe(false);    // one-shot untouched
+
+    bank.applyMute(false);
+    expect(fuse.muted).toBe(false);  // and audible again
+  });
 });

@@ -41,6 +41,15 @@ export class SoundEffectBank {
     if (sfx) audio.stopLoop(sfx);
   }
 
+  /** Applies the mute state to live looping channels, so toggling mute mid-loop
+      takes effect on the spot. One-shots need nothing — they re-read the predicate
+      on each play. */
+  applyMute(muted: boolean): void {
+    for (const sfx of this.sounds.values()) {
+      if (sfx.loop) sfx.muted = muted;
+    }
+  }
+
   /** The underlying element — for tests and any bespoke sequencing a caller needs. */
   get(name: string): HTMLAudioElement | undefined {
     return this.sounds.get(name);

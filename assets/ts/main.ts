@@ -492,7 +492,7 @@ function main(): void {
 
     setupMuteButton(
       screen.querySelector('.mute-btn') as HTMLButtonElement,
-      (muted) => { game.muted = muted; caveLoop.muted = muted; },
+      (muted) => { game.muted = muted; game.sfx.applyMute(muted); caveLoop.muted = muted; },
     );
 
     /* One verb per state: Space (or the action button) is pick up / place /
