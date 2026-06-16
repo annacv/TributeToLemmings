@@ -258,17 +258,17 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     activeGame().onTunnelWorld!(makeBreakdown({ surface: 42 }));
     vi.advanceTimersByTime(3600);
     expect(document.querySelector('.info-modal-backdrop')).not.toBeNull();
-    expect(document.querySelector('.info-modal-title')?.textContent).toBe('Underground');
+    expect(document.querySelector('.info-modal-title')?.textContent).toBe('How to play');
     document.querySelector<HTMLElement>('.info-modal-backdrop')?.remove();
   });
 
-  it('submits only the breakdown total and rolls the tally up to it', () => {
+  it('submits only the breakdown total and rolls the count up to it', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
     activeGame().onGameOver!(makeBreakdown({ surface: 42, livesBonus: 20 }));
-    /* A multi-component breakdown shows the tally: lines stagger in, then
+    /* A multi-component breakdown shows the count: lines stagger in, then
        the total rolls; the leaderboard still receives only the total */
-    expect(document.querySelectorAll('.go-tally-line')).toHaveLength(2);
+    expect(document.querySelectorAll('.go-count-line')).toHaveLength(2);
     vi.advanceTimersByTime(2000);
     expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
     expect(submitScore).toHaveBeenCalledWith(expect.any(String), 62);
@@ -277,7 +277,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('a surface-only death keeps the single-score presentation unchanged', () => {
     vi.useFakeTimers();
     activeGame().onGameOver!(makeBreakdown({ surface: 30 }));
-    expect(document.querySelector('.go-tally')).toBeNull();
+    expect(document.querySelector('.go-count')).toBeNull();
     expect(document.querySelector('.go-title')?.textContent).toBe('GAME OVER');
     expect(document.querySelector('.go-boom')?.textContent).toBe('BOOOM!!!');
     expect(document.querySelector('.go-score-value')?.textContent).toBe('30');
@@ -343,8 +343,8 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
 
   it('renders the tunnel screen with the contextual action button', () => {
     expect(document.querySelector('.section-container.tunnel')).not.toBeNull();
-    expect(document.querySelector('.touch-action')).not.toBeNull();
-    expect(document.querySelector('.level-value')?.textContent).toBe('depth 1/3');
+    expect(document.querySelector('.touch-action')?.textContent).toBe('SPACE');
+    expect(document.querySelector('.level-value')?.textContent).toBe('1');
   });
 
   it('Space fires the game action and is preventDefault-ed', async () => {
@@ -425,7 +425,7 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
-  it('completion shows TO BE CONTINUED with the tally; DIE.WAV never plays; ranking music starts once', () => {
+  it('completion shows TO BE CONTINUED with the count; DIE.WAV never plays; ranking music starts once', () => {
     vi.useFakeTimers();
     const game = tunnels[0];
     /* Drive the run to the third breach and through the tease to the cut */
@@ -436,15 +436,18 @@ describe('win variant end screen (tunnel completion)', () => {
     game.step();
     for (let i = 0; i < 300 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
-    game['renderFrame'](); // settle fires the completion route
+    game['renderFrame'](); // settle fires the completion route → Abyss fall transition
+    /* The Abyss collapse-shaft transition plays first; the win screen lands after it
+       (TBC_TRANSITION_MS + TBC_BREATH_MS) */
+    vi.advanceTimersByTime(3600);
 
-    expect(document.querySelector('.go-title')?.textContent).toBe('TO BE CONTINUED...');
-    expect(document.querySelector('.go-sub')?.textContent).toBe('> you made it. for now.');
-    expect(document.querySelectorAll('.go-tally-line').length).toBeGreaterThan(0);
+    expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
+    expect(document.querySelector('.go-sub')?.textContent).toBe('TO BE CONTINUED...');
+    expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
 
     const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
-    expect(rankingStarts()).toBe(0); // not before the tally completes
+    expect(rankingStarts()).toBe(0); // not before the count completes
     vi.advanceTimersByTime(2500);    // lines + roll done → music
     expect(rankingStarts()).toBe(1);
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
