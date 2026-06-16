@@ -1,4 +1,5 @@
 import { SPRITES } from './assets';
+import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
 
 export class Bomb {
   ctx: CanvasRenderingContext2D;
@@ -17,8 +18,8 @@ export class Bomb {
     this.image.src = SPRITES.bomb;
     this.dx = randomX;
     this.dy = -45;
-    this.dWidth = 28;
-    this.dHeight = 32;
+    this.dWidth = BOMB_WIDTH;
+    this.dHeight = BOMB_HEIGHT;
     this.speed = speed;
     this.isExploding = false;
     this.explosionFramesLeft = 0;

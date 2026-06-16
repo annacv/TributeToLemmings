@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+
+  <!-- Cave void: stepped darkness, never pure black so the CRT inset still reads -->
+  <g id="void">
+    <rect width="800" height="800" fill="#070503"/>
+    <rect width="800" height="260" fill="#010106"/>
+    <rect y="260" width="800" height="150" fill="#020208" opacity="0.6"/>
+    <rect y="410" width="800" height="230" fill="#0D062B" opacity="0.10"/>
+  </g>
+
+  <!-- Back wall: faint soil fragments floating in the dark, barely-there depth -->
+  <g id="backwall">
+    <rect x="180" y="330" width="76" height="26" rx="8" fill="#3A3426" opacity="0.10"/>
+    <rect x="420" y="300" width="60" height="22" rx="7" fill="#322C20" opacity="0.08"/>
+    <rect x="580" y="372" width="88" height="28" rx="9" fill="#3A3426" opacity="0.10"/>
+    <rect x="120" y="452" width="64" height="22" rx="7" fill="#2C271E" opacity="0.12"/>
+    <rect x="330" y="430" width="92" height="30" rx="9" fill="#322C20" opacity="0.09"/>
+    <rect x="520" y="490" width="70" height="24" rx="8" fill="#3A3426" opacity="0.11"/>
+    <rect x="240" y="540" width="80" height="26" rx="8" fill="#322C20" opacity="0.10"/>
+    <rect x="640" y="540" width="58" height="20" rx="7" fill="#2C271E" opacity="0.12"/>
+  </g>
+
+  <!-- Left wall: continuous earth column, bumpy inner edge of overlapping rock -->
+  <g id="wall-left">
+    <rect x="0" width="66" height="800" fill="#46280E"/>
+    <rect x="0" width="34" height="800" fill="#35200C"/>
+    <rect x="0" width="16" height="800" fill="#28221A"/>
+    <rect x="26" y="-12" width="50" height="124" rx="11" fill="#54320F"/>
+    <rect x="32" y="98" width="40" height="110" rx="10" fill="#3A2208"/>
+    <rect x="24" y="194" width="58" height="132" rx="12" fill="#5E3A16"/>
+    <rect x="34" y="312" width="42" height="104" rx="10" fill="#54320F"/>
+    <rect x="26" y="402" width="54" height="128" rx="12" fill="#6E4419"/>
+    <rect x="36" y="516" width="40" height="100" rx="10" fill="#3A2208"/>
+    <rect x="24" y="602" width="56" height="120" rx="12" fill="#5E3A16"/>
+    <rect x="34" y="708" width="44" height="100" rx="10" fill="#54320F"/>
+    <rect x="48" y="166" width="16" height="24" rx="6" fill="#28221A"/>
+    <rect x="50" y="376" width="18" height="26" rx="6" fill="#28221A"/>
+    <rect x="46" y="576" width="16" height="24" rx="6" fill="#28221A"/>
+  </g>
+
+  <!-- Right wall -->
+  <g id="wall-right">
+    <rect x="734" width="66" height="800" fill="#46280E"/>
+    <rect x="766" width="34" height="800" fill="#35200C"/>
+    <rect x="784" width="16" height="800" fill="#28221A"/>
+    <rect x="724" y="-10" width="50" height="118" rx="11" fill="#5E3A16"/>
+    <rect x="728" y="94" width="42" height="112" rx="10" fill="#54320F"/>
+    <rect x="718" y="192" width="58" height="128" rx="12" fill="#6E4419"/>
+    <rect x="730" y="306" width="42" height="106" rx="10" fill="#3A2208"/>
+    <rect x="720" y="398" width="56" height="126" rx="12" fill="#54320F"/>
+    <rect x="730" y="510" width="42" height="102" rx="10" fill="#5E3A16"/>
+    <rect x="720" y="598" width="56" height="122" rx="12" fill="#3A2208"/>
+    <rect x="726" y="706" width="46" height="102" rx="10" fill="#6E4419"/>
+    <rect x="736" y="160" width="16" height="24" rx="6" fill="#28221A"/>
+    <rect x="734" y="370" width="18" height="26" rx="6" fill="#28221A"/>
+    <rect x="738" y="568" width="16" height="24" rx="6" fill="#28221A"/>
+  </g>
+
+  <!-- Floor: walkable dirt shelf, soil-mid lip, strata, cave moss -->
+  <g id="floor">
+    <rect y="690" width="800" height="110" fill="#46280E"/>
+    <rect x="8" y="690" width="72" height="34" rx="6" fill="#3A3426"/>
+    <rect x="88" y="692" width="58" height="32" rx="5" fill="#322C20"/>
+    <rect x="154" y="688" width="80" height="36" rx="6" fill="#3A3426"/>
+    <rect x="242" y="691" width="62" height="33" rx="5" fill="#2C271E"/>
+    <rect x="312" y="689" width="74" height="35" rx="6" fill="#3A3426"/>
+    <rect x="394" y="692" width="56" height="32" rx="5" fill="#322C20"/>
+    <rect x="458" y="688" width="84" height="36" rx="6" fill="#3A3426"/>
+    <rect x="550" y="691" width="64" height="33" rx="5" fill="#2C271E"/>
+    <rect x="622" y="689" width="72" height="35" rx="6" fill="#322C20"/>
+    <rect x="702" y="691" width="90" height="34" rx="6" fill="#3A3426"/>
+    <rect y="752" width="800" height="5" fill="#35200C" opacity="0.65"/>
+    <!-- moss tufts: cool greens, the only echo of the surface -->
+    <ellipse cx="118" cy="690" rx="15" ry="5" fill="#0C3208"/>
+    <ellipse cx="296" cy="689" rx="12" ry="4" fill="#186010"/>
+    <ellipse cx="452" cy="690" rx="16" ry="5" fill="#0C3208"/>
+    <ellipse cx="612" cy="689" rx="11" ry="4" fill="#186010"/>
+    <ellipse cx="712" cy="691" rx="13" ry="4" fill="#0C3208"/>
+    <!-- pebbles -->
+    <rect x="200" y="734" width="20" height="9" rx="4" fill="#35200C"/>
+    <rect x="384" y="766" width="26" height="10" rx="5" fill="#3A2208"/>
+    <rect x="560" y="738" width="18" height="8" rx="4" fill="#35200C"/>
+  </g>
+
+  <!-- Rust whispers: warm accents stay faint — full-opacity rust is reserved
+       for interactive objects (the crack, the fuse spark) -->
+  <g id="rust">
+    <rect x="64" y="412" width="44" height="14" rx="6" fill="#A85A1C" opacity="0.14"/>
+    <rect x="700" y="338" width="38" height="12" rx="6" fill="#8A3E10" opacity="0.16"/>
+    <rect x="252" y="722" width="52" height="12" rx="6" fill="#A85A1C" opacity="0.12"/>
+    <rect x="600" y="760" width="40" height="10" rx="5" fill="#8A3E10" opacity="0.14"/>
+  </g>
+
+  <!-- CRT-bezel breathing room: dark margin so scanlines never eat detail -->
+  <g id="vignette">
+    <rect width="14" height="800" fill="#010106" opacity="0.55"/>
+    <rect x="786" width="14" height="800" fill="#010106" opacity="0.55"/>
+    <rect y="786" width="800" height="14" fill="#010106" opacity="0.55"/>
+  </g>
+</svg>

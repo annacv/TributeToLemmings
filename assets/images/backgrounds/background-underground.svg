@@ -338,6 +338,65 @@
 <path d="M145.904 1234.03L100.591 1222.21V1237.97L145.904 1247.82V1234.03Z" fill="#070503"/>
 <path d="M244.412 1048.84L218.8 1029.13L226.681 1044.9L246.382 1058.69L244.412 1048.84Z" fill="#070503"/>
 <path d="M498.562 1044.9L524.174 1027.16L518.263 1042.93L496.592 1056.72L498.562 1044.9Z" fill="#070503"/>
+<!-- ===== Tunnel-world reveal ===== -->
+<g id="tunnel-reveal">
+  <!-- Lift the navy dead-end into the tunnel's warm cave-dark, easing the seam -->
+  <rect y="2240" width="800" height="560" fill="#070503"/>
+  <rect y="2152" width="800" height="208" fill="#070503" opacity="0.5"/>
+  <rect y="2240" width="800" height="300" fill="#020208" opacity="0.35"/>
+  <!-- Left wall: continuous earth column, bumpy inner rock edge -->
+  <rect x="0" y="2200" width="66" height="600" fill="#46280E"/>
+  <rect x="0" y="2200" width="34" height="600" fill="#35200C"/>
+  <rect x="0" y="2200" width="16" height="600" fill="#28221A"/>
+  <rect x="24" y="2250" width="58" height="132" rx="12" fill="#5E3A16"/>
+  <rect x="34" y="2390" width="42" height="104" rx="10" fill="#54320F"/>
+  <rect x="26" y="2496" width="54" height="128" rx="12" fill="#6E4419"/>
+  <rect x="36" y="2628" width="40" height="110" rx="10" fill="#3A2208"/>
+  <rect x="48" y="2360" width="16" height="24" rx="6" fill="#28221A"/>
+  <rect x="46" y="2560" width="16" height="24" rx="6" fill="#28221A"/>
+  <!-- Right wall: mirror, offsets staggered so the two don't twin -->
+  <rect x="734" y="2200" width="66" height="600" fill="#46280E"/>
+  <rect x="766" y="2200" width="34" height="600" fill="#35200C"/>
+  <rect x="784" y="2200" width="16" height="600" fill="#28221A"/>
+  <rect x="718" y="2230" width="58" height="128" rx="12" fill="#6E4419"/>
+  <rect x="730" y="2366" width="42" height="106" rx="10" fill="#3A2208"/>
+  <rect x="720" y="2470" width="56" height="126" rx="12" fill="#54320F"/>
+  <rect x="726" y="2606" width="46" height="120" rx="10" fill="#5E3A16"/>
+  <rect x="736" y="2330" width="16" height="24" rx="6" fill="#28221A"/>
+  <rect x="734" y="2540" width="18" height="26" rx="6" fill="#28221A"/>
+  <!-- Backwall soil fragments: barely-there depth in the chamber dark -->
+  <rect x="220" y="2330" width="80" height="26" rx="8" fill="#322C20" opacity="0.10"/>
+  <rect x="520" y="2400" width="70" height="24" rx="8" fill="#3A3426" opacity="0.10"/>
+  <rect x="300" y="2500" width="88" height="28" rx="9" fill="#322C20" opacity="0.09"/>
+  <rect x="560" y="2560" width="62" height="22" rx="7" fill="#2C271E" opacity="0.11"/>
+  <!-- Rust whispers: warm accents stay faint (full rust is for interactive objects) -->
+  <rect x="150" y="2452" width="52" height="14" rx="7" fill="#A85A1C" opacity="0.14"/>
+  <rect x="600" y="2520" width="46" height="12" rx="6" fill="#8A3E10" opacity="0.16"/>
+  <rect x="260" y="2640" width="52" height="12" rx="6" fill="#A85A1C" opacity="0.12"/>
+  <!-- Floor: walkable dirt shelf, soil lip, strata, cave moss, pebbles -->
+  <g id="reveal-floor">
+    <rect y="2688" width="800" height="112" fill="#46280E"/>
+    <rect x="8" y="2688" width="72" height="34" rx="6" fill="#3A3426"/>
+    <rect x="88" y="2690" width="58" height="32" rx="5" fill="#322C20"/>
+    <rect x="154" y="2686" width="80" height="36" rx="6" fill="#3A3426"/>
+    <rect x="242" y="2689" width="62" height="33" rx="5" fill="#2C271E"/>
+    <rect x="312" y="2687" width="74" height="35" rx="6" fill="#3A3426"/>
+    <rect x="394" y="2690" width="56" height="32" rx="5" fill="#322C20"/>
+    <rect x="458" y="2686" width="84" height="36" rx="6" fill="#3A3426"/>
+    <rect x="550" y="2689" width="64" height="33" rx="5" fill="#2C271E"/>
+    <rect x="622" y="2687" width="72" height="35" rx="6" fill="#322C20"/>
+    <rect x="702" y="2689" width="90" height="34" rx="6" fill="#3A3426"/>
+    <rect y="2750" width="800" height="5" fill="#35200C" opacity="0.65"/>
+    <ellipse cx="118" cy="2688" rx="15" ry="5" fill="#0C3208"/>
+    <ellipse cx="296" cy="2687" rx="12" ry="4" fill="#186010"/>
+    <ellipse cx="452" cy="2688" rx="16" ry="5" fill="#0C3208"/>
+    <ellipse cx="612" cy="2687" rx="11" ry="4" fill="#186010"/>
+    <ellipse cx="712" cy="2689" rx="13" ry="4" fill="#0C3208"/>
+    <rect x="200" y="2732" width="20" height="9" rx="4" fill="#35200C"/>
+    <rect x="384" y="2764" width="26" height="10" rx="5" fill="#3A2208"/>
+    <rect x="560" y="2736" width="18" height="8" rx="4" fill="#35200C"/>
+  </g>
+</g>
 </g>
 <defs>
 <clipPath id="clip0_225_80">
