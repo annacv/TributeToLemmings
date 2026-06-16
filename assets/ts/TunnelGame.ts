@@ -3,6 +3,7 @@ import { GameLoop } from './lib/GameLoop';
 import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
+import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
 import * as audio from './lib/audio';
 import {
   makeBreakdown, livesBonusPoints, CYCLE_CLEAR_POINTS, type ScoreBreakdown,
@@ -624,24 +625,20 @@ export class TunnelGame {
       }
     }
 
-    /* Floor bombs waiting to be picked (only present outside the breach) */
-    const bombW = 28;
-    const bombH = 32;
-
     /* Footing pad, drawn behind the bombs (see drawLightPad) */
     if (this.state === 'placed') this.drawLightPad(floorY);
 
     if (this.bombImg.complete && this.bombImg.naturalWidth > 0) {
       for (const x of this.floorBombs) {
-        ctx.drawImage(this.bombImg, x * size - bombW / 2, floorY - bombH, bombW, bombH);
+        ctx.drawImage(this.bombImg, x * size - BOMB_WIDTH / 2, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
       }
       
       /* Bombs stacked on the crack, fanned around its x (none until the player places) */
       if (this.state !== 'breach') {
         for (let i = 0; i < this.placedCount; i++) {
-          const stackX = this.crackXFrac * size - bombW / 2
-            + (i - (this.placedCount - 1) / 2) * bombW * 0.7;
-          ctx.drawImage(this.bombImg, stackX, floorY - bombH, bombW, bombH);
+          const stackX = this.crackXFrac * size - BOMB_WIDTH / 2
+            + (i - (this.placedCount - 1) / 2) * BOMB_WIDTH * 0.7;
+          ctx.drawImage(this.bombImg, stackX, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
         }
       }
     }
@@ -652,7 +649,7 @@ export class TunnelGame {
       ctx.font = `${Math.round(size * 0.05)}px monospace`;
       ctx.fillStyle = RUST_ACCENT;
       ctx.textAlign = 'center';
-      ctx.fillText(String(fuseSeconds), this.crackXFrac * size, floorY - bombH - 8);
+      ctx.fillText(String(fuseSeconds), this.crackXFrac * size, floorY - BOMB_HEIGHT - 8);
       ctx.textAlign = 'start';
     }
 
