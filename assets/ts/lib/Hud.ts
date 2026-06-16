@@ -6,6 +6,7 @@ import { restartAnimation } from './fx';
    a game screen, so each selector hits the DOM once instead of every frame. */
 export class Hud {
   private els = new Map<string, HTMLElement | null>();
+  private lastScore: number | null = null;
 
   el(selector: string): HTMLElement | null {
     let el = this.els.get(selector);
@@ -25,8 +26,13 @@ export class Hud {
     restartAnimation(this.el(selector), 'blink');
   }
 
-  setScore(score: number): void {
+  /** Writes the countdown only when it changes, returning whether 
+      the displayed value moved so callers can gate their own per-second updates. */
+  setScore(score: number): boolean {
+    if (score === this.lastScore) return false;
+    this.lastScore = score;
     this.setText('.seconds-value', String(score));
+    return true;
   }
 
   setLevel(label: string): void {
@@ -38,6 +44,7 @@ export class Hud {
     const container = this.el('.lives-icons');
     if (!container) return;
     container.innerHTML = '';
+
     for (let i = 0; i < lives; i++) {
       const img = document.createElement('img');
       img.src = iconSrc;
@@ -49,16 +56,18 @@ export class Hud {
 
   displayLives(lives: number): void {
     this.setText('.lives-value', String(lives));
-
     const container = this.el('.lives-icons');
     if (!container) return;
+
     const activeIcons = container.querySelectorAll('.life-icon:not(.life-losing)');
     const excess = activeIcons.length - Math.max(0, lives);
+
     for (let i = 0; i < excess; i++) {
       const icon = activeIcons[activeIcons.length - 1 - i] as HTMLElement;
       icon.classList.add('life-losing');
       icon.addEventListener('animationend', () => icon.remove(), { once: true });
     }
+    
     if (excess > 0) this.blinkItem('.lives-item');
   }
 }
