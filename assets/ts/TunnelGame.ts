@@ -71,7 +71,6 @@ const PAD_ARRIVE_STEPS = 6;
 const PAD_NUDGE_STEPS = 10;
 
 export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'breach' | 'event';
-export type TunnelVerb = 'pick up' | 'place' | 'light' | null;
 
 export class TunnelGame {
   player: Player | null;
@@ -199,14 +198,6 @@ export class TunnelGame {
     this.hud.blinkItem('.hud-score');
     this.beginCycle(0);
     this.gameLoop.start();
-  }
-
-  /** The action verb available */
-  currentVerb(): TunnelVerb {
-    if (this.state === 'explore' && this.nearBombIndex() >= 0) return 'pick up';
-    if (this.state === 'carry' && this.atCrack()) return 'place';
-    if (this.state === 'placed' && this.atCrack()) return 'light';
-    return null;
   }
 
   /** Perform the current action verb */
@@ -419,9 +410,10 @@ export class TunnelGame {
     }
 
     this.stepCount++;
-    this.hud.setScore(this.secondsLeft());
-    /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
-    this.hud.el('.seconds-value')?.classList.toggle('time-warning', this.secondsLeft() <= 10);
+    if (this.hud.setScore(this.secondsLeft())) {
+      /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
+      this.hud.el('.seconds-value')?.classList.toggle('time-warning', this.secondsLeft() <= 10);
+    }
 
     if (this.state === 'event') {
       /* Hold the ceiling while the ground shakes (rumble fired on entry) */

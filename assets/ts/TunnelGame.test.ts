@@ -138,13 +138,11 @@ describe('TunnelGame — mechanic state machine', () => {
 
     for (let i = 0; i < required; i++) {
       placePlayerAt(game, game.floorBombs[0]);
-      expect(game.currentVerb()).toBe('pick up');
       game.action();
       expect(game.state).toBe('carry');
       expect(game.carrying).toBe(true);
 
       placePlayerAt(game, atCrackFrac(game));
-      expect(game.currentVerb()).toBe('place');
       game.action();
       /* More bombs send the lemming back out; the full stack unlocks lighting */
       expect(game.state).toBe(i + 1 < required ? 'explore' : 'placed');
@@ -152,7 +150,6 @@ describe('TunnelGame — mechanic state machine', () => {
     expect(game.placedCount).toBe(required);
     expect(game.floorBombs).toHaveLength(0);
 
-    expect(game.currentVerb()).toBe('light');
     game.action();
     game.action();
     expect(game.state).toBe('placed');
@@ -251,14 +248,12 @@ describe('TunnelGame — mechanic state machine', () => {
     const game = makeTunnel(canvas);
     game.state = 'placed';
     placePlayerAt(game, game.crackXFrac > 0.5 ? 0.05 : 0.95); // away from the crack
-    expect(game.currentVerb()).toBeNull();
     game.action();
     game.action();
     game.action();
     expect(game.state).toBe('placed');       // never ignites from afar
     expect(game['padNudgeSteps']).toBeGreaterThan(0); // the pad beckons him back instead
     placePlayerAt(game, game.crackXFrac);    // back on the charge
-    expect(game.currentVerb()).toBe('light');
     game.action();
     game.action();
     game.action();
