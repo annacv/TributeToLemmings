@@ -6,7 +6,7 @@ import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { loadImage } from './lib/images';
-import { makeBreakdown, type ScoreBreakdown } from './lib/score';
+import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
@@ -414,7 +414,7 @@ function main(): void {
       const skipMs = reduceMotion ? TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS : 0;
       requestAnimationFrame((now) => animate(now - skipMs, now));
       /* The arrival routes into the tunnel after a short breath; the breakdown
-         passes onward unchanged (surface + lives bonus already applied) */
+         passes onward unchanged (surface + surface levels bonus already applied) */
       setTimeout(() => onArrive(breakdown), TBC_TRANSITION_MS + TBC_BREATH_MS);
     };
     let pendingImgs = [undergroundImg].filter((img) => !img.complete);
@@ -532,14 +532,9 @@ function main(): void {
   function createGameOverScreen(breakdown: ScoreBreakdown, variant: 'death' | 'win' = 'death'): void {
     const size = getCanvasSize();
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const countLines: Array<[string, number]> = ([
-      ['surface', breakdown.surface],
-      ['lives', breakdown.livesBonus],
-      ['tunnel time', breakdown.tunnelTime],
-      ['cycles', breakdown.cyclesBonus],
-    ] as Array<[string, number]>).filter(([, value]) => value > 0);
+    const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
 
-    const hasCount = breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus > 0;
+    const hasCount = breakdown.tunnelTime + breakdown.levelsBonus > 0;
 
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
@@ -593,10 +588,10 @@ function main(): void {
     let countDoneMs = 0;
 
     if (hasCount && countList && scoreEl) {
-      const lineEls = countLines.map(([label, value]) => {
+      const lineEls = countLines.map(({ label, rule, value }) => {
         const li = document.createElement('li');
         li.className = 'go-count-line';
-        li.innerHTML = `<span class="go-count-label">${label}</span><span class="go-count-value">${value}</span>`;
+        li.innerHTML = `<span class="go-count-label">${label}</span><span class="go-count-rule">${rule}</span><span class="go-count-value">${value}</span>`;
         countList.appendChild(li);
         return li;
       });
@@ -803,8 +798,8 @@ function main(): void {
   }
 
   const debugScreen = getDebugScreen();
-  if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surface: 42 }));
-  else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surface: 42, livesBonus: 20 }));
+  if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surfaceTime: 42 }));
+  else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
   else createStartScreen();
 }
 

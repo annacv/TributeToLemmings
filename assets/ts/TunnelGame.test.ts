@@ -14,7 +14,7 @@ function timeToCrushSteps(level: (typeof TUNNEL_LEVELS)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;
 }
 
-function makeTunnel(canvas: HTMLCanvasElement, base = makeBreakdown({ surface: 42, livesBonus: 20 })) {
+function makeTunnel(canvas: HTMLCanvasElement, base = makeBreakdown({ surfaceTime: 42, levelsBonus: 15 })) {
   const game = new TunnelGame(canvas, base);
   game.startGame();
   return game;
@@ -412,8 +412,9 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
     game['renderFrame']();
     expect(onGameOver).toHaveBeenCalledTimes(1);
     expect(onComplete).not.toHaveBeenCalled();
+    /* Levels sum: 3 surface (base 15) + 1 tunnel cycle cleared × 5 = 20 */
     expect(onGameOver).toHaveBeenCalledWith(
-      makeBreakdown({ surface: 42, livesBonus: 20, tunnelTime: 25, cyclesBonus: 5 }),
+      makeBreakdown({ surfaceTime: 42, tunnelTime: 25, levelsBonus: 20 }),
     );
   });
 });
@@ -424,7 +425,7 @@ describe('TunnelGame — completion routing', () => {
   beforeEach(() => { canvas = makeCanvas(468, 468); });
   afterEach(() => { document.body.innerHTML = ''; });
 
-  it('the third breach banks the rest, converts lives, and completes exactly once', () => {
+  it('the third breach banks the rest and completes exactly once', () => {
     const game = makeTunnel(canvas);
     game.stepCount = 10 * STEPS_PER_SECOND; // 50 s left
     game.bankedSeconds = 30;
@@ -449,13 +450,14 @@ describe('TunnelGame — completion routing', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onGameOver).not.toHaveBeenCalled();
 
-    /* Banks all unbanked seconds (50 − 30 = 20 → 50 total); 3 lives convert at completion */
+    /* Banks all unbanked seconds (50 − 30 = 20 → 50 total); levels sum:
+       3 surface (base 15) + 3 tunnel cycles cleared × 5 = 30 */
     const breakdown = onComplete.mock.calls[0][0];
     expect(breakdown).toEqual(
-      makeBreakdown({ surface: 42, livesBonus: 20 + 30, tunnelTime: 50, cyclesBonus: 15 }),
+      makeBreakdown({ surfaceTime: 42, tunnelTime: 50, levelsBonus: 30 }),
     );
     expect(breakdown.total).toBe(
-      breakdown.surface + breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus,
+      breakdown.surfaceTime + breakdown.tunnelTime + breakdown.levelsBonus,
     );
   });
 

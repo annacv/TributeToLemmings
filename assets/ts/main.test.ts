@@ -126,7 +126,7 @@ describe('game screen keyboard wiring', () => {
 
   it('moves focus onto each new screen', () => {
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
-    activeGame().onGameOver!(makeBreakdown({ surface: 7 }));
+    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 7 }));
     expect((document.activeElement as HTMLElement).classList.contains('go-title')).toBe(true);
   });
 
@@ -189,7 +189,7 @@ describe('ranking row outside the top 10', () => {
     ]);
     vi.mocked(getPlayerRank).mockResolvedValue(12);
 
-    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surface: 30 }));
+    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surfaceTime: 30 }));
     await vi.advanceTimersByTimeAsync(2000); // game-over beat → ranking screen
     await vi.advanceTimersByTimeAsync(10);   // flush the ranking load
 
@@ -240,7 +240,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
 
   it('onTunnelWorld renders the arrival interstitial, then routes into the tunnel', () => {
     vi.useFakeTimers();
-    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42, livesBonus: 20 }));
+    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
@@ -255,7 +255,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     /* surface-modal-dismissed is already set in beforeEach — the surface key
        must not suppress the tunnel modal (separate storage key) */
     localStorage.removeItem('tunnel-modal-dismissed');
-    activeGame().onTunnelWorld!(makeBreakdown({ surface: 42 }));
+    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42 }));
     vi.advanceTimersByTime(3600);
     expect(document.querySelector('.info-modal-backdrop')).not.toBeNull();
     expect(document.querySelector('.info-modal-title')?.textContent).toBe('How to play');
@@ -265,18 +265,17 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('submits only the breakdown total and rolls the count up to it', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
-    activeGame().onGameOver!(makeBreakdown({ surface: 42, livesBonus: 20 }));
-    /* A multi-component breakdown shows the count: lines stagger in, then
-       the total rolls; the leaderboard still receives only the total */
+    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+    
     expect(document.querySelectorAll('.go-count-line')).toHaveLength(2);
     vi.advanceTimersByTime(2000);
-    expect(document.querySelector('.go-score-value')?.textContent).toBe('62');
-    expect(submitScore).toHaveBeenCalledWith(expect.any(String), 62);
+    expect(document.querySelector('.go-score-value')?.textContent).toBe('57');
+    expect(submitScore).toHaveBeenCalledWith(expect.any(String), 57);
   });
 
   it('a surface-only death keeps the single-score presentation unchanged', () => {
     vi.useFakeTimers();
-    activeGame().onGameOver!(makeBreakdown({ surface: 30 }));
+    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 30 }));
     expect(document.querySelector('.go-count')).toBeNull();
     expect(document.querySelector('.go-title')?.textContent).toBe('GAME OVER');
     expect(document.querySelector('.go-boom')?.textContent).toBe('BOOOM!!!');
@@ -285,7 +284,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
 
   it('plays no falling SFX through the interstitial when muted', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surface: 5 }));
+    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     expect(play).not.toHaveBeenCalled();
     play.mockRestore();
@@ -294,7 +293,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('plays the falling SFX exactly once when unmuted', () => {
     localStorage.setItem('audio-muted', '0');
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surface: 5 }));
+    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
     expect(play).toHaveBeenCalledTimes(1);
     play.mockRestore();
   });
@@ -496,7 +495,7 @@ describe('leaderboard fetch timeout', () => {
   it('shows the error/retry UI when Firestore never responds', async () => {
     vi.useFakeTimers();
     vi.mocked(fetchTopScores).mockImplementation(() => new Promise(() => {}));
-    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surface: 10 }));
+    gameInstances[gameInstances.length - 1].onGameOver!(makeBreakdown({ surfaceTime: 10 }));
     await vi.advanceTimersByTimeAsync(2000); // hold → ranking screen
     expect(document.querySelector('.ranking-loading')).not.toBeNull();
     await vi.advanceTimersByTimeAsync(2600); // bounded fetch times out

@@ -6,7 +6,7 @@ import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH } from './lib/geometry';
 import { loadImages } from './lib/images';
-import { makeBreakdown, livesBonusPoints, type ScoreBreakdown } from './lib/score';
+import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
@@ -417,12 +417,10 @@ export class Game {
     this.onTunnelWorld = callback;
   }
 
-  /** Snapshot of the run as a breakdown: surface seconds plus the
-      lives-to-points conversion applied at every screen transition. */
-  private currentBreakdown(): ScoreBreakdown {
+  private currentBreakdown(levelsCompleted = this.currentLevel): ScoreBreakdown {
     return makeBreakdown({
-      surface: this.score,
-      livesBonus: livesBonusPoints(this.player?.lives ?? 0),
+      surfaceTime: this.score,
+      levelsBonus: levelsCompleted * LEVEL_POINTS,
     });
   }
 
@@ -431,15 +429,18 @@ export class Game {
     this.isTunnelTransition = true;
     this.gameSong.pause();
 
-    /* The breakdown snapshots at the moment of collapse: lives convert to
-       points here, at the screen transition, before any teardown touches them */
-    const breakdown = this.currentBreakdown();
+    /* The breakdown snapshots at the moment of collapse: surface seconds + all
+       surface levels completed, captured before any teardown touches them */
+    const breakdown = this.currentBreakdown(this.currentLevel + 1);
+
     let fired = false;
     let watchdog: ReturnType<typeof setTimeout> | undefined;
+
     const fireCallback = () => {
       if (fired) return;
       fired = true;
       clearTimeout(watchdog);
+
       if (this.onTunnelWorld) {
         this.onTunnelWorld(breakdown);
       } else {

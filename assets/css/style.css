@@ -82,6 +82,7 @@
   --border-brand-thick: 2px solid var(--brand);
   --radius-sm: 0.25rem;
   --radius-pixel: 4px;
+  --gap-md: 0.5rem;
   --gap-lg: 1.5rem;
   --transition-pixel-btn: background-color .15s ease, color .15s ease;
 }
@@ -253,7 +254,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--gap-md);
   flex-wrap: wrap;
 }
 
@@ -566,7 +567,7 @@ canvas {
 .hud-lives, .hud-score {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--gap-md);
 }
 
 .hud-score {
@@ -678,68 +679,6 @@ canvas {
   color: var(--bg-black);
 }
 
-.go-sub {
-  margin: 0 0 .5rem;
-}
-
-.go-count {
-  list-style: none;
-  padding: 0;
-  max-width: 260px;
-}
-
-.go-count-line {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--gap-lg);
-  font-family: var(--font-pixel);
-  font-size: var(--text-xs);
-  line-height: var(--leading-pixel);
-  color: var(--white, #fff);
-  opacity: 0;
-}
-
-.go-count-line.show {
-  opacity: 1;
-  transition: opacity .15s steps(2);
-}
-
-.go-count-value {
-  color: var(--accent);
-}
-
-/* Tunnel HUD: countdown warning (the global reduced-motion clamp collapses
-   the pulse, leaving the color-only state) and the per-bank "+N" pop */
-.hud-score {
-  position: relative;
-}
-
-.seconds-value.time-warning {
-  color: var(--accent);
-  animation: time-pulse 1s ease-in-out infinite;
-}
-
-@keyframes time-pulse {
-  50% { opacity: .55; }
-}
-
-.bank-pop {
-  position: absolute;
-  right: 0;
-  top: -1.2em;
-  color: var(--accent);
-  font-size: .8em;
-  pointer-events: none;
-  animation: bank-pop .9s ease-out forwards;
-}
-
-@keyframes bank-pop {
-  to {
-    opacity: 0;
-    transform: translateY(-16px);
-  }
-}
-
 /* Contextual action button (tunnel): label is the current verb */
 .touch-action {
   height: 42px;
@@ -780,6 +719,92 @@ canvas {
 @media (min-width: 768px) {
   .touch-controls {
     display: none;
+  }
+}
+
+/* ---- SCORE BREAKDOWN ---- */
+
+.go-sub {
+  margin: 0 0 .5rem;
+}
+
+.go-count {
+  list-style: none;
+  padding: 0;
+  max-width: 260px;
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  column-gap: var(--gap-lg);
+  row-gap: var(--gap-md);
+}
+
+.go-count-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--gap-lg);
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--white, #fff);
+  opacity: 0;
+}
+
+.go-count-line.show {
+  opacity: 1;
+  transition: opacity .15s steps(2);
+}
+
+.go-count-label {
+  text-align: left;
+  line-height: 1.2;
+}
+
+.go-count-rule {
+  font-size: var(--text-2xs);
+  color: var(--text-subtle);
+  text-align: right;
+  width: 100%;
+}
+
+.go-count-value {
+  color: var(--accent);
+}
+
+/* Tunnel HUD: countdown warning (the global reduced-motion clamp collapses
+   the pulse, leaving the color-only state) and the per-bank "+N" pop */
+.hud-score {
+  position: relative;
+}
+
+.seconds-value.time-warning {
+  color: var(--accent);
+  animation: time-pulse 1s ease-in-out infinite;
+}
+
+@keyframes time-pulse {
+  50% { opacity: .55; }
+}
+
+.bank-pop {
+  position: absolute;
+  right: 0;
+  top: -1.2em;
+  color: var(--accent);
+  font-size: .8em;
+  pointer-events: none;
+  animation: bank-pop .9s ease-out forwards;
+}
+
+@keyframes bank-pop {
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@media (max-width: 767px) {
+  .go-count {
+    max-width: 320px;
   }
 }
 
@@ -855,7 +880,7 @@ canvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--gap-md);
   pointer-events: none;
   z-index: 2;
   text-align: center;

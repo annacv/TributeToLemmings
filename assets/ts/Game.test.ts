@@ -3,7 +3,7 @@ import { Game } from './Game';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
-import { makeBreakdown } from './lib/score';
+import { makeBreakdown, LEVEL_POINTS } from './lib/score';
 import { makeCanvas, makeCtx } from './test-helpers';
 
 // --- helpers ---
@@ -164,6 +164,26 @@ describe('Game', () => {
 
     expect(game.player.lives).toBe(0);
     expect(game.isGameOver).toBe(true);
+  });
+
+  it('a surface death scores only completed levels, never the level died on', () => {
+    const game = makeGameWithPlayer(canvas);
+    const onGameOver = vi.fn();
+    game.gameOverCallback(onGameOver);
+    game.score = 40;
+    game.currentLevel = 2;
+    game.player.lives = 1;
+
+    placeHitBomb(game);
+    runFrames(game);
+    expect(game.isGameOver).toBe(true);
+
+    game['renderFrame']();
+    game['renderFrame']();
+
+    expect(onGameOver).toHaveBeenCalledWith(
+      makeBreakdown({ surfaceTime: 40, levelsBonus: 2 * LEVEL_POINTS }),
+    );
   });
 
   it('removes bombs that fall off the bottom of the canvas', () => {
@@ -573,8 +593,9 @@ describe('Game — tunnel world transition', () => {
 
     expect(tunnelCb).not.toHaveBeenCalled();
     vi.advanceTimersByTime(500);
-    /* Lives convert to points at the transition: 3 lives × 10 on top of the surface seconds */
-    expect(tunnelCb).toHaveBeenCalledWith(makeBreakdown({ surface: game.score, livesBonus: 30 }));
+    expect(tunnelCb).toHaveBeenCalledWith(
+      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
+    );
     expect(gameOverCb).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
@@ -592,7 +613,9 @@ describe('Game — tunnel world transition', () => {
     game.update();
     vi.advanceTimersByTime(500);
 
-    expect(gameOverCb).toHaveBeenCalledWith(makeBreakdown({ surface: game.score, livesBonus: 30 }));
+    expect(gameOverCb).toHaveBeenCalledWith(
+      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
+    );
     vi.useRealTimers();
   });
 
@@ -716,9 +739,11 @@ describe('Game — unmuted sting exit routes (seam-test gate)', () => {
     game.tentonSfx.dispatchEvent(new Event('ended'));
     const breakdown = tunnelCb.mock.calls[0][0];
     expect(breakdown.total).toBe(
-      breakdown.surface + breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus,
+      breakdown.surfaceTime + breakdown.tunnelTime + breakdown.levelsBonus,
     );
-    expect(breakdown).toEqual(makeBreakdown({ surface: game.score, livesBonus: 30 }));
+    expect(breakdown).toEqual(
+      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
+    );
   });
 });
 

@@ -1,45 +1,47 @@
-/* Run scoring, ratified for Iteration V:
-   TOTAL = surface seconds + 10 × lives saved (per screen transition)
-         + seconds left (per underground screen, banked per cycle)
-         + 5 × cycles cleared
-   The breakdown travels through every screen handoff; only `total` reaches the
-   leaderboard. No other scoring source exists. */
+/* Run scoring:
+   TOTAL = surface seconds
+         + tunnel seconds
+         + 5 × levels completed (surface levels completed + tunnel cycles cleared)
+*/
 
-export const LIFE_BONUS_POINTS = 10;
-export const CYCLE_CLEAR_POINTS = 5;
+export const LEVEL_POINTS = 5;
 
 export interface ScoreBreakdown {
   /** Seconds survived on the surface. */
-  surface: number;
-  /** 10 × lives remaining, converted at each screen transition. */
-  livesBonus: number;
+  surfaceTime: number;
   /** Countdown seconds banked at tunnel cycle breakouts. */
   tunnelTime: number;
-  /** 5 × cycles cleared, banked with the time slice. */
-  cyclesBonus: number;
+  /** 5 × levels completed (surface levels completed + tunnel cycles completed). */
+  levelsBonus: number;
   /** Total score, derived via makeBreakdown. */
   total: number;
 }
 
 type BreakdownParts = Partial<Omit<ScoreBreakdown, 'total'>>;
 
-/** The only way to build a breakdown: total is derived from the parts, so the
-    tally on screen can never disagree with the score that gets submitted. */
 export function makeBreakdown(parts: BreakdownParts = {}): ScoreBreakdown {
-  const surface = parts.surface ?? 0;
-  const livesBonus = parts.livesBonus ?? 0;
+  const surfaceTime = parts.surfaceTime ?? 0;
   const tunnelTime = parts.tunnelTime ?? 0;
-  const cyclesBonus = parts.cyclesBonus ?? 0;
+  const levelsBonus = parts.levelsBonus ?? 0;
   return {
-    surface,
-    livesBonus,
+    surfaceTime,
     tunnelTime,
-    cyclesBonus,
-    total: surface + livesBonus + tunnelTime + cyclesBonus,
+    levelsBonus,
+    total: surfaceTime + tunnelTime + levelsBonus,
   };
 }
 
-/** Lives-to-points conversion applied at every screen transition. */
-export function livesBonusPoints(lives: number): number {
-  return LIFE_BONUS_POINTS * Math.max(0, lives);
+export interface BreakdownLine {
+  label: string;
+  rule: string;
+  value: number;
+}
+
+export function breakdownLines(b: ScoreBreakdown): BreakdownLine[] {
+  const levels = b.levelsBonus / LEVEL_POINTS;
+  return [
+    { label: 'Surface time', rule: `${b.surfaceTime} s`, value: b.surfaceTime },
+    { label: 'Tunnel time', rule: `${b.tunnelTime} s`, value: b.tunnelTime },
+    { label: 'Levels completed', rule: `${levels} × ${LEVEL_POINTS}`, value: b.levelsBonus },
+  ];
 }

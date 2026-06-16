@@ -7,7 +7,7 @@ import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
 import { loadImage, loadImages } from './lib/images';
 import * as audio from './lib/audio';
 import {
-  makeBreakdown, livesBonusPoints, CYCLE_CLEAR_POINTS, type ScoreBreakdown,
+  makeBreakdown, LEVEL_POINTS, type ScoreBreakdown,
 } from './lib/score';
 import {
   SPRITES, CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
@@ -259,24 +259,11 @@ export class TunnelGame {
     return FLOOR_FRAC - this.ceilingFrac;
   }
 
-  /** Score if the run ended now — banked values only; the current cycle's
-      unbanked time dies with the lemming. */
   currentBreakdown(): ScoreBreakdown {
     return makeBreakdown({
-      surface: this.baseBreakdown.surface,
-      livesBonus: this.baseBreakdown.livesBonus,
+      surfaceTime: this.baseBreakdown.surfaceTime,
       tunnelTime: this.bankedSeconds,
-      cyclesBonus: this.cyclesCleared * CYCLE_CLEAR_POINTS,
-    });
-  }
-
-  private completionBreakdown(): ScoreBreakdown {
-    const base = this.currentBreakdown();
-    return makeBreakdown({
-      surface: base.surface,
-      livesBonus: base.livesBonus + livesBonusPoints(this.player?.lives ?? 0),
-      tunnelTime: base.tunnelTime,
-      cyclesBonus: base.cyclesBonus,
+      levelsBonus: this.baseBreakdown.levelsBonus + this.cyclesCleared * LEVEL_POINTS,
     });
   }
 
@@ -371,7 +358,7 @@ export class TunnelGame {
     this.bankedSeconds += share;
     this.cyclesCleared++;
     this.hud.setScore(this.secondsLeft());
-    this.showBankPop(share + CYCLE_CLEAR_POINTS);
+    this.showBankPop(share + LEVEL_POINTS);
     restartAnimation(this.canvas, 'shake-light');
 
     /* Every cycle — including the last — opens the floor pit; the final breach
@@ -541,7 +528,7 @@ export class TunnelGame {
     if (this.caveLoop) audio.stopLoop(this.caveLoop);
     audio.stopLoop(this.fuseTickSfx);
     if (this.cyclesCleared >= TOTAL_CYCLES) {
-      this.onComplete?.(this.completionBreakdown());
+      this.onComplete?.(this.currentBreakdown());
     } else {
       this.onGameOver?.(this.currentBreakdown());
     }
