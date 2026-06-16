@@ -8,65 +8,69 @@ import {
   makeBreakdown, livesBonusPoints, CYCLE_CLEAR_POINTS, type ScoreBreakdown,
 } from './lib/score';
 import {
-  SPRITES, CRACK_MARK_SVGS,
-  FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX,
+  SPRITES, CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
+  FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX, FALLING_SFX,
   TUNNEL_BACKGROUND_SVG, TUNNEL_CEILING_SVG,
 } from './assets';
 
-/* Scoring/timing (run-scoring spec): one visible budget for the whole screen,
-   derived from step counting; it floors at 0 and never kills — the ceiling does. */
 export const TUNNEL_TIME_BUDGET_S = 60;
 export const TOTAL_CYCLES = 3;
 const STEPS_PER_SECOND = 60;
 
-/* World geometry as canvas fractions (the canvas resizes 280–580 px; px-stored
-   heights would teleport on resize). Asset-baked values follow the artwork. */
-export const FLOOR_FRAC = 690 / 800;          // walkable line in background-tunnel.svg
-const CEILING_ASPECT = 480 / 800;             // tunnel-ceiling.svg strip
-const CEILING_TOOTH_FRAC = 474 / 480;         // deepest tooth: the collision line, never per-tooth
+/* World geometry is stored as canvas fractions, not pixels, so nothing jumps
+   when the canvas resizes (280–580 px). The numbers come from the artwork. */
+export const FLOOR_FRAC = 690 / 800;  // walkable line in background-tunnel.svg
+const CEILING_ASPECT = 800 / 800;     // tunnel-ceiling.svg strip
+const CEILING_TOOTH_FRAC = 794 / 800; // deepest tooth: the collision line, never per-tooth
 
-/* Kill line and telegraph band, floor-to-ceiling headroom (D10). The crouch
-   telegraph must always read before the crush can fire. */
+/* Kill line and warning band, both as floor-to-ceiling headroom. The rule:
+   the crouch warning must always show before the crush can fire. */
 export const CRUSH_HEADROOM_FRAC = 0.09;
-export const TELEGRAPH_HEADROOM_FRAC = 0.17;
-const CRUSH_HITSTOP_STEPS = 15;               // ~250 ms freeze: the death beat reads without sound or shake
+export const WARNING_HEADROOM_FRAC = 0.17;
 
-/* Per-level tunables (round-3 ratified): L2 lowers the start, L3 also drifts
-   faster. The solvability invariant over this table is pinned by tests:
-   time-to-crush exceeds the budget on levels 1–2; only level 3 can crush
-   within it (no sooner than ~40 s). */
+const CRUSH_HITSTOP_STEPS = 15;      // ~250 ms freeze so the death beat lands
+
 export const TUNNEL_LEVELS = [
-  { startHeadroomFrac: 0.62, driftPerStep: 0.00009, crackAssets: [0, 1] },
-  { startHeadroomFrac: 0.48, driftPerStep: 0.00009, crackAssets: [1] },
-  { startHeadroomFrac: 0.34, driftPerStep: 0.000102, crackAssets: [0] },
+  { startHeadroomFrac: 0.62, driftPerStep: 0.00009, crackMark: 2, bombs: 2 },
+  { startHeadroomFrac: 0.48, driftPerStep: 0.00009, crackMark: 0, bombs: 3 },
+  { startHeadroomFrac: 0.34, driftPerStep: 0.00013, crackMark: 1, bombs: 4 },
 ] as const;
 
-const STAGED_EVENT_STEPS = 48;                // ~800 ms between-cycle lowering event
-const FUSE_STEPS = 120;                       // ~2 s lit fuse before the breach
+const EVENT_SHAKE_STEPS = 18;       // ~300 ms ground-shake warning before the ceiling falls
+const STAGED_EVENT_STEPS = 48;      // ~800 ms ceiling drop opening each new level
+const MIN_EVENT_DROP_FRAC = 0.05;   // the drop must read even if drift already passed the next start
+const FUSE_STEPS = 120;             // ~2 s lit fuse before the explosion
 
-/* Abyss tease beat sequence (round-4 ratified, ~3.3 s total): cave loop fades
-   while the smoke hangs, clears sideways frame-right, rust spills in, the
-   lemming walks out right, the stinger breathes, hard cut. Under reduced
-   motion the wipe is skipped: cleared frame + rust + right-facing lemming. */
-const TEASE_FADE_STEPS = 60;
-const TEASE_HANG_STEPS = 24;
-const TEASE_WIPE_STEPS = 54;
-const TEASE_WALK_STEPS = 42;
-const TEASE_REDUCED_HOLD_STEPS = 90;
-const TEASE_STINGER_STEPS = 72;
-const TEASE_CUT_STEPS = 3;
-const TEASE_RUST = '#A85A1C';
-const TEASE_RUST_MAX_ALPHA = 0.18;
+/* Breach sequence between cycles: the booom blasts a floor pit open (frames
+   0→3), the camera drops into the next-deeper chamber, then the pit seals
+   overhead (3→0) before the next level is announced and the ceiling drops in. */
+export const BREACH_BOOM_STEPS = 42; // ~0.7 s booom.svg + pit blasting open
+export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
+export const BREACH_SEAL_STEPS = 36; // ~0.6 s the pit sealing overhead
+export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat
+export const BREACH_TOTAL_STEPS = BREACH_PAN_END_STEPS + BREACH_SEAL_STEPS;
+
+const RUST_ACCENT = '#A85A1C';
 const LIGHT_PRESSES = 3;
-const ACTION_RANGE_FRAC = 0.08;               // how close "near the bomb / at the crack" is
-export const MIN_CRACK_SPAWN_DIST_FRAC = 0.18;
+const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
+export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
-const CRACK_MIN_X_FRAC = 0.06;
-const CRACK_MAX_X_FRAC = 0.88;
 
-/* One verb per state (D4): what Space (or the touch button) means right now.
-   `tease` is the post-victory beat: input inert, countdown frozen, no crush. */
-export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'event' | 'tease';
+/* Bombs spawn in the middle band, apart from each other, so the route matters */
+const BOMB_MIN_X_FRAC = 0.18;
+const BOMB_MAX_X_FRAC = 0.82;
+const BOMB_MIN_GAP_FRAC = 0.12;
+
+/* The crack sits at a random floor x, off the spawn point and this cycle's bombs */
+export const CRACK_MIN_X_FRAC = 0.18;
+export const CRACK_MAX_X_FRAC = 0.82;
+const CRACK_MARK_HEIGHT_FRAC = 0.12;
+
+/* Footing-pad one-shots: snap when he reaches the charge, beckon when he strays */
+const PAD_ARRIVE_STEPS = 6;
+const PAD_NUDGE_STEPS = 10;
+
+export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'breach' | 'event';
 export type TunnelVerb = 'pick up' | 'place' | 'light' | null;
 
 export class TunnelGame {
@@ -76,11 +80,12 @@ export class TunnelGame {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   state: TunnelState;
-  cycle: number;                              // 0-based index into TUNNEL_LEVELS
-  ceilingFrac: number;                        // collision line, canvas fraction from the top
+  cycle: number;        // 0-based index into TUNNEL_LEVELS
+  ceilingFrac: number;  // collision line, canvas fraction from the top
   crackXFrac: number;
-  bombXFrac: number;
-  bombSpawnXFrac: number;
+  floorBombs: number[];
+  bombSpawns: number[]; // this cycle's spawn layout (for crush respawn)
+  placedCount: number;
   carrying: boolean;
   lightPresses: number;
   fuseStepsLeft: number;
@@ -96,24 +101,31 @@ export class TunnelGame {
   pickupSfx: HTMLAudioElement;
   rumbleSfx: HTMLAudioElement;
   scrapeSfx: HTMLAudioElement;
+  fallingSfx: HTMLAudioElement;
   muted: boolean;
+  breachStep: number;
   private readonly baseBreakdown: ScoreBreakdown;
   private eventStepsLeft: number;
+  private eventShakeStepsLeft: number;
   private eventFromFrac: number;
+  private eventTargetFrac: number;
   private hitstopStepsLeft: number;
   private crushFlashStepsLeft: number;
-  /* The telegraph rumble plays once per descent into the danger band; it
-     re-arms whenever the ceiling resets (new cycle, respawn) */
-  private telegraphArmed: boolean;
-  private teaseStep: number;
+  private warningArmed: boolean;
   private readonly reduceMotion: boolean;
   private hud: Hud;
   private gameLoop: GameLoop;
   private run = new RunLifecycle();
+  private padArriveSteps = 0;
+  private padNudgeSteps = 0;
+  private padNudgeDir = 1;
+  private wasAtCrack = false;
   private backgroundImg: HTMLImageElement;
   private ceilingImg: HTMLImageElement;
   private crackImgs: HTMLImageElement[];
   private bombImg: HTMLImageElement;
+  private booomImg: HTMLImageElement;
+  private groundHoleImgs: HTMLImageElement[];
 
   constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
     this.player = null;
@@ -126,20 +138,23 @@ export class TunnelGame {
     this.cycle = 0;
     this.ceilingFrac = this.cycleStartCeilingFrac(0);
     this.crackXFrac = 0.5;
-    this.bombXFrac = 0.5;
-    this.bombSpawnXFrac = 0.5;
+    this.floorBombs = [];
+    this.bombSpawns = [];
+    this.placedCount = 0;
     this.carrying = false;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
     this.stepCount = 0;
     this.bankedSeconds = 0;
     this.cyclesCleared = 0;
+    this.breachStep = 0;
     this.eventStepsLeft = 0;
+    this.eventShakeStepsLeft = 0;
     this.eventFromFrac = 0;
+    this.eventTargetFrac = 0;
     this.hitstopStepsLeft = 0;
     this.crushFlashStepsLeft = 0;
-    this.telegraphArmed = true;
-    this.teaseStep = 0;
+    this.warningArmed = true;
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.onGameOver = null;
     this.onComplete = null;
@@ -153,6 +168,7 @@ export class TunnelGame {
     this.pickupSfx = new Audio(EXPLODE_SFX);
     this.rumbleSfx = new Audio(CHAIN_SFX);
     this.scrapeSfx = new Audio(SCRAPE_SFX);
+    this.fallingSfx = new Audio(FALLING_SFX);
 
     const loadImg = (src: string) => {
       const img = new Image();
@@ -163,6 +179,8 @@ export class TunnelGame {
     this.ceilingImg = loadImg(TUNNEL_CEILING_SVG);
     this.crackImgs = CRACK_MARK_SVGS.map(loadImg);
     this.bombImg = loadImg(SPRITES.bomb);
+    this.booomImg = loadImg(SPRITES.booom);
+    this.groundHoleImgs = GROUND_HOLE_SVGS.map(loadImg);
 
     this.gameLoop = new GameLoop({
       step: () => this.step(),
@@ -188,43 +206,52 @@ export class TunnelGame {
     this.player.dy = this.canvas.height * FLOOR_FRAC - this.player.dHeight;
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
     this.hud.setText('.lives-value', String(this.player.lives));
-    this.hud.setLevel(`depth 1/${TOTAL_CYCLES}`);
-    /* Entry signals the rule change: the score slot now counts down */
+    /* The score slot now counts down */
     this.hud.setScore(this.secondsLeft());
     this.hud.blinkItem('.hud-score');
     this.beginCycle(0);
     this.gameLoop.start();
   }
 
-  /** Label for the contextual touch button: exactly one meaning per state. */
+  /** The action verb available */
   currentVerb(): TunnelVerb {
-    if (this.state === 'explore' && this.nearBomb()) return 'pick up';
+    if (this.state === 'explore' && this.nearBombIndex() >= 0) return 'pick up';
     if (this.state === 'carry' && this.atCrack()) return 'place';
-    if (this.state === 'placed') return 'light';
+    if (this.state === 'placed' && this.atCrack()) return 'light';
     return null;
   }
 
-  /** The single action verb (Space / touch button). One meaning per state (D4). */
+  /** Perform the current action verb */
   action(): void {
     if (this.paused || this.isOver || this.hitstopStepsLeft > 0) return;
-    if (this.state === 'explore' && this.nearBomb()) {
+    if (this.state === 'explore') {
+      const i = this.nearBombIndex();
+      if (i < 0) return;
+      this.floorBombs.splice(i, 1);
       this.carrying = true;
       this.state = 'carry';
       audio.playSfx(this.pickupSfx, this.muted);
     } else if (this.state === 'carry' && this.atCrack()) {
       this.carrying = false;
-      this.bombXFrac = this.crackXFrac;
-      this.state = 'placed';
+      this.placedCount++;
+      audio.playSfx(this.pickupSfx, this.muted);
+      this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
       this.lightPresses = 0;
-    } else if (this.state === 'placed') {
+    } else if (this.state === 'placed' && this.atCrack()) {
       this.lightPresses++;
-      /* Match-strike per light press; the third one ignites the fuse loop */
+      this.scrapeSfx.volume = 1;
       audio.playSfx(this.scrapeSfx, this.muted);
       if (this.lightPresses >= LIGHT_PRESSES) {
         this.state = 'armed';
         this.fuseStepsLeft = FUSE_STEPS;
+        if (this.player) this.player.direction = 0;
         audio.playLoop(this.fuseTickSfx, this.muted);
       }
+    } else if (this.state === 'placed') {
+      this.padNudgeSteps = PAD_NUDGE_STEPS;
+      this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
+      this.scrapeSfx.volume = 0.3;
+      audio.playSfx(this.scrapeSfx, this.muted);
     }
   }
 
@@ -236,8 +263,8 @@ export class TunnelGame {
     return FLOOR_FRAC - this.ceilingFrac;
   }
 
-  /** The breakdown if the run ended right now: banked values only — the
-      unbanked remainder of the current cycle dies with the lemming. */
+  /** Score if the run ended now — banked values only; the current cycle's
+      unbanked time dies with the lemming. */
   currentBreakdown(): ScoreBreakdown {
     return makeBreakdown({
       surface: this.baseBreakdown.surface,
@@ -248,7 +275,6 @@ export class TunnelGame {
   }
 
   private completionBreakdown(): ScoreBreakdown {
-    /* Lives convert at every screen transition — completing the tunnel is one */
     const base = this.currentBreakdown();
     return makeBreakdown({
       surface: base.surface,
@@ -262,46 +288,74 @@ export class TunnelGame {
     return FLOOR_FRAC - TUNNEL_LEVELS[cycle].startHeadroomFrac;
   }
 
-  private nearBomb(): boolean {
-    if (!this.player) return false;
-    const playerCenter = (this.player.dx + this.player.dWidth / 2) / this.canvas.width;
-    return Math.abs(playerCenter - this.bombXFrac) <= ACTION_RANGE_FRAC;
+  private playerCenterFrac(): number {
+    return this.player ? (this.player.dx + this.player.dWidth / 2) / this.canvas.width : 0.5;
+  }
+
+  private nearBombIndex(): number {
+    if (!this.player) return -1;
+    const center = this.playerCenterFrac();
+    return this.floorBombs.findIndex((x) => Math.abs(center - x) <= ACTION_RANGE_FRAC);
   }
 
   private atCrack(): boolean {
     if (!this.player) return false;
-    const playerCenter = (this.player.dx + this.player.dWidth / 2) / this.canvas.width;
-    return Math.abs(playerCenter - this.crackXFrac) <= ACTION_RANGE_FRAC;
+    return Math.abs(this.playerCenterFrac() - this.crackXFrac) <= CRACK_RANGE_FRAC;
   }
 
-  /** Random crack position, re-rolled per cycle and per crush respawn; never
-      within MIN_CRACK_SPAWN_DIST of the spawn point (free discovery). */
-  private rollCrackPosition(): number {
-    let x: number;
-    do {
-      x = CRACK_MIN_X_FRAC + Math.random() * (CRACK_MAX_X_FRAC - CRACK_MIN_X_FRAC);
-    } while (Math.abs(x - PLAYER_SPAWN_X_FRAC) < MIN_CRACK_SPAWN_DIST_FRAC);
-    return x;
+  /** Random floor x for the crack, clear of the spawn and the cycle's bombs;
+      re-rolled per cycle and per crush respawn. */
+  private rollCrack(): void {
+    const blocked = [PLAYER_SPAWN_X_FRAC, ...this.bombSpawns];
+    const clearOf = (x: number) => Math.min(...blocked.map((b) => Math.abs(b - x)));
+
+    for (let i = 0; i < 30; i++) {
+      const x = CRACK_MIN_X_FRAC + Math.random() * (CRACK_MAX_X_FRAC - CRACK_MIN_X_FRAC);
+      if (clearOf(x) >= BOMB_MIN_GAP_FRAC) { this.crackXFrac = x; return; }
+    }
+    /* Fallback: midpoint of the widest gap — the roomiest spot, always exists */
+    const stops = [
+      CRACK_MIN_X_FRAC,
+      ...this.bombSpawns.filter((b) => b > CRACK_MIN_X_FRAC && b < CRACK_MAX_X_FRAC).sort((a, b) => a - b),
+      CRACK_MAX_X_FRAC,
+    ];
+    let best = (CRACK_MIN_X_FRAC + CRACK_MAX_X_FRAC) / 2;
+    let bestGap = -1;
+    for (let i = 1; i < stops.length; i++) {
+      const gap = stops[i] - stops[i - 1];
+      if (gap > bestGap) { bestGap = gap; best = (stops[i] + stops[i - 1]) / 2; }
+    }
+    this.crackXFrac = best;
+  }
+
+  private rollBombs(count: number): number[] {
+    const bombs: number[] = [];
+    while (bombs.length < count) {
+      const x = BOMB_MIN_X_FRAC + Math.random() * (BOMB_MAX_X_FRAC - BOMB_MIN_X_FRAC);
+      if (bombs.every((b) => Math.abs(b - x) >= BOMB_MIN_GAP_FRAC)) bombs.push(x);
+    }
+    return bombs;
+  }
+
+  /** Lay out a cycle's crack + bombs without changing state, so a transition
+      can stage them before gameplay resumes. */
+  private setupCycle(cycle: number): void {
+    this.cycle = cycle;
+    this.carrying = false;
+    this.placedCount = 0;
+    this.lightPresses = 0;
+    this.fuseStepsLeft = 0;
+    this.bombSpawns = this.rollBombs(TUNNEL_LEVELS[cycle].bombs);
+    this.floorBombs = [...this.bombSpawns];
+    this.rollCrack();
+    this.hud.setLevel(String(cycle + 1));
   }
 
   private beginCycle(cycle: number): void {
-    this.cycle = cycle;
+    this.setupCycle(cycle);
     this.state = 'explore';
-    this.carrying = false;
-    this.lightPresses = 0;
-    this.fuseStepsLeft = 0;
-    this.crackXFrac = this.rollCrackPosition();
-    /* The pickable bomb spawns away from the crack so the route matters */
-    do {
-      this.bombSpawnXFrac = CRACK_MIN_X_FRAC + Math.random() * (CRACK_MAX_X_FRAC - CRACK_MIN_X_FRAC);
-    } while (Math.abs(this.bombSpawnXFrac - this.crackXFrac) < MIN_CRACK_SPAWN_DIST_FRAC);
-    this.bombXFrac = this.bombSpawnXFrac;
-    this.hud.setLevel(`depth ${cycle + 1}/${TOTAL_CYCLES}`);
   }
 
-  /** Per-cycle banking: each breakout secures an equal share of the still
-      unbanked remaining seconds; the final breakout banks all of it. The
-      invariant test pins this rule (design.md open question, resolved). */
   private bankShare(): number {
     const unbanked = Math.max(0, this.secondsLeft() - this.bankedSeconds);
     const cyclesLeft = TOTAL_CYCLES - this.cyclesCleared;
@@ -316,25 +370,14 @@ export class TunnelGame {
     this.cyclesCleared++;
     this.hud.setScore(this.secondsLeft());
     this.showBankPop(share + CYCLE_CLEAR_POINTS);
-
-    if (this.cyclesCleared >= TOTAL_CYCLES) {
-      /* Drift stays suspended from here through the tease: the win cannot be
-         crushed after the bank latch (round-4 guard) */
-      this.state = 'tease';
-      this.teaseStep = 0;
-      return;
-    }
-    /* Staged lowering event into the next cycle: drift suspended, ~800 ms,
-       step-counted so pause mid-event cannot desync it. The shake rides the
-       existing CSS animation, which the global reduced-motion clamp covers. */
-    this.state = 'event';
-    this.eventStepsLeft = STAGED_EVENT_STEPS;
-    this.eventFromFrac = this.ceilingFrac;
-    audio.playSfx(this.rumbleSfx, this.muted);
     restartAnimation(this.canvas, 'shake-light');
+
+    /* Every cycle — including the last — opens the floor pit; the final breach
+       hands off to the Abyss transition screen (main.ts) via the completion latch */
+    this.state = 'breach';
+    this.breachStep = 0;
   }
 
-  /** "+N" pop at the banking moment, near the score slot. */
   private showBankPop(points: number): void {
     const slot = this.hud.el('.hud-score');
     if (!slot) return;
@@ -351,8 +394,6 @@ export class TunnelGame {
     this.hud.displayLives(this.player.lives);
     audio.stopLoop(this.fuseTickSfx);
     audio.playSfx(this.crushSfx, this.muted);
-    /* Hit-stop + flash: the death beat must read muted and under reduced
-       motion (it is a freeze and a flash, not shake) */
     this.hitstopStepsLeft = CRUSH_HITSTOP_STEPS;
     this.crushFlashStepsLeft = CRUSH_HITSTOP_STEPS;
 
@@ -360,26 +401,22 @@ export class TunnelGame {
       this.isOver = true;
       return;
     }
-    /* Respawn rule (round-3, Anna's clarified intent): same cycle, remaining
-       countdown, same crack appearance, new crack position, ceiling reset to
-       the cycle's start height. A carried bomb returns to its pickup spawn;
-       a placed one is removed with the old crack (same reset). */
+
     this.ceilingFrac = this.cycleStartCeilingFrac(this.cycle);
-    this.telegraphArmed = true;
+    this.warningArmed = true;
     this.player.dx = this.canvas.width * PLAYER_SPAWN_X_FRAC;
     this.player.direction = 0;
     this.state = 'explore';
     this.carrying = false;
+    this.placedCount = 0;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
-    this.crackXFrac = this.rollCrackPosition();
-    this.bombXFrac = this.bombSpawnXFrac;
+    this.rollCrack();
+    this.floorBombs = [...this.bombSpawns];
   }
 
-  /** One fixed 1/60 s simulation step; returns false to halt the loop. */
   step(): boolean {
     if (this.isOver) return false;
-    /* Pause is a consumer-side flag: render stays alive under the modal */
     if (this.paused) return true;
     if (this.hitstopStepsLeft > 0) {
       this.hitstopStepsLeft--;
@@ -387,38 +424,43 @@ export class TunnelGame {
     }
     if (this.crushFlashStepsLeft > 0) this.crushFlashStepsLeft--;
 
-    /* The tease freezes the countdown and the world; only its beats advance */
-    if (this.state === 'tease') {
-      this.stepTease();
+    /* The breach beat freezes the countdown and the world */
+    if (this.state === 'breach') {
+      this.stepBreach();
       return true;
     }
 
     this.stepCount++;
     this.hud.setScore(this.secondsLeft());
-    /* ≤10 s warning: color + 1 Hz pulse (the global reduced-motion clamp
-       collapses the pulse to color-only) */
+    /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
     this.hud.el('.seconds-value')?.classList.toggle('time-warning', this.secondsLeft() <= 10);
 
     if (this.state === 'event') {
-      /* Staged lowering: interpolate to the next cycle's start, then begin it */
+      /* Hold the ceiling while the ground shakes (rumble fired on entry) */
+      if (this.eventShakeStepsLeft > 0) {
+        this.eventShakeStepsLeft--;
+        return true;
+      }
+
+      /* Staged drop into the new level, readable even if drift overshot the start */
       this.eventStepsLeft--;
-      const target = this.cycleStartCeilingFrac(this.cyclesCleared);
       const t = 1 - this.eventStepsLeft / STAGED_EVENT_STEPS;
-      this.ceilingFrac = this.eventFromFrac + (target - this.eventFromFrac) * t;
+      this.ceilingFrac = this.eventFromFrac + (this.eventTargetFrac - this.eventFromFrac) * t;
+
       if (this.eventStepsLeft <= 0) {
-        this.ceilingFrac = target;
-        this.telegraphArmed = true;
-        this.beginCycle(this.cyclesCleared);
+        this.ceilingFrac = this.eventTargetFrac;
+        this.warningArmed = true;
+        /* The cycle was already laid out on entry; just resume gameplay */
+        this.state = 'explore';
       }
       return true;
     }
 
-    /* Continuous drift (D10): per-step descent at the level's velocity —
-       reduced motion never stops it; it is gameplay, not decoration */
+    /* Continuous drift: reduced motion never stops it — it's gameplay, not decoration */
     this.ceilingFrac += TUNNEL_LEVELS[this.cycle].driftPerStep;
 
-    if (this.telegraphArmed && this.inTelegraphBand()) {
-      this.telegraphArmed = false;
+    if (this.warningArmed && this.inWarningBand()) {
+      this.warningArmed = false;
       audio.playSfx(this.rumbleSfx, this.muted);
     }
 
@@ -427,8 +469,21 @@ export class TunnelGame {
       return true;
     }
 
-    this.player?.move();
+    /* Frozen on the charge during the lit fuse: he committed, he stays put */
+    if (this.state !== 'armed') this.player?.move();
     this.player?.tickBlink();
+
+    /* Tick the pad one-shots; snap on first arrival at the charge while placed */
+    if (this.padArriveSteps > 0) this.padArriveSteps--;
+    if (this.padNudgeSteps > 0) this.padNudgeSteps--;
+    
+    if (this.state === 'placed') {
+      const at = this.atCrack();
+      if (at && !this.wasAtCrack) this.padArriveSteps = PAD_ARRIVE_STEPS;
+      this.wasAtCrack = at;
+    } else {
+      this.wasAtCrack = false;
+    }
 
     if (this.state === 'armed') {
       this.fuseStepsLeft--;
@@ -437,39 +492,50 @@ export class TunnelGame {
     return true;
   }
 
-  /** Beat thresholds for the tease, in tease-steps. Reduced motion skips the
-      wipe and holds the cleared frame instead. */
-  private teaseBeats() {
-    const wipeEnd = this.reduceMotion ? 0 : TEASE_HANG_STEPS + TEASE_WIPE_STEPS;
-    const walkEnd = wipeEnd + (this.reduceMotion ? TEASE_REDUCED_HOLD_STEPS : TEASE_WALK_STEPS);
-    const stingerEnd = walkEnd + TEASE_STINGER_STEPS;
-    return { wipeEnd, walkEnd, stingerEnd, cutEnd: stingerEnd + TEASE_CUT_STEPS };
-  }
-
-  private stepTease(): void {
-    this.teaseStep++;
-    const { wipeEnd, walkEnd, cutEnd } = this.teaseBeats();
-    /* Cave loop fades out under the hanging smoke; silence is the held breath */
-    if (this.caveLoop) {
-      this.caveLoop.volume = Math.max(0, 1 - this.teaseStep / TEASE_FADE_STEPS);
+  /** Advances the breach beat one step at a time (see the BREACH_* constants). */
+  private stepBreach(): void {
+    this.breachStep++;
+    if (this.player) this.player.direction = 0; // falls, no walk cycle
+    const isFinal = this.cyclesCleared >= TOTAL_CYCLES;
+    if (isFinal) {
+      /* Final breach: the run ends the instant the pit opens — no in-tunnel pan
+         (it reads as falling into another tunnel). main.ts plays the fall on the
+         Abyss screen instead, mirroring the surface→tunnel handoff. */
+      if (this.breachStep >= BREACH_BOOM_STEPS) this.isOver = true;
+      return;
     }
-    if (this.player && this.teaseStep > wipeEnd) {
-      /* He fell in; he walks out under his own power (optional rider, 8.1b) */
-      this.player.direction = 1;
-      if (this.teaseStep <= walkEnd) this.player.dx += this.player.speed * 1.5;
+    if (this.breachStep === BREACH_BOOM_STEPS + 1) {
+      /* Collapse cue at 2× so it reads shorter than the final world-boundary
+         fall (which plays on the Abyss screen) */
+      this.fallingSfx.playbackRate = 2;
+      audio.playSfx(this.fallingSfx, this.muted);
     }
-    if (this.teaseStep === walkEnd) {
-      this.hud.el('.tbc-overlay')?.classList.add('show');
-    }
-    if (this.teaseStep >= cutEnd) {
-      this.isOver = true;
+    if (this.breachStep >= BREACH_TOTAL_STEPS) {
+      /* Landed and the pit sealed overhead; announce the level */
+      const banner = this.hud.el('.level-up-banner');
+      if (banner) {
+        banner.textContent = `Level ${this.cyclesCleared + 1}`;
+        restartAnimation(banner, 'show');
+      }
+      this.state = 'event';
+      /* Stage the new level now so it's in place as the chamber arrives */
+      this.setupCycle(this.cyclesCleared);
+      /* Warn before the drop: a ground shake + grinding rumble fire now */
+      this.eventShakeStepsLeft = EVENT_SHAKE_STEPS;
+      this.eventStepsLeft = STAGED_EVENT_STEPS;
+      this.eventFromFrac = this.ceilingFrac;
+      this.eventTargetFrac = Math.max(
+        this.cycleStartCeilingFrac(this.cyclesCleared),
+        this.ceilingFrac + MIN_EVENT_DROP_FRAC,
+      );
+      audio.playSfx(this.rumbleSfx, this.muted);
+      restartAnimation(this.canvas, 'shake-light');
     }
   }
 
   private renderFrame(): void {
     this.drawScene();
-    /* Extra frames can draw after the halt — teardown fires exactly once, and
-       exactly one of {bank-completion, death} resolves through this latch */
+    /* Frames can still draw after the halt; the latch fires teardown once */
     this.run.settle(this.isOver, () => this.endRun());
   }
 
@@ -483,55 +549,110 @@ export class TunnelGame {
     }
   }
 
-  /** Near-crush telegraph: crouch frame + rumble before the kill line. */
-  inTelegraphBand(): boolean {
-    return this.headroomFrac() <= TELEGRAPH_HEADROOM_FRAC;
+  /** Near-crush warning: crouch frame + rumble before the kill line. */
+  inWarningBand(): boolean {
+    return this.headroomFrac() <= WARNING_HEADROOM_FRAC;
+  }
+
+  /** Ground-hole frame for this breach step: opens 0→last (boom), held open
+      through the pan, then last→0 (seal). Reduced motion snaps without a tween. */
+  private breachHoleFrame(): number {
+    const last = this.groundHoleImgs.length - 1;
+
+    if (this.breachStep > BREACH_PAN_END_STEPS) {
+      /* Seal beat: cover the hole back over (last→0) */
+      if (this.reduceMotion) return 0;
+      const t = (this.breachStep - BREACH_PAN_END_STEPS) / BREACH_SEAL_STEPS;
+      return Math.max(0, Math.min(last, Math.floor((1 - t) * (last + 1))));
+    }
+
+    if (this.breachStep > BREACH_BOOM_STEPS) return last; // held open through the pan
+    if (this.reduceMotion) return last;
+
+    const t = this.breachStep / BREACH_BOOM_STEPS;       // blast open (0→last)
+    return Math.min(last, Math.floor(t * (last + 1)));
+  }
+
+  /** Camera drop during the breach: downward Y offset in px, 0 at the boom up to
+      full canvas height on arrival. Reduced motion snaps to the rest frame. */
+  private dropOffsetPx(): number {
+    if (this.state !== 'breach' || this.breachStep <= BREACH_BOOM_STEPS) return 0;
+    
+    const t = Math.min(1, (this.breachStep - BREACH_BOOM_STEPS) / BREACH_PAN_STEPS);
+    const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // easeInOutQuad
+    
+    return (this.reduceMotion ? (t >= 1 ? 1 : 0) : eased) * this.canvas.height;
   }
 
   private drawScene(): void {
     const { ctx, canvas } = this;
     const size = canvas.width;
-    ctx.clearRect(0, 0, size, canvas.height);
+    const h = canvas.height;
+    const drop = this.dropOffsetPx();
+    const floorY = h * FLOOR_FRAC;
+    ctx.clearRect(0, 0, size, h);
 
     if (this.backgroundImg.complete && this.backgroundImg.naturalWidth > 0) {
-      ctx.drawImage(this.backgroundImg, 0, 0, size, canvas.height);
-    }
-
-    /* Crack marks sit on the back wall above the floor shelf */
-    const crackW = size * 0.12;
-    const crackY = canvas.height * FLOOR_FRAC - crackW * 1.4;
-    for (const idx of TUNNEL_LEVELS[this.cycle].crackAssets) {
-      const img = this.crackImgs[idx];
-      if (img?.complete && img.naturalWidth > 0) {
-        ctx.drawImage(img, this.crackXFrac * size - crackW / 2, crackY, crackW, crackW);
+      ctx.drawImage(this.backgroundImg, 0, -drop, size, h);
+      
+      if (drop !== 0) {
+        /* The next-deeper chamber slides up from below */
+        ctx.drawImage(this.backgroundImg, 0, -drop + h, size, h);
       }
     }
 
-    /* The pickable bomb (when not carried or placed it rests on the floor) */
-    if (!this.carrying && this.bombImg.complete && this.bombImg.naturalWidth > 0) {
-      const bombW = 28;
-      const bombH = 32;
-      const bombY = this.state === 'placed' || this.state === 'armed'
-        ? crackY + crackW - bombH
-        : canvas.height * FLOOR_FRAC - bombH;
-      ctx.drawImage(this.bombImg, this.bombXFrac * size - bombW / 2, bombY, bombW, bombH);
-
-      /* Visual fuse countdown: code-drawn digits over the armed bomb (the
-         spark frames are an optional asset; the digits never depend on it) */
-      if (this.state === 'armed') {
-        const fuseSeconds = Math.ceil(this.fuseStepsLeft / 60);
-        ctx.font = `${Math.round(size * 0.05)}px monospace`;
-        ctx.fillStyle = '#A85A1C';
-        ctx.fillText(String(fuseSeconds), this.bombXFrac * size - bombW / 2, bombY - 6);
+    if (this.state === 'breach') {
+      this.drawBreachPit(drop);
+    } else {
+      /* The level's crack, in place from the event onward (staged as the chamber arrives) */
+      const crackImg = this.crackImgs[TUNNEL_LEVELS[this.cycle].crackMark];
+      
+      if (crackImg.complete && crackImg.naturalWidth) {
+        const markH = size * CRACK_MARK_HEIGHT_FRAC;
+        const markW = markH * (crackImg.naturalWidth / crackImg.naturalHeight);
+        ctx.drawImage(crackImg, this.crackXFrac * size - markW / 2, floorY, markW, markH);
       }
+    }
+
+    /* Floor bombs waiting to be picked (only present outside the breach) */
+    const bombW = 28;
+    const bombH = 32;
+
+    /* Footing pad, drawn behind the bombs (see drawLightPad) */
+    if (this.state === 'placed') this.drawLightPad(floorY);
+
+    if (this.bombImg.complete && this.bombImg.naturalWidth > 0) {
+      for (const x of this.floorBombs) {
+        ctx.drawImage(this.bombImg, x * size - bombW / 2, floorY - bombH, bombW, bombH);
+      }
+      
+      /* Bombs stacked on the crack, fanned around its x (none until the player places) */
+      if (this.state !== 'breach') {
+        for (let i = 0; i < this.placedCount; i++) {
+          const stackX = this.crackXFrac * size - bombW / 2
+            + (i - (this.placedCount - 1) / 2) * bombW * 0.7;
+          ctx.drawImage(this.bombImg, stackX, floorY - bombH, bombW, bombH);
+        }
+      }
+    }
+
+    /* Visual fuse countdown: code-drawn digits over the armed stack */
+    if (this.state === 'armed') {
+      const fuseSeconds = Math.ceil(this.fuseStepsLeft / 60);
+      ctx.font = `${Math.round(size * 0.05)}px monospace`;
+      ctx.fillStyle = RUST_ACCENT;
+      ctx.textAlign = 'center';
+      ctx.fillText(String(fuseSeconds), this.crackXFrac * size, floorY - bombH - 8);
+      ctx.textAlign = 'start';
     }
 
     if (this.player) {
-      const crouching = this.state !== 'tease' && this.inTelegraphBand();
+      const crouching = this.state !== 'breach' && this.inWarningBand();
+      
       if (crouching) {
         /* Crouch read: vertical squash anchored at the feet */
         ctx.save();
-        ctx.translate(0, canvas.height * FLOOR_FRAC * 0.2);
+        ctx.translate(0, floorY * 0.2);
         ctx.scale(1, 0.8);
         this.player.drawImage(this.stepCount);
         ctx.restore();
@@ -540,56 +661,87 @@ export class TunnelGame {
       }
     }
 
-    /* Ceiling strip last: solid mass overflows above the canvas top; the
-       deepest tooth of the artwork rides the collision line */
+    /* Ceiling strip last; it scrolls up with the world during the breach drop */
     if (this.ceilingImg.complete && this.ceilingImg.naturalWidth > 0) {
       const drawH = size * CEILING_ASPECT;
-      const drawY = this.ceilingFrac * canvas.height - drawH * CEILING_TOOTH_FRAC;
+      const drawY = this.ceilingFrac * h - drawH * CEILING_TOOTH_FRAC - drop;
       ctx.drawImage(this.ceilingImg, 0, drawY, size, drawH);
     }
 
     if (this.crushFlashStepsLeft > 0) {
       ctx.globalAlpha = 0.55;
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, size, canvas.height);
+      ctx.fillRect(0, 0, size, h);
       ctx.globalAlpha = 1;
     }
-
-    if (this.state === 'tease') this.drawTease();
   }
 
-  /** Tease overlays: hanging smoke that wipes frame-right, the rust spill
-      bleeding in from the right edge, and the final hard cut to black. */
-  private drawTease(): void {
+  /** The "stand here to light" footing pad on the floor seam: a rust baseline
+      with ticks — a spot to stand on, not a box. It breathes, brightens with
+      proximity, snaps on arrival, and leans toward him on a stray press. */
+  private drawLightPad(floorY: number): void {
     const { ctx, canvas } = this;
     const size = canvas.width;
-    const { wipeEnd, stingerEnd, cutEnd } = this.teaseBeats();
+    const cx = this.crackXFrac * size;
+    const dist = Math.abs(this.playerCenterFrac() - this.crackXFrac);
+    const prox = 1 - Math.min(1, dist / CRACK_RANGE_FRAC);    // 0 far → 1 on the charge
+    const pulse = this.reduceMotion ? 1 : 0.5 + 0.5 * Math.sin(this.stepCount / 8);
+    
+    let alpha = (this.reduceMotion ? 0.7 : 0.4 + 0.35 * pulse) * (0.4 + 0.6 * prox);
+    
+    if (this.padArriveSteps > 0) alpha = 1;                   // "locked in" snap
+    if (this.padNudgeSteps > 0) alpha = Math.max(alpha, 0.9); // beckon on a stray press
+    
+    const lean = this.padNudgeSteps > 0 ? this.padNudgeDir * size * 0.02 : 0;
 
-    if (!this.reduceMotion && this.teaseStep < wipeEnd) {
-      /* Smoke hangs, then clears sideways toward frame-right */
-      const wipeT = Math.max(0, (this.teaseStep - TEASE_HANG_STEPS) / TEASE_WIPE_STEPS);
-      const eased = wipeT * (2 - wipeT); // easeOutQuad
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = '#28221A';
-      ctx.fillRect(eased * size, 0, size - eased * size, canvas.height);
-      ctx.globalAlpha = 1;
+    const padW = size * 0.16;
+    const tickW = Math.max(3, size * 0.012);
+    const tickH = size * 0.05 * (0.6 + 0.4 * prox) * (this.reduceMotion ? 1 : 0.8 + 0.2 * pulse);
+    
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.fillStyle = RUST_ACCENT;
+    ctx.fillRect(cx - padW / 2 + lean, floorY - 2, padW, 3);  // footing baseline
+    
+    for (let i = 0; i < 3; i++) {
+      const tx = cx - padW / 2 + lean + (i + 0.5) * (padW / 3);
+      ctx.fillRect(tx - tickW / 2, floorY - tickH, tickW, tickH);
     }
+    ctx.restore();
+  }
 
-    /* Faint warm rust spill from frame-right: direction, never destination */
-    const rustT = this.reduceMotion
-      ? 1
-      : Math.min(1, Math.max(0, (this.teaseStep - TEASE_HANG_STEPS) / TEASE_WIPE_STEPS));
-    if (rustT > 0) {
-      ctx.globalAlpha = TEASE_RUST_MAX_ALPHA * rustT;
-      ctx.fillStyle = TEASE_RUST;
-      ctx.fillRect(size * 0.7, 0, size * 0.3, canvas.height);
-      ctx.globalAlpha = 1;
+  /** The floor pit: blasts open (0→3) and scrolls up with the old chamber as the
+      camera drops, then seals overhead in the new chamber (3→0), mouth flipped down. */
+  private drawBreachPit(drop: number): void {
+    const { ctx, canvas } = this;
+    const size = canvas.width;
+    const holeImg = this.groundHoleImgs[this.breachHoleFrame()];
+    const holeCx = this.crackXFrac * size;
+    const holeW = size * 0.4;
+    
+    if (holeImg?.complete && holeImg.naturalWidth > 0) {
+      const holeH = holeW * (holeImg.naturalHeight / holeImg.naturalWidth);
+      
+      if (this.breachStep > BREACH_PAN_END_STEPS) {
+        /* Seals overhead in the new chamber, mouth facing down (flipped) */
+        const sealY = size * 0.2;
+        ctx.save();
+        ctx.translate(holeCx, sealY);
+        ctx.scale(1, -1);
+        ctx.drawImage(holeImg, -holeW / 2, -holeH / 2, holeW, holeH);
+        ctx.restore();
+      } else {
+        /* Opens in the old floor, scrolling up with the chamber */
+        const holeY = canvas.height * FLOOR_FRAC - drop;
+        ctx.drawImage(holeImg, holeCx - holeW / 2, holeY - holeH * 0.35, holeW, holeH);
+      }
     }
-
-    if (this.teaseStep >= stingerEnd && this.teaseStep < cutEnd) {
-      /* Hard cut to black, 2–3 frames, brutal and retro */
-      ctx.fillStyle = '#010106';
-      ctx.fillRect(0, 0, size, canvas.height);
+    
+    if (this.breachStep <= BREACH_BOOM_STEPS
+        && this.booomImg.complete && this.booomImg.naturalWidth > 0) {
+      const boomW = size * 0.3;
+      const boomY = canvas.height * FLOOR_FRAC - drop;
+      ctx.drawImage(this.booomImg, holeCx - boomW / 2, boomY - boomW / 2, boomW, boomW);
     }
   }
 }
