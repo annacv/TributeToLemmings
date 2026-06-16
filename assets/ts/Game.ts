@@ -203,9 +203,7 @@ export class Game {
   }
 
   private showLevelUpEffect(): void {
-    const banner = document.querySelector('.level-up-banner') as HTMLElement | null;
-    if (banner) banner.textContent = `Level ${this.currentLevel + 1}`;
-    restartAnimation(banner, 'show');
+    this.hud.showLevelBanner(`Level ${this.currentLevel + 1}`);
     restartAnimation(document.querySelector('.crt-frame'), 'flash-active');
   }
 
