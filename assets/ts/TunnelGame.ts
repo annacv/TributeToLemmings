@@ -230,29 +230,37 @@ export class TunnelGame {
       this.floorBombs.splice(i, 1);
       this.carrying = true;
       this.state = 'carry';
-      audio.playSfx(this.pickupSfx, this.muted);
+      this.playSfx(this.pickupSfx);
     } else if (this.state === 'carry' && this.atCrack()) {
       this.carrying = false;
       this.placedCount++;
-      audio.playSfx(this.pickupSfx, this.muted);
+      this.playSfx(this.pickupSfx);
       this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
       this.lightPresses = 0;
     } else if (this.state === 'placed' && this.atCrack()) {
       this.lightPresses++;
       this.scrapeSfx.volume = 1;
-      audio.playSfx(this.scrapeSfx, this.muted);
+      this.playSfx(this.scrapeSfx);
       if (this.lightPresses >= LIGHT_PRESSES) {
         this.state = 'armed';
         this.fuseStepsLeft = FUSE_STEPS;
         if (this.player) this.player.direction = 0;
-        audio.playLoop(this.fuseTickSfx, this.muted);
+        this.playLoop(this.fuseTickSfx);
       }
     } else if (this.state === 'placed') {
       this.padNudgeSteps = PAD_NUDGE_STEPS;
       this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
       this.scrapeSfx.volume = 0.3;
-      audio.playSfx(this.scrapeSfx, this.muted);
+      this.playSfx(this.scrapeSfx);
     }
+  }
+
+  private playSfx(sfx: HTMLAudioElement): void {
+    audio.playSfx(sfx, this.muted);
+  }
+
+  private playLoop(loop: HTMLAudioElement): void {
+    audio.playLoop(loop, this.muted);
   }
 
   secondsLeft(): number {
@@ -370,7 +378,7 @@ export class TunnelGame {
 
   private breach(): void {
     audio.stopLoop(this.fuseTickSfx);
-    audio.playSfx(this.breachSfx, this.muted);
+    this.playSfx(this.breachSfx);
     const share = this.bankShare();
     this.bankedSeconds += share;
     this.cyclesCleared++;
@@ -399,7 +407,7 @@ export class TunnelGame {
     this.player.lives--;
     this.hud.displayLives(this.player.lives);
     audio.stopLoop(this.fuseTickSfx);
-    audio.playSfx(this.crushSfx, this.muted);
+    this.playSfx(this.crushSfx);
     this.hitstopStepsLeft = CRUSH_HITSTOP_STEPS;
     this.crushFlashStepsLeft = CRUSH_HITSTOP_STEPS;
 
@@ -463,7 +471,7 @@ export class TunnelGame {
 
     if (this.warningArmed && this.inWarningBand()) {
       this.warningArmed = false;
-      audio.playSfx(this.rumbleSfx, this.muted);
+      this.playSfx(this.rumbleSfx);
     }
 
     if (this.headroomFrac() <= CRUSH_HEADROOM_FRAC) {
@@ -510,7 +518,7 @@ export class TunnelGame {
       /* Collapse cue at 2× so it reads shorter than the final world-boundary
          fall (which plays on the Abyss screen) */
       this.fallingSfx.playbackRate = 2;
-      audio.playSfx(this.fallingSfx, this.muted);
+      this.playSfx(this.fallingSfx);
     }
     if (this.breachStep >= BREACH_TOTAL_STEPS) {
       /* Landed and the pit sealed overhead; announce the level */
@@ -530,7 +538,7 @@ export class TunnelGame {
         this.cycleStartCeilingFrac(this.cyclesCleared),
         this.ceilingFrac + MIN_EVENT_DROP_FRAC,
       );
-      audio.playSfx(this.rumbleSfx, this.muted);
+      this.playSfx(this.rumbleSfx);
       restartAnimation(this.canvas, 'shake-light');
     }
   }
