@@ -15,6 +15,7 @@ logs/
 # local / agent
 .claude/
 openspec/
+memory/*
 assets/images/backgrounds/refs/
 CLAUDE.md
 
