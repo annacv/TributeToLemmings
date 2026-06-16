@@ -165,11 +165,6 @@ main {
 }
 
 @media (min-width: 768px) {
-  .section-container.intro {
-    padding: 4.5rem 10rem;
-    justify-content: flex-start;
-  }
-
   .section-container {
     padding: 2rem 10rem;
     justify-content: flex-start;
@@ -310,7 +305,7 @@ canvas {
 }
 
 .game-canvas,
-.tunel-game-canvas,
+.tunnel-game-canvas,
 .game-over-canvas,
 .ranking-canvas,
 .tbc-canvas,
@@ -325,7 +320,7 @@ canvas {
   background-size: cover;
 }
 
-.tunel-game-canvas {
+.tunnel-game-canvas {
   background-image: url("../images/backgrounds/background-tunnel.svg");
   background-position: 50% 50%;
   background-size: cover;
@@ -683,19 +678,17 @@ canvas {
   color: var(--bg-black);
 }
 
-/* End-screen tally (round 4): one line per non-zero component, then the
-   total roll; the win variant swaps BOOOM!!! for the lowercase stinger */
 .go-sub {
   margin: 0 0 .5rem;
 }
 
-.go-tally {
+.go-count {
   list-style: none;
   padding: 0;
   max-width: 260px;
 }
 
-.go-tally-line {
+.go-count-line {
   display: flex;
   justify-content: space-between;
   gap: var(--gap-lg);
@@ -706,12 +699,12 @@ canvas {
   opacity: 0;
 }
 
-.go-tally-line.show {
+.go-count-line.show {
   opacity: 1;
   transition: opacity .15s steps(2);
 }
 
-.go-tally-value {
+.go-count-value {
   color: var(--accent);
 }
 
@@ -776,11 +769,6 @@ canvas {
 .touch-action:active:not(:disabled) {
   background-color: var(--brand);
   color: var(--bg-black);
-}
-
-.info-modal-rows {
-  text-align: left;
-  display: inline-block;
 }
 
 .key-times {
@@ -888,7 +876,7 @@ canvas {
   color: var(--brand);
   line-height: var(--leading-pixel);
   letter-spacing: .2em;
-  margin: 1rem 0 0;
+  margin: 1.5rem 0 0;
   text-shadow: 2px 2px 0 var(--bg-black);
 }
 
@@ -1117,7 +1105,6 @@ button:active {
 
 /* ---- SPLASH NAME INPUT ---- */
 
-/* Mirrors the .splash-hero column so the form wrapper is invisible to the layout */
 .splash-form {
   display: flex;
   flex-direction: column;

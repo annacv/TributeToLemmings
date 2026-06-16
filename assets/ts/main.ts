@@ -4,14 +4,18 @@ import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
+import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
-  TALLY_TICK_SFX, TALLY_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG,
+  COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
 } from './assets';
 
+type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
+type InfoModalOptions = { title: string; bodyHtml: string; storageKey: string };
+
 const GAME_OVER_TRANSITION_MS = 2000;
-const GAME_OVER_TALLY_HOLD_MS = 4200;
+const GAME_OVER_COUNT_HOLD_MS = 4200;
 const SUBMISSION_TIMEOUT_MS = 2500;
 const TBC_FALL_DURATION_MS = 500;
 const TBC_SCROLL_DURATION_MS = 1700;
@@ -36,8 +40,6 @@ export function generateGuestHandle(): string {
   return `Lemming #${id}`;
 }
 
-type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
-
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -51,25 +53,11 @@ function main(): void {
   let playerName = '';
   let rankingMusic: HTMLAudioElement | null = null;
 
-  /* Dev-only shortcut (?screen=tbc) to replay the interstitial; skips score submission */
-  let debugScreen = import.meta.env.DEV
-    ? new URLSearchParams(window.location.search).get('screen')
-    : null;
-
-  /* Same rule as the game song: no music in a hidden tab */
   document.addEventListener('visibilitychange', () => {
     if (!rankingMusic) return;
     if (document.hidden) rankingMusic.pause();
     else safePlay(rankingMusic);
   });
-
-  function consumeDebugScreen(): void {
-    if (!debugScreen) return;
-    debugScreen = null;
-    const url = new URL(window.location.href);
-    url.searchParams.delete('screen');
-    history.replaceState(null, '', url);
-  }
 
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
@@ -89,14 +77,11 @@ function main(): void {
     });
   }
 
-  /* One info-modal pattern for every world: title, body, and the dismissal
-     storage key are parameters so each screen's controls are taught once,
-     independently (a returning surface player still sees the tunnel modal). */
-  type InfoModalOptions = { title: string; bodyHtml: string; storageKey: string };
+  /* INFO MODALS */
 
   const SURFACE_MODAL: InfoModalOptions = {
     title: 'How to play',
-    storageKey: 'info-modal-dismissed',
+    storageKey: 'surface-modal-dismissed',
     bodyHtml: `
         <p class="info-modal-instruction">
           Use <kbd class="key-hint">&#x2190;</kbd> <kbd class="key-hint">&#x2192;</kbd> arrow keys<br>
@@ -105,16 +90,14 @@ function main(): void {
   };
 
   const TUNNEL_MODAL: InfoModalOptions = {
-    title: 'Underground',
+    title: 'How to play',
     storageKey: 'tunnel-modal-dismissed',
     bodyHtml: `
-        <p class="info-modal-instruction info-modal-rows">
-          <kbd class="key-hint">SPACE</kbd> pick up the bomb<br>
-          <kbd class="key-hint">SPACE</kbd> place it at the crack<br>
-          <kbd class="key-hint">SPACE</kbd> &times;3 light the fuse
+        <p class="info-modal-instruction">
+          1. Find the crack and use <kbd class="key-hint-text">SPACE</kbd> to pick up and place the bombs.<br>
+          2. Stand on the bombs, then <kbd class="key-hint-text">SPACE</kbd> <strong class="key-times">&times;3 times</strong> to light the fuse!<br>
         </p>
-        <p class="info-modal-instruction">on touch, the action button is your SPACE</p>
-        <p class="info-modal-instruction">&gt; escape fast. bonus per breakout.</p>`,
+        <p class="info-modal-instruction">&gt; Escape fast! bonus per breakout.</p>`,
   };
 
   function showInfoModal(opts: InfoModalOptions, onClose: () => void): void {
@@ -150,8 +133,6 @@ function main(): void {
       onClose();
     }
 
-    /* aria-modal promises focus stays inside: Escape closes, Tab wraps over the
-       three focusables (close button, checkbox, confirm button) */
     function onModalKeydown(event: KeyboardEvent): void {
       if (event.key === 'Escape') {
         closeModal();
@@ -172,6 +153,8 @@ function main(): void {
     confirmBtn.focus();
   }
 
+  /* SCREENS */
+  
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
@@ -181,9 +164,10 @@ function main(): void {
         <form class="splash-form">
           <div class="splash-name-wrap">
             <input
+              id="splash-name-input"
               class="splash-name-input"
               type="text"
-              maxlength="20"
+              maxlength="27"
               placeholder="Enter your name"
               aria-label="Your nickname"
               autocomplete="off"
@@ -307,14 +291,23 @@ function main(): void {
     });
   }
 
-  function createToBeContinuedScreen(breakdown: ScoreBreakdown): void {
+  /* The collapse-shaft fall transition. Default: surface→tunnel (lands in the
+     tunnel). Reused for tunnel→Abyss by passing the warm stinger, the descent art
+     that reddens into the Abyss, and the win-screen arrival (see the tunnel
+     completion callback). */
+  function createToBeContinuedScreen(
+    breakdown: ScoreBreakdown,
+    stingerHtml = '&gt; somewhere underground...',
+    onArrive: (b: ScoreBreakdown) => void = createTunnelScreen,
+    backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
+  ): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
         <div class="crt-frame">
           <canvas class="tbc-canvas" aria-hidden="true"></canvas>
           <div class="tbc-overlay">
-            <p class="tbc-line">&gt; somewhere underground...</p>
+            <p class="tbc-line">${stingerHtml}</p>
           </div>
         </div>
       </section>
@@ -331,7 +324,7 @@ function main(): void {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const undergroundImg = new Image();
-    undergroundImg.src = UNDERGROUND_BACKGROUND_SVG;
+    undergroundImg.src = backgroundSvg;
 
     if (localStorage.getItem('audio-muted') !== '1') {
       safePlay(new Audio(FALLING_SFX));
@@ -361,7 +354,6 @@ function main(): void {
 
     function drawScene(lemmingY: number, scrollY: number, veilAlpha: number): void {
       ctx.clearRect(0, 0, size, size);
-      /* One draw for the whole world: surface, shaft, dirt, veils, dark, hints */
       if (undergroundImg.complete && undergroundImg.naturalWidth > 0) {
         ctx.drawImage(undergroundImg, 0, surfaceBottomY - size * 0.5 - scrollY, size, size * 3.5);
       }
@@ -419,7 +411,7 @@ function main(): void {
       requestAnimationFrame((now) => animate(now - skipMs, now));
       /* The arrival routes into the tunnel after a short breath; the breakdown
          passes onward unchanged (surface + lives bonus already applied) */
-      setTimeout(() => createTunnelScreen(breakdown), TBC_TRANSITION_MS + TBC_BREATH_MS);
+      setTimeout(() => onArrive(breakdown), TBC_TRANSITION_MS + TBC_BREATH_MS);
     };
     let pendingImgs = [undergroundImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
@@ -428,8 +420,6 @@ function main(): void {
     };
     if (pendingImgs.length === 0) start();
     else pendingImgs.forEach((img) => {
-      /* 'error' counts as settled too — drawScene guards per image, and a missing
-         layer must not stall the whole transition */
       img.addEventListener('load', () => onImgSettled(img), { once: true });
       img.addEventListener('error', () => onImgSettled(img), { once: true });
     });
@@ -438,9 +428,10 @@ function main(): void {
   function createTunnelScreen(breakdown: ScoreBreakdown): void {
     const size = getCanvasSize();
     const screen = buildDom(`
-      <section class="section-container play tunnel">
+      <section class="section-container play">
         <div class="crt-frame">
-          <canvas class="game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
+          <canvas class="tunnel-game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
+          <p class="level-up-banner"></p>
           <div class="game-hud">
             <div class="hud-lives">
               <span class="hud-item lives-item">
@@ -452,11 +443,11 @@ function main(): void {
             <div class="hud-score">
               <span class="hud-item">
                 <span class="hud-value seconds-value">60</span>
-                <span class="hud-label">time</span>
+                <span class="hud-label">sec</span>
               </span>
               <span class="hud-item level-item">
-                <span class="hud-label"></span>
-                <span class="hud-value level-value">depth 1/3</span>
+                <span class="hud-label">level</span>
+                <span class="hud-value level-value">1</span>
               </span>
             </div>
           </div>
@@ -467,10 +458,10 @@ function main(): void {
         </div>
         <div class="touch-controls">
           <button class="touch-left" aria-label="Move left">&#x2190;</button>
-          <button class="touch-action" aria-label="Action" disabled>...</button>
+          <button class="touch-action" aria-label="Action">SPACE</button>
           <button class="touch-right" aria-label="Move right">&#x2192;</button>
         </div>
-        <p class="game-hint">&gt; find the crack. blast your way out.</p>
+        <p class="game-hint">&gt; Find the crack. Blast your way out!</p>
       </section>
     `);
 
@@ -479,9 +470,12 @@ function main(): void {
     canvas.height = size;
 
     const game = new TunnelGame(canvas, breakdown);
-    /* Death keeps the GAME OVER verdict; the tease routes the winner to the
-       TO BE CONTINUED variant of the same end screen (round 4) */
-    game.completionCallback((b) => createGameOverScreen(b, 'win'));
+    game.completionCallback((b) => createToBeContinuedScreen(
+      b,
+      '&gt; the air grows warm...',
+      (bb) => createGameOverScreen(bb, 'win'),
+      UNDERGROUND_ABYSS_BACKGROUND_SVG,
+    ));
     game.gameOverCallback(createGameOverScreen);
 
     /* Cave loop through the channel helper: respects the mute gate, pauses
@@ -512,24 +506,17 @@ function main(): void {
     const arrowRight = screen.querySelector('.touch-right') as HTMLElement;
     arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
     arrowRight.addEventListener('click', () => game.player?.setDirection(1));
+    
     const arrowLeft = screen.querySelector('.touch-left') as HTMLElement;
     arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
     arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
 
-    /* Contextual action button: label always shows the available verb */
     const actionBtn = screen.querySelector('.touch-action') as HTMLButtonElement;
     actionBtn.addEventListener('click', () => game.action());
-    const verbTimer = setInterval(() => {
-      const verb = game.currentVerb();
-      actionBtn.disabled = verb === null;
-      if (verb) actionBtn.textContent = verb;
-    }, 150);
-    game.runSignal.addEventListener('abort', () => clearInterval(verbTimer), { once: true });
 
     canvas.tabIndex = -1;
-    /* The simulation starts only when the controls modal closes; the paused
-       flag keeps the run keydown handler inert while it is open */
     game.paused = true;
+
     showInfoModal(TUNNEL_MODAL, () => {
       game.paused = false;
       canvas.focus();
@@ -537,41 +524,40 @@ function main(): void {
     });
   }
 
-  /* One end screen, two verdicts (round 4): death keeps GAME OVER + BOOOM +
-     DIE.WAV; the tunnel win reads TO BE CONTINUED... and never plays the
-     death knell — the tally roll carries the verdict. "THE END" reuses this
-     screen in Iteration VI. */
   function createGameOverScreen(breakdown: ScoreBreakdown, variant: 'death' | 'win' = 'death'): void {
     const size = getCanvasSize();
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const tallyLines: Array<[string, number]> = ([
+    const countLines: Array<[string, number]> = ([
       ['surface', breakdown.surface],
       ['lives', breakdown.livesBonus],
       ['tunnel time', breakdown.tunnelTime],
       ['cycles', breakdown.cyclesBonus],
     ] as Array<[string, number]>).filter(([, value]) => value > 0);
-    /* Surface-only runs see today's screen unchanged (skip-if-empty) */
-    const hasTally = breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus > 0;
+
+    const hasCount = breakdown.livesBonus + breakdown.tunnelTime + breakdown.cyclesBonus > 0;
 
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="crt-frame">
-          <canvas class="game-over-canvas" aria-hidden="true"></canvas>
+        ${variant === 'win' ? 
+          '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>' :
+          '<canvas class="game-over-canvas" aria-hidden="true"></canvas>'}
           <div class="game-over-overlay">
-            ${variant === 'win'
-    ? '<p class="tbc-line go-sub">&gt; you made it. for now.</p>'
-    : '<p class="go-boom">BOOOM!!!</p>'}
-            <h1 class="go-title">${variant === 'win' ? 'TO BE CONTINUED...' : 'GAME OVER'}</h1>
-            ${hasTally ? '<ul class="go-tally"></ul>' : ''}
+            ${variant === 'win' ? 
+              '<h1 class="go-title">&gt; You made it!<br>For now...</h1>' : 
+              '<p class="go-boom">BOOOM!!!</p>' + '<h1 class="go-title">GAME OVER</h1>'}
+            ${hasCount ? '<ul class="go-count"></ul>' : ''}
             <p class="go-score">score <span class="go-score-value"></span></p>
           </div>
         </div>
       </section>
     `);
 
-    const canvas = gameOverScreen.querySelector('.game-over-canvas') as HTMLCanvasElement;
-    canvas.width = size;
-    canvas.height = size;
+    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-tunnel-canvas') as HTMLCanvasElement | null;
+    if (canvas) {
+      canvas.width = size;
+      canvas.height = size;
+    }
 
     const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
     title.tabIndex = -1;
@@ -579,7 +565,7 @@ function main(): void {
 
     const startRankingMusic = (): void => {
       if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
-      if (rankingMusic) return; // exactly once per arrival, whatever triggered it
+      if (rankingMusic) return;
       rankingMusic = new Audio(RANKING_MUSIC);
       rankingMusic.loop = true;
       rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
@@ -594,23 +580,22 @@ function main(): void {
 
     const muted = localStorage.getItem('audio-muted') === '1';
     const playOptionalSfx = (src: string | null): void => {
-      /* Tally cues degrade silently while their assets are absent */
       if (src && !muted) safePlay(new Audio(src));
     };
 
-    /* Tally: line-by-line reveal inside the hold, then a fast roll to the
-       total; instant under reduced motion */
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
-    const tallyList = gameOverScreen.querySelector('.go-tally');
-    let tallyDoneMs = 0;
-    if (hasTally && tallyList && scoreEl) {
-      const lineEls = tallyLines.map(([label, value]) => {
+    const countList = gameOverScreen.querySelector('.go-count');
+    let countDoneMs = 0;
+
+    if (hasCount && countList && scoreEl) {
+      const lineEls = countLines.map(([label, value]) => {
         const li = document.createElement('li');
-        li.className = 'go-tally-line';
-        li.innerHTML = `<span class="go-tally-label">${label}</span><span class="go-tally-value">${value}</span>`;
-        tallyList.appendChild(li);
+        li.className = 'go-count-line';
+        li.innerHTML = `<span class="go-count-label">${label}</span><span class="go-count-value">${value}</span>`;
+        countList.appendChild(li);
         return li;
       });
+
       if (reduceMotion) {
         lineEls.forEach((li) => li.classList.add('show'));
         scoreEl.textContent = String(breakdown.total);
@@ -618,12 +603,14 @@ function main(): void {
         scoreEl.textContent = '0';
         lineEls.forEach((li, i) => setTimeout(() => {
           li.classList.add('show');
-          playOptionalSfx(TALLY_TICK_SFX);
+          playOptionalSfx(COUNT_TICK_SFX);
         }, 300 + i * 250));
+        
         const rollStartMs = 300 + lineEls.length * 250;
         const ROLL_MS = 500;
+
         setTimeout(() => {
-          playOptionalSfx(TALLY_CHIME_SFX);
+          playOptionalSfx(COUNT_CHIME_SFX);
           const rollTimer = setInterval(() => {
             if (!mainElement.contains(scoreEl)) { clearInterval(rollTimer); return; }
             const next = Math.min(breakdown.total, Number(scoreEl.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
@@ -631,7 +618,8 @@ function main(): void {
             if (next >= breakdown.total) clearInterval(rollTimer);
           }, 40);
         }, rollStartMs);
-        tallyDoneMs = rollStartMs + ROLL_MS;
+
+        countDoneMs = rollStartMs + ROLL_MS;
       }
     } else if (scoreEl) {
       scoreEl.textContent = String(breakdown.total);
@@ -644,19 +632,19 @@ function main(): void {
     } else if (variant === 'death') {
       startRankingMusic();
     } else {
-      /* Win: no death knell — ranking music starts from the tally completion */
-      setTimeout(startRankingMusic, tallyDoneMs);
+      /* Win: no death knell — ranking music starts from the count completion */
+      setTimeout(startRankingMusic, countDoneMs);
     }
 
     /* Only the total reaches the leaderboard; the breakdown stays client-side */
-    const submission: Promise<SubmissionResult> = debugScreen
+    const submission: Promise<SubmissionResult> = getDebugScreen()
       ? Promise.resolve({ error: false, docId: null, bestScore: null })
       : submitScore(playerName, breakdown.total)
         .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
         .catch(() => ({ error: true, docId: null, bestScore: null }));
 
-    /* The hold extends to let the tally land; surface-only deaths keep today's beat */
-    const holdMs = hasTally && !reduceMotion ? GAME_OVER_TALLY_HOLD_MS : GAME_OVER_TRANSITION_MS;
+    /* The hold extends to let the count land; surface-only deaths keep today's beat */
+    const holdMs = hasCount && !reduceMotion ? GAME_OVER_COUNT_HOLD_MS : GAME_OVER_TRANSITION_MS;
     setTimeout(() => createRankingScreen(breakdown.total, submission), holdMs);
   }
 
@@ -734,8 +722,11 @@ function main(): void {
           setTimeout(() => reject(new Error('leaderboard fetch timeout')), SUBMISSION_TIMEOUT_MS)
         ),
       ]);
+
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+      
       const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
+
       if (!mainElement.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
 
@@ -750,10 +741,12 @@ function main(): void {
       const isPlayerRow = (s: { id: string; name: string }): boolean =>
         (submittedDocId !== null && s.id === submittedDocId)
         || (playerName !== '' && s.name === playerName);
-      const playerInTop10 = scores.some(isPlayerRow);
+      
+        const playerInTop10 = scores.some(isPlayerRow);
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
+
       scores.forEach((s, i) => {
         if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
         const isCurrent = isPlayerRow(s);
@@ -768,7 +761,9 @@ function main(): void {
       if (!playerInTop10) {
         const effectiveScore = bestScore ?? currentScore;
         const rank = await getPlayerRank(effectiveScore).catch(() => null);
+
         if (!mainElement.querySelector('.ranking-list')) return;
+        
         if (rank !== null) {
           html += `
             <hr class="ranking-divider">
@@ -788,10 +783,12 @@ function main(): void {
       const { error: submissionError } = await resolveSubmission();
       if (!mainElement.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
+
       listEl.innerHTML = `
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
       `;
+      
       listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
         listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
@@ -800,6 +797,7 @@ function main(): void {
     }
   }
 
+  const debugScreen = getDebugScreen();
   if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surface: 42 }));
   else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surface: 42, livesBonus: 20 }));
   else createStartScreen();
