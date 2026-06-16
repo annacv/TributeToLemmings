@@ -724,10 +724,6 @@ canvas {
 
 /* ---- SCORE BREAKDOWN ---- */
 
-.go-sub {
-  margin: 0 0 .5rem;
-}
-
 .go-count {
   list-style: none;
   padding: 0;
