@@ -35,9 +35,33 @@ export class Hud {
     return true;
   }
 
+  /** Toggles the low-time warning styling on the countdown digits. */
+  setTimeWarning(on: boolean): void {
+    this.el('.seconds-value')?.classList.toggle('time-warning', on);
+  }
+
+  /** Floats a self-removing "+N" pop over the score slot at a cycle breakout. */
+  popBank(points: number): void {
+    const slot = this.el('.hud-score');
+    if (!slot) return;
+    const pop = document.createElement('span');
+    pop.className = 'bank-pop';
+    pop.textContent = `+${points}`;
+    slot.appendChild(pop);
+    pop.addEventListener('animationend', () => pop.remove(), { once: true });
+  }
+
   setLevel(label: string): void {
     this.setText('.level-value', label);
     this.blinkItem('.level-item');
+  }
+
+  /** Announces a level via the center banner, replaying its show animation. */
+  showLevelBanner(label: string): void {
+    const banner = this.el('.level-up-banner');
+    if (!banner) return;
+    banner.textContent = label;
+    restartAnimation(banner, 'show');
   }
 
   initLivesIcons(lives: number, iconSrc: string): void {

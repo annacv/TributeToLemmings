@@ -357,23 +357,13 @@ export class TunnelGame implements TunnelView {
     this.bankedSeconds += share;
     this.cyclesCleared++;
     this.hud.setScore(this.secondsLeft());
-    this.showBankPop(share + LEVEL_POINTS);
+    this.hud.popBank(share + LEVEL_POINTS);
     restartAnimation(this.canvas, 'shake-light');
 
     /* Every cycle — including the last — opens the floor pit; the final breach
        hands off to the Abyss transition screen (main.ts) via the completion latch */
     this.state = 'breach';
     this.breachStep = 0;
-  }
-
-  private showBankPop(points: number): void {
-    const slot = this.hud.el('.hud-score');
-    if (!slot) return;
-    const pop = document.createElement('span');
-    pop.className = 'bank-pop';
-    pop.textContent = `+${points}`;
-    slot.appendChild(pop);
-    pop.addEventListener('animationend', () => pop.remove(), { once: true });
   }
 
   private handleCrush(): void {
@@ -420,7 +410,7 @@ export class TunnelGame implements TunnelView {
     this.stepCount++;
     if (this.hud.setScore(this.secondsLeft())) {
       /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
-      this.hud.el('.seconds-value')?.classList.toggle('time-warning', this.secondsLeft() <= 10);
+      this.hud.setTimeWarning(this.secondsLeft() <= 10);
     }
 
     if (this.state === 'event') {
@@ -499,11 +489,7 @@ export class TunnelGame implements TunnelView {
     }
     if (this.breachStep >= BREACH_PAN_END_STEPS) {
       /* Landed in the new chamber; announce the level */
-      const banner = this.hud.el('.level-up-banner');
-      if (banner) {
-        banner.textContent = `Level ${this.cyclesCleared + 1}`;
-        restartAnimation(banner, 'show');
-      }
+      this.hud.showLevelBanner(`Level ${this.cyclesCleared + 1}`);
       this.state = 'event';
       /* Stage the new level now so it's in place as the chamber arrives */
       this.setupCycle(this.cyclesCleared);
