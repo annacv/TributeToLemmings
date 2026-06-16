@@ -3,7 +3,7 @@ import {
   TunnelGame, TUNNEL_LEVELS, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
   FLOOR_FRAC, CRUSH_HEADROOM_FRAC, WARNING_HEADROOM_FRAC,
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
-  BREACH_BOOM_STEPS, BREACH_PAN_END_STEPS, BREACH_TOTAL_STEPS,
+  BREACH_BOOM_STEPS, BREACH_PAN_END_STEPS,
 } from './TunnelGame';
 import { makeBreakdown } from './lib/score';
 import { makeCanvas } from './test-helpers';
@@ -222,7 +222,7 @@ describe('TunnelGame — mechanic state machine', () => {
     game.fuseStepsLeft = 1;
     game.step();
 
-    for (let i = 0; i < BREACH_TOTAL_STEPS; i++) game.step();
+    for (let i = 0; i < BREACH_PAN_END_STEPS; i++) game.step();
     expect(game.state).toBe('event'); // announcement fired, ceiling drop running
     expect(game.secondsLeft()).toBe(frozen); // the cinematic froze the countdown
 
@@ -241,7 +241,7 @@ describe('TunnelGame — mechanic state machine', () => {
     game.state = 'armed';
     game.fuseStepsLeft = 1;
     game.step();
-    for (let i = 0; i < BREACH_TOTAL_STEPS; i++) game.step();
+    for (let i = 0; i < BREACH_PAN_END_STEPS; i++) game.step();
     const center = (game.player!.dx + game.player!.dWidth / 2) / canvas.width;
     expect(center).toBeCloseTo(pitX, 5);     // fell straight through the pit, never moved
     expect(game.player!.direction).toBe(0);  // a fall, not a walk
@@ -277,7 +277,7 @@ describe('TunnelGame — mechanic state machine', () => {
     expect(game.state).toBe('armed');        // fuse still burning
   });
 
-  it('the breach blasts the ground-hole open, holds it through the pan, then covers it over', () => {
+  it('the breach blasts the ground-hole open, then holds it open through the pan', () => {
     const game = makeTunnel(canvas);
     game.state = 'breach';
     const frame = (step: number) => {
@@ -286,9 +286,7 @@ describe('TunnelGame — mechanic state machine', () => {
     };
     expect(frame(1)).toBe(0);                        // boom: opens toward the last frame
     expect(frame(BREACH_BOOM_STEPS)).toBe(3);
-    expect(frame(BREACH_PAN_END_STEPS)).toBe(3);     // pan: held fully open
-    expect(frame(BREACH_PAN_END_STEPS + 1)).toBe(3);
-    expect(frame(BREACH_TOTAL_STEPS)).toBe(0);       // seal: covered back over
+    expect(frame(BREACH_PAN_END_STEPS)).toBe(3);     // pan: held fully open to arrival
   });
 
   it('the breach drop offset descends monotonically to a full canvas height', () => {
@@ -532,7 +530,7 @@ describe('TunnelGame — HUD countdown and banking pop', () => {
     game.state = 'armed';
     game.fuseStepsLeft = 1;
     game.step();
-    for (let i = 0; i < BREACH_TOTAL_STEPS + 48; i++) game.step();
+    for (let i = 0; i < BREACH_PAN_END_STEPS + 48; i++) game.step();
     expect(document.querySelector('.level-value')?.textContent).toBe('2');
     expect(document.querySelector('.level-up-banner')?.textContent).toBe('Level 2');
   });

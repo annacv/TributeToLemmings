@@ -44,13 +44,11 @@ const MIN_EVENT_DROP_FRAC = 0.05;   // the drop must read even if drift already 
 const FUSE_STEPS = 120;             // ~2 s lit fuse before the explosion
 
 /* Breach sequence between cycles: the booom blasts a floor pit open (frames
-   0→3), the camera drops into the next-deeper chamber, then the pit seals
-   overhead (3→0) before the next level is announced and the ceiling drops in. */
+   0→3), then the camera drops into the next-deeper chamber, which arrives clean
+   (the pit scrolled up and away) for the level announce and ceiling drop. */
 export const BREACH_BOOM_STEPS = 42; // ~0.7 s booom.svg + pit blasting open
 export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
-export const BREACH_SEAL_STEPS = 36; // ~0.6 s the pit sealing overhead
-export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat
-export const BREACH_TOTAL_STEPS = BREACH_PAN_END_STEPS + BREACH_SEAL_STEPS;
+export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat: breach ends here
 
 const RUST_ACCENT = '#A85A1C';
 const LIGHT_PRESSES = 3;
@@ -510,8 +508,8 @@ export class TunnelGame {
       this.fallingSfx.playbackRate = 2;
       this.playSfx(this.fallingSfx);
     }
-    if (this.breachStep >= BREACH_TOTAL_STEPS) {
-      /* Landed and the pit sealed overhead; announce the level */
+    if (this.breachStep >= BREACH_PAN_END_STEPS) {
+      /* Landed in the new chamber; announce the level */
       const banner = this.hud.el('.level-up-banner');
       if (banner) {
         banner.textContent = `Level ${this.cyclesCleared + 1}`;
@@ -554,17 +552,10 @@ export class TunnelGame {
     return this.headroomFrac() <= WARNING_HEADROOM_FRAC;
   }
 
-  /** Ground-hole frame for this breach step: opens 0→last (boom), held open
-      through the pan, then last→0 (seal). Reduced motion snaps without a tween. */
+  /** Ground-hole frame for this breach step: opens 0→last (boom), then held open
+      through the pan as it scrolls up and away. Reduced motion snaps open. */
   private breachHoleFrame(): number {
     const last = this.groundHoleImgs.length - 1;
-
-    if (this.breachStep > BREACH_PAN_END_STEPS) {
-      /* Seal beat: cover the hole back over (last→0) */
-      if (this.reduceMotion) return 0;
-      const t = (this.breachStep - BREACH_PAN_END_STEPS) / BREACH_SEAL_STEPS;
-      return Math.max(0, Math.min(last, Math.floor((1 - t) * (last + 1))));
-    }
 
     if (this.breachStep > BREACH_BOOM_STEPS) return last; // held open through the pan
     if (this.reduceMotion) return last;
@@ -707,32 +698,21 @@ export class TunnelGame {
   }
 
   /** The floor pit: blasts open (0→3) and scrolls up with the old chamber as the
-      camera drops, then seals overhead in the new chamber (3→0), mouth flipped down. */
+      camera drops into the new chamber. */
   private drawBreachPit(drop: number): void {
     const { ctx, canvas } = this;
     const size = canvas.width;
     const holeImg = this.groundHoleImgs[this.breachHoleFrame()];
     const holeCx = this.crackXFrac * size;
     const holeW = size * 0.4;
-    
+
     if (holeImg?.complete && holeImg.naturalWidth > 0) {
+      /* Opens in the old floor, scrolling up with the chamber */
       const holeH = holeW * (holeImg.naturalHeight / holeImg.naturalWidth);
-      
-      if (this.breachStep > BREACH_PAN_END_STEPS) {
-        /* Seals overhead in the new chamber, mouth facing down (flipped) */
-        const sealY = size * 0.2;
-        ctx.save();
-        ctx.translate(holeCx, sealY);
-        ctx.scale(1, -1);
-        ctx.drawImage(holeImg, -holeW / 2, -holeH / 2, holeW, holeH);
-        ctx.restore();
-      } else {
-        /* Opens in the old floor, scrolling up with the chamber */
-        const holeY = canvas.height * FLOOR_FRAC - drop;
-        ctx.drawImage(holeImg, holeCx - holeW / 2, holeY - holeH * 0.35, holeW, holeH);
-      }
+      const holeY = canvas.height * FLOOR_FRAC - drop;
+      ctx.drawImage(holeImg, holeCx - holeW / 2, holeY - holeH * 0.35, holeW, holeH);
     }
-    
+
     if (this.breachStep <= BREACH_BOOM_STEPS
         && this.booomImg.complete && this.booomImg.naturalWidth > 0) {
       const boomW = size * 0.3;
