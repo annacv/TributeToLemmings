@@ -337,16 +337,22 @@ export class TunnelGame {
     return bombs;
   }
 
-  /** Lay out a cycle's crack + bombs without changing state, so a transition
-      can stage them before gameplay resumes. */
-  private setupCycle(cycle: number): void {
-    this.cycle = cycle;
+  /** Clear in-progress carry/place/light/fuse and restore the floor bombs from
+      this cycle's spawn layout. Shared by cycle setup and crush respawn. */
+  private resetCycleProgress(): void {
     this.carrying = false;
     this.placedCount = 0;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
-    this.bombSpawns = this.rollBombs(TUNNEL_LEVELS[cycle].bombs);
     this.floorBombs = [...this.bombSpawns];
+  }
+
+  /** Lay out a cycle's crack + bombs without changing state, so a transition
+      can stage them before gameplay resumes. */
+  private setupCycle(cycle: number): void {
+    this.cycle = cycle;
+    this.bombSpawns = this.rollBombs(TUNNEL_LEVELS[cycle].bombs);
+    this.resetCycleProgress();
     this.rollCrack();
     this.hud.setLevel(String(cycle + 1));
   }
@@ -407,12 +413,8 @@ export class TunnelGame {
     this.player.dx = this.canvas.width * PLAYER_SPAWN_X_FRAC;
     this.player.direction = 0;
     this.state = 'explore';
-    this.carrying = false;
-    this.placedCount = 0;
-    this.lightPresses = 0;
-    this.fuseStepsLeft = 0;
+    this.resetCycleProgress();
     this.rollCrack();
-    this.floorBombs = [...this.bombSpawns];
   }
 
   step(): boolean {
