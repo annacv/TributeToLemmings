@@ -61,8 +61,8 @@ A new game screen with a puzzle mechanic: the player must blast their way out of
 1. Tunnel screen: underground environment with a confined layout, distinct from the surface game.
 2. Retro-styled info modal explaining the new controls before play begins.
 3. Unexploded bombs as pickable objects — one spacebar press picks one bomb.
-4. Player explores the tunnel left/right to find a randomly-placed crack in the wall. Crack legibility decreases per cycle (cycle 1: crack-mark 1+2 combined; cycle 2: mark 2 alone; cycle 3: mark 1 alone — the subtlest read).
-5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown). On touch devices a single contextual action button (label = current verb) replaces spacebar.
+4. Player explores the tunnel left/right to find a randomly-placed crack in the wall, marked by a single crack-mark SVG that varies per cycle (chosen via `TUNNEL_LEVELS[].crackMark`) so the read differs each cycle.
+5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown). On touch devices a single action button (press ≡ Space) replaces spacebar.
 6. Explosion breaks the crack open — triggers the next escape cycle.
 7. Three escape cycles per screen: after each successful escape, the ceiling lowers — and it keeps lowering throughout each cycle, so it can crush the lemming (the tunnel's only death source). Level differences: level 2 = new crack-mark appearance/placement + lower ceiling starting point; level 3 = the same + faster lowering velocity. Crack position randomizes each cycle to prevent memorization.
 8. Crush death and respawn: with lives remaining, the cycle restarts with the ceiling back at that cycle's starting height, the remaining countdown time, the same crack-mark appearance, and a re-randomized crack position; the fuse is cancelled and carried/placed bombs are cleared. Losing the third life routes to Game Over with the banked score only. Levels 1–2 are tuned to be effectively un-lethal within the countdown budget (guarded by a unit test); only level 3 can crush inside it.

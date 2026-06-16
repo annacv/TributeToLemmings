@@ -388,16 +388,11 @@ export class TunnelGame implements TunnelView {
     }
     if (this.crush.flash > 0) this.crush.flash--;
 
-    /* The breach beat freezes the countdown and the world */
+    /* The breach beat and the inter-cycle ceiling drop are both non-interactive:
+       freeze the countdown and the world through them (no stepCount tick) */
     if (this.state === 'breach') {
       this.stepBreach();
       return true;
-    }
-
-    this.stepCount++;
-    if (this.hud.setScore(this.secondsLeft())) {
-      /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
-      this.hud.setTimeWarning(this.secondsLeft() <= 10);
     }
 
     if (this.state === 'event') {
@@ -419,6 +414,12 @@ export class TunnelGame implements TunnelView {
         this.state = 'explore';
       }
       return true;
+    }
+
+    this.stepCount++;
+    if (this.hud.setScore(this.secondsLeft())) {
+      /* ≤10 s warning: color + pulse (reduced motion keeps color only) */
+      this.hud.setTimeWarning(this.secondsLeft() <= 10);
     }
 
     /* Continuous drift: reduced motion never stops it — it's gameplay, not decoration */
