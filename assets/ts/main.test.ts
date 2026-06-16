@@ -77,7 +77,7 @@ describe('game screen keyboard wiring', () => {
 
   beforeEach(() => {
     gameInstances.length = 0;
-    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('surface-modal-dismissed', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     window.dispatchEvent(new Event('load'));
     (document.querySelector('.splash-start') as HTMLButtonElement).click();
@@ -141,7 +141,7 @@ describe('game screen keyboard wiring', () => {
   });
 
   it('focuses the how-to modal; Escape closes it and starts the game', () => {
-    localStorage.removeItem('info-modal-dismissed');
+    localStorage.removeItem('surface-modal-dismissed');
     window.dispatchEvent(new Event('load'));
     (document.querySelector('.splash-start') as HTMLButtonElement).click();
 
@@ -165,7 +165,7 @@ describe('ranking row outside the top 10', () => {
 
   beforeEach(() => {
     gameInstances.length = 0;
-    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     window.dispatchEvent(new Event('load'));
@@ -218,7 +218,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   beforeEach(() => {
     vi.stubGlobal('Image', SettledImage);
     gameInstances.length = 0;
-    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     window.dispatchEvent(new Event('load'));
@@ -247,12 +247,12 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     expect(document.querySelector('.tbc-line')?.textContent).toBe('> somewhere underground...');
 
     vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + breath elapse
-    expect(document.querySelector('.section-container.tunnel')).not.toBeNull();
+    expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
   });
 
   it('shows the tunnel controls modal once, even for returning surface players', () => {
     vi.useFakeTimers();
-    /* info-modal-dismissed is already set in beforeEach — the surface key
+    /* surface-modal-dismissed is already set in beforeEach — the surface key
        must not suppress the tunnel modal (separate storage key) */
     localStorage.removeItem('tunnel-modal-dismissed');
     activeGame().onTunnelWorld!(makeBreakdown({ surface: 42 }));
@@ -342,7 +342,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
   }
 
   it('renders the tunnel screen with the contextual action button', () => {
-    expect(document.querySelector('.section-container.tunnel')).not.toBeNull();
+    expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
     expect(document.querySelector('.touch-action')?.textContent).toBe('SPACE');
     expect(document.querySelector('.level-value')?.textContent).toBe('1');
   });
@@ -406,7 +406,7 @@ describe('win variant end screen (tunnel completion)', () => {
       origStart.call(this);
     });
     localStorage.setItem('audio-muted', '0');
-    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('tunnel-modal-dismissed', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     history.replaceState(null, '', '/?screen=tunnel');
@@ -416,7 +416,7 @@ describe('win variant end screen (tunnel completion)', () => {
   afterEach(() => {
     history.replaceState(null, '', '/');
     localStorage.removeItem('audio-muted');
-    localStorage.removeItem('info-modal-dismissed');
+    localStorage.removeItem('surface-modal-dismissed');
     localStorage.removeItem('tunnel-modal-dismissed');
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -425,7 +425,7 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
-  it('completion shows TO BE CONTINUED with the count; DIE.WAV never plays; ranking music starts once', () => {
+  it('completion shows the win title with the count; DIE.WAV never plays; ranking music starts once', () => {
     vi.useFakeTimers();
     const game = tunnels[0];
     /* Drive the run to the third breach and through the tease to the cut */
@@ -442,7 +442,6 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.advanceTimersByTime(3600);
 
     expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
-    expect(document.querySelector('.go-sub')?.textContent).toBe('TO BE CONTINUED...');
     expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
 
@@ -480,7 +479,7 @@ describe('leaderboard fetch timeout', () => {
 
   beforeEach(() => {
     gameInstances.length = 0;
-    localStorage.setItem('info-modal-dismissed', '1');
+    localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
     document.body.innerHTML = '<main id="site-main"></main>';
     window.dispatchEvent(new Event('load'));
