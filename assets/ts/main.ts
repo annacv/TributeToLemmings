@@ -1,4 +1,4 @@
-import { Game } from './Game';
+import { SurfaceGame } from './SurfaceGame';
 import { TunnelGame } from './TunnelGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
@@ -261,7 +261,7 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameOverCallback(createGameOverScreen);
     game.tunnelWorldCallback(createTransitionScreen);
 

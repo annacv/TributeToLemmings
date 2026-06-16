@@ -24,8 +24,8 @@ vi.mock('./lib/leaderboard', () => ({
   getPlayerRank: vi.fn().mockResolvedValue(1),
 }));
 
-vi.mock('./Game', () => ({
-  Game: class {
+vi.mock('./SurfaceGame', () => ({
+  SurfaceGame: class {
     player = { setDirection: vi.fn() };
     gameSong = { muted: false };
     onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
@@ -34,7 +34,7 @@ vi.mock('./Game', () => ({
     private runController = new AbortController();
     get runSignal(): AbortSignal { return this.runController.signal; }
     constructor() { gameInstances.push(this); }
-    /* The real Game aborts runSignal before firing these — keep the mock honest */
+    /* The real SurfaceGame aborts runSignal before firing these — keep the mock honest */
     gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
       this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }

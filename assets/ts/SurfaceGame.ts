@@ -5,14 +5,13 @@ import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH } from './lib/geometry';
-import { loadImages } from './lib/images';
 import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import { SoundEffectBank } from './lib/SoundEffectBank';
+import { SurfaceRenderer } from './SurfaceRenderer';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
-  CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
 } from './assets';
 
 
@@ -28,29 +27,26 @@ const LEVEL_THRESHOLDS = [0, 18, 36];
 const PLAYER_HITBOX_INSET_X = 8;   // torso/head span x≈15–35 of 50
 const PLAYER_HITBOX_INSET_TOP = 5; // hair top starts at y≈5 of 50
 const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs never mirror
-const GROUND_TOP_FRAC = 0.71;
-const COVERAGE_COLS = 8;
-const COVERAGE_ROWS = 3;
 const COLLAPSE_COVERAGE = 0.95;
 const COLLAPSE_HOLD_MS = 500;
 const EARLY_CRACK_MISSES = 4;
 const LATE_CRACK_MISSES = 14;
 const TUNNEL_STING_WATCHDOG_MS = 4000;
 
-interface GroundStamp {
-  img: HTMLImageElement;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+/** The read-only slice of surface state the renderer draws from each frame. Keeps
+    the renderer decoupled from gameplay: it reads this view, never mutates it. */
+export interface SurfaceView {
+  readonly groundErosionActive: boolean;
+  readonly player: Player | null;
+  readonly count: number;
+  readonly bombs: readonly Bomb[];
 }
 
-export class Game {
+export class SurfaceGame implements SurfaceView {
   player: Player | null;
   bombs: Bomb[];
   isGameOver: boolean;
   canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
   onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
   score: number;
@@ -63,13 +59,7 @@ export class Game {
   tentonSfx: HTMLAudioElement;
   sfx: SoundEffectBank;
   private isTunnelTransition: boolean;
-  private erosionCanvas: HTMLCanvasElement;
-  private erosionCtx: CanvasRenderingContext2D;
-  private crackImgs: HTMLImageElement[];
-  private holeImgs: HTMLImageElement[];
-  private crackStamps: GroundStamp[];
-  private holeStamps: GroundStamp[];
-  private coveredCells: boolean[];
+  private renderer: SurfaceRenderer;
   private hud: Hud;
   private gameLoop: GameLoop;
   private run = new RunLifecycle();
@@ -79,7 +69,6 @@ export class Game {
     this.bombs = [];
     this.isGameOver = false;
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d')!;
     this.onGameOver = null;
     this.onTunnelWorld = null;
     this.score = 0;
@@ -89,9 +78,6 @@ export class Game {
     this.groundErosionActive = false;
     this.erosionCounter = 0;
     this.isTunnelTransition = false;
-    this.crackStamps = [];
-    this.holeStamps = [];
-    this.coveredCells = new Array(COVERAGE_COLS * COVERAGE_ROWS).fill(false);
     this.hud = new Hud();
 
     this.gameSong = new Audio(GAME_SONG);
@@ -103,18 +89,12 @@ export class Game {
       bang: BANG_SFX,
     }, () => this.gameSong.muted);
 
-    this.erosionCanvas = document.createElement('canvas');
-    this.erosionCanvas.width = canvas.width;
-    this.erosionCanvas.height = canvas.height;
-    this.erosionCtx = this.erosionCanvas.getContext('2d')!;
+    this.renderer = new SurfaceRenderer(canvas);
 
     this.gameLoop = new GameLoop({
       step: () => this.step(),
       render: () => this.renderFrame(),
     });
-
-    this.crackImgs = loadImages(CRACK_MARK_SVGS);
-    this.holeImgs = loadImages(GROUND_HOLE_SVGS);
   }
 
   startGame(): void {
@@ -163,8 +143,7 @@ export class Game {
   }
 
   private renderFrame(): void {
-    this.clear();
-    this.draw();
+    this.renderer.render(this);
     /* Extra frames can draw after the halt — the teardown must fire only once */
     this.run.settle(this.isGameOver, () => this.endRun());
   }
@@ -226,20 +205,18 @@ export class Game {
           if (this.groundErosionActive) {
             this.erosionCounter++;
             const impactX = bomb.dx + bomb.dWidth / 2;
-            this.stampCrack(impactX, this.erosionCounter <= EARLY_CRACK_MISSES ? 0 : 2);
-            
+            this.renderer.stampCrack(impactX, this.erosionCounter <= EARLY_CRACK_MISSES ? 0 : 2);
+
             if (this.erosionCounter > LATE_CRACK_MISSES) {
-              this.stampHole(impactX);
+              this.renderer.stampHole(impactX);
             }
-            this.drawGroundErosion();
             this.triggerGroundShake();
             this.sfx.play('bang');
 
-            if (this.groundCoverage() >= COLLAPSE_COVERAGE) {
+            if (this.renderer.coverage() >= COLLAPSE_COVERAGE) {
               // force a hole under the lemming so the fall always lines up
               if (this.player) {
-                this.stampHole(this.player.dx + this.player.dWidth / 2, true);
-                this.drawGroundErosion();
+                this.renderer.stampHole(this.player.dx + this.player.dWidth / 2, true);
               }
               this.triggerTunnelWorld();
               return;
@@ -263,92 +240,6 @@ export class Game {
 
     if (this.player && preLives !== undefined && this.player.lives < preLives) {
       this.player.triggerBlink(preLives);
-    }
-  }
-
-  clear(): void {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-  }
-
-  draw(): void {
-    if (this.groundErosionActive) {
-      this.ctx.drawImage(this.erosionCanvas, 0, 0);
-    }
-    this.player?.drawImage(this.count);
-    this.bombs.forEach((bomb) => bomb.drawImage());
-  }
-
-  private drawGroundErosion(): void {
-    this.erosionCtx.clearRect(0, 0, this.erosionCanvas.width, this.erosionCanvas.height);
-    this.drawStamps(this.holeStamps);
-    this.drawStamps(this.crackStamps);
-  }
-
-  /** Aspect ratio (w/h) from the image's intrinsic size, so resized assets keep their shape. */
-  private static imgAspect(img: HTMLImageElement, fallback: number): number {
-    return img.naturalWidth > 0 && img.naturalHeight > 0
-      ? img.naturalWidth / img.naturalHeight
-      : fallback;
-  }
-
-  /** Stamps a crack mark centered under the impact point, alternating between the
-   *  two variants of the given pair (offset 0 → marks 1/2, offset 2 → marks 3/4). */
-  private stampCrack(impactX: number, variantOffset: number): void {
-    const img = this.crackImgs[variantOffset + (this.crackStamps.length % 2)];
-    /* An asset-list edit can leave this slot empty; a missing variant must not
-       take the whole run down via imgAspect on undefined */
-    if (!img) return;
-    const h = this.canvas.height * (0.16 + Math.random() * 0.08);
-    const w = h * Game.imgAspect(img, 1 / 3);
-    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
-    const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
-    const y = bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
-    this.crackStamps.push({ img, x, y, w, h });
-  }
-
-  /** Stamps a hole (alternating star-burst and ragged-void variants) and tracks ground coverage.
-   *  `bottomAligned` pins the stamp to the canvas bottom (under the player's feet) instead of a random band y. */
-  private stampHole(impactX: number, bottomAligned = false): void {
-    const img = this.holeImgs[this.holeStamps.length % this.holeImgs.length];
-    const w = this.canvas.width * (0.25 + Math.random() * 0.08);
-    const h = w / Game.imgAspect(img, 1 / 0.6);
-    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
-    const x = Math.min(Math.max(impactX - w / 2, 0), this.canvas.width - w);
-    const y = bottomAligned
-      ? this.canvas.height - h
-      : bandTop + Math.random() * Math.max(0, this.canvas.height - bandTop - h);
-    this.holeStamps.push({ img, x, y, w, h });
-    this.markCovered(x, y, w, h);
-  }
-
-  /** Marks every coverage-grid cell the given stamp rect touches. */
-  private markCovered(x: number, y: number, w: number, h: number): void {
-    const bandTop = this.canvas.height * GROUND_TOP_FRAC;
-    const cellW = this.canvas.width / COVERAGE_COLS;
-    const cellH = (this.canvas.height - bandTop) / COVERAGE_ROWS;
-    const c0 = Math.max(0, Math.floor(x / cellW));
-    const c1 = Math.min(COVERAGE_COLS - 1, Math.floor((x + w) / cellW));
-    const r0 = Math.max(0, Math.floor((y - bandTop) / cellH));
-    const r1 = Math.min(COVERAGE_ROWS - 1, Math.floor((y - bandTop + h) / cellH));
-    for (let r = r0; r <= r1; r++) {
-      for (let c = c0; c <= c1; c++) {
-        this.coveredCells[r * COVERAGE_COLS + c] = true;
-      }
-    }
-  }
-
-  /** Fraction of the ground band currently covered by hole stamps. */
-  private groundCoverage(): number {
-    let covered = 0;
-    for (const cell of this.coveredCells) if (cell) covered++;
-    return covered / this.coveredCells.length;
-  }
-
-  private drawStamps(stamps: GroundStamp[]): void {
-    for (const stamp of stamps) {
-      if (stamp.img.complete) {
-        this.erosionCtx.drawImage(stamp.img, stamp.x, stamp.y, stamp.w, stamp.h);
-      }
     }
   }
 

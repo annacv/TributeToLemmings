@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Game } from './Game';
+import { SurfaceGame } from './SurfaceGame';
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
 import { makeBreakdown, LEVEL_POINTS } from './lib/score';
-import { makeCanvas, makeCtx } from './test-helpers';
+import { makeCanvas } from './test-helpers';
 
 // --- helpers ---
 
 function makeGameWithPlayer(canvas: HTMLCanvasElement) {
-  const game = new Game(canvas);
+  const game = new SurfaceGame(canvas);
   game.player = new Player(canvas);
-  return game as Game & { player: Player };
+  return game as SurfaceGame & { player: Player };
 }
 
-function placeBomb(game: Game, dx: number, dy = 390): Bomb {
+function placeBomb(game: SurfaceGame, dx: number, dy = 390): Bomb {
   const bomb = new Bomb(game.canvas, dx);
   bomb.dy = dy;
   game.bombs.push(bomb);
@@ -22,11 +22,11 @@ function placeBomb(game: Game, dx: number, dy = 390): Bomb {
   return bomb;
 }
 
-function placeHitBomb(game: Game, dx = 50): Bomb {
+function placeHitBomb(game: SurfaceGame, dx = 50): Bomb {
   return placeBomb(game, dx);
 }
 
-function runFrames(game: Game, frames = 6): void {
+function runFrames(game: SurfaceGame, frames = 6): void {
   for (let i = 0; i < frames; i++) game.update();
 }
 
@@ -43,7 +43,7 @@ function setupHud(iconCount = 3): void {
 
 // --- tests ---
 
-describe('Game', () => {
+describe('SurfaceGame', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
@@ -55,24 +55,24 @@ describe('Game', () => {
   });
 
   it('instantiates without throwing', () => {
-    expect(() => new Game(canvas)).not.toThrow();
+    expect(() => new SurfaceGame(canvas)).not.toThrow();
   });
 
   it('starts with no player', () => {
-    expect(new Game(canvas).player).toBeNull();
+    expect(new SurfaceGame(canvas).player).toBeNull();
   });
 
   it('starts with an empty bombs array', () => {
-    expect(new Game(canvas).bombs).toHaveLength(0);
+    expect(new SurfaceGame(canvas).bombs).toHaveLength(0);
   });
 
   it('starts with isGameOver false', () => {
-    expect(new Game(canvas).isGameOver).toBe(false);
+    expect(new SurfaceGame(canvas).isGameOver).toBe(false);
   });
 
   it('gameOverCallback sets the callback', () => {
-    const game = new Game(canvas);
-    const cb = (_score: number) => {};
+    const game = new SurfaceGame(canvas);
+    const cb = vi.fn();
     game.gameOverCallback(cb);
     expect(game.onGameOver).toBe(cb);
   });
@@ -218,7 +218,7 @@ describe('Game', () => {
   });
 
   it('has a bombHit audio element', () => {
-    expect(new Game(canvas).sfx.get('bombHit')).toBeInstanceOf(HTMLAudioElement);
+    expect(new SurfaceGame(canvas).sfx.get('bombHit')).toBeInstanceOf(HTMLAudioElement);
   });
 
   it('plays bombHit from currentTime=0 on collision when unmuted', () => {
@@ -278,24 +278,24 @@ describe('Game', () => {
 
 // ── Iteration IV: Level Progression & Ground Erosion ──────────────────────────
 
-describe('Game — level system', () => {
+describe('SurfaceGame — level system', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
   it('starts at level 1 (index 0)', () => {
-    expect(new Game(canvas).currentLevel).toBe(0);
+    expect(new SurfaceGame(canvas).currentLevel).toBe(0);
   });
 
   it('advances to level 2 when score reaches 18', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.score = 18;
     game['checkLevelUp']();
     expect(game.currentLevel).toBe(1);
   });
 
   it('advances to level 3 when score reaches 36', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.currentLevel = 1;
     game.score = 36;
     game['checkLevelUp']();
@@ -303,7 +303,7 @@ describe('Game — level system', () => {
   });
 
   it('does not advance past level 3', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.currentLevel = 2;
     game.score = 9999;
     game['checkLevelUp']();
@@ -311,7 +311,7 @@ describe('Game — level system', () => {
   });
 
   it('resets lastSpawnFrame on level-up', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.count = 1080;
     game.lastSpawnFrame = 960;
     game.score = 18;
@@ -320,18 +320,18 @@ describe('Game — level system', () => {
   });
 
   it('does not advance if score is below threshold', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.score = 17;
     game['checkLevelUp']();
     expect(game.currentLevel).toBe(0);
   });
 });
 
-describe('Game — ground erosion', () => {
+describe('SurfaceGame — ground erosion', () => {
   let canvas: HTMLCanvasElement;
 
   function makeGame() {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.player = new Player(canvas);
     return game;
   }
@@ -339,7 +339,7 @@ describe('Game — ground erosion', () => {
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
   it('groundErosionActive starts false', () => {
-    expect(new Game(canvas).groundErosionActive).toBe(false);
+    expect(new SurfaceGame(canvas).groundErosionActive).toBe(false);
   });
 
   it('activates ground erosion when level 3 starts', () => {
@@ -351,7 +351,7 @@ describe('Game — ground erosion', () => {
   });
 
   it('erosionCounter starts at 0', () => {
-    expect(new Game(canvas).erosionCounter).toBe(0);
+    expect(new SurfaceGame(canvas).erosionCounter).toBe(0);
   });
 
   it('does not increment erosionCounter when erosion is inactive (levels 1-2)', () => {
@@ -369,8 +369,8 @@ describe('Game — ground erosion', () => {
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
-    expect(game['crackStamps']).toHaveLength(0);
-    expect(game['holeStamps']).toHaveLength(0);
+    expect(game['renderer']['crackStamps']).toHaveLength(0);
+    expect(game['renderer']['holeStamps']).toHaveLength(0);
   });
 
   it('increments erosionCounter each time a bomb exits at level 3', () => {
@@ -402,18 +402,18 @@ describe('Game — ground erosion', () => {
   });
 });
 
-describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
+describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () => {
   let canvas: HTMLCanvasElement;
 
   function makeGame() {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.player = new Player(canvas);
     game.gameSong.muted = true;
     game.groundErosionActive = true;
     return game;
   }
 
-  function dropBomb(game: Game, dx = 100): Bomb {
+  function dropBomb(game: SurfaceGame, dx = 100): Bomb {
     const bomb = new Bomb(canvas, dx);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -426,15 +426,15 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
   it('adds a crack stamp for each bomb that hits the ground', () => {
     const game = makeGame();
     dropBomb(game);
-    expect(game['crackStamps']).toHaveLength(1);
+    expect(game['renderer']['crackStamps']).toHaveLength(1);
     dropBomb(game);
-    expect(game['crackStamps']).toHaveLength(2);
+    expect(game['renderer']['crackStamps']).toHaveLength(2);
   });
 
   it('centers the crack stamp under the bomb that fell', () => {
     const game = makeGame();
     const bomb = dropBomb(game, 100);
-    const stamp = game['crackStamps'][0];
+    const stamp = game['renderer']['crackStamps'][0];
     expect(stamp.x + stamp.w / 2).toBeCloseTo(100 + bomb.dWidth / 2);
   });
 
@@ -447,33 +447,33 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
   it('stamps only crack-mark-1/2 during the first four misses', () => {
     const game = makeGame();
     for (let i = 0; i < 4; i++) dropBomb(game);
-    const cracks = game['crackStamps'];
+    const cracks = game['renderer']['crackStamps'];
     expect(cracks).toHaveLength(4);
-    expect(game['holeStamps']).toHaveLength(0);
-    expect(cracks[0].img).toBe(game['crackImgs'][0]);
-    expect(cracks[1].img).toBe(game['crackImgs'][1]);
-    expect(cracks[2].img).toBe(game['crackImgs'][0]);
-    expect(cracks[3].img).toBe(game['crackImgs'][1]);
+    expect(game['renderer']['holeStamps']).toHaveLength(0);
+    expect(cracks[0].img).toBe(game['renderer']['crackImgs'][0]);
+    expect(cracks[1].img).toBe(game['renderer']['crackImgs'][1]);
+    expect(cracks[2].img).toBe(game['renderer']['crackImgs'][0]);
+    expect(cracks[3].img).toBe(game['renderer']['crackImgs'][1]);
   });
 
   it('stamps only crack-mark-3/4 during misses five to eight', () => {
     const game = makeGame();
     for (let i = 0; i < 8; i++) dropBomb(game);
-    const cracks = game['crackStamps'];
+    const cracks = game['renderer']['crackStamps'];
     expect(cracks).toHaveLength(8);
-    expect(game['holeStamps']).toHaveLength(0);
-    expect(cracks[4].img).toBe(game['crackImgs'][2]);
-    expect(cracks[5].img).toBe(game['crackImgs'][3]);
-    expect(cracks[6].img).toBe(game['crackImgs'][2]);
-    expect(cracks[7].img).toBe(game['crackImgs'][3]);
+    expect(game['renderer']['holeStamps']).toHaveLength(0);
+    expect(cracks[4].img).toBe(game['renderer']['crackImgs'][2]);
+    expect(cracks[5].img).toBe(game['renderer']['crackImgs'][3]);
+    expect(cracks[6].img).toBe(game['renderer']['crackImgs'][2]);
+    expect(cracks[7].img).toBe(game['renderer']['crackImgs'][3]);
   });
 
   it('stamps holes (cycling all four variants) from the fifteenth miss on', () => {
     const game = makeGame();
     for (let i = 0; i < 14; i++) dropBomb(game);
-    expect(game['holeStamps']).toHaveLength(0);
+    expect(game['renderer']['holeStamps']).toHaveLength(0);
     for (let i = 0; i < 5; i++) dropBomb(game);
-    const holes = game['holeStamps'];
+    const holes = game['renderer']['holeStamps'];
     expect(holes).toHaveLength(5);
     expect(holes[0].img).not.toBe(holes[1].img);
     expect(holes[4].img).toBe(holes[0].img);
@@ -482,68 +482,29 @@ describe('Game — per-hit ground feedback (cracks, holes, shake)', () => {
   it('stamps a crack at every miss, even once holes are landing', () => {
     const game = makeGame();
     for (let i = 0; i < 17; i++) dropBomb(game);
-    const cracks = game['crackStamps'];
+    const cracks = game['renderer']['crackStamps'];
     expect(cracks).toHaveLength(17);
     // hole-phase misses keep using the heavy pair (crack-mark-3/4)
-    expect(cracks[16].img).toBe(game['crackImgs'][2 + (16 % 2)]);
+    expect(cracks[16].img).toBe(game['renderer']['crackImgs'][2 + (16 % 2)]);
   });
 
   it('keeps stamps inside the ground band', () => {
     const game = makeGame();
     for (let i = 0; i < 10; i++) dropBomb(game, i % 2 === 0 ? 0 : canvas.width - 10);
-    for (const stamp of [...game['crackStamps'], ...game['holeStamps']]) {
+    for (const stamp of [...game['renderer']['crackStamps'], ...game['renderer']['holeStamps']]) {
       expect(stamp.x).toBeGreaterThanOrEqual(0);
       expect(stamp.x + stamp.w).toBeLessThanOrEqual(canvas.width);
       expect(stamp.y).toBeGreaterThanOrEqual(canvas.height * 0.71);
       expect(stamp.y + stamp.h).toBeLessThanOrEqual(canvas.height);
     }
   });
-
-  it('grows ground coverage once holes start landing', () => {
-    const game = makeGame();
-    for (let i = 0; i < 14; i++) dropBomb(game);
-    expect(game['groundCoverage']()).toBe(0);
-    dropBomb(game); // 15th miss: first hole
-    expect(game['groundCoverage']()).toBeGreaterThan(0);
-  });
 });
 
-describe('Game — erosion canvas drawing', () => {
-  let canvas: HTMLCanvasElement;
-
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
-
-  it('draws each loaded stamp onto the erosion canvas', () => {
-    const game = new Game(canvas);
-    const ctx = makeCtx();
-    game['erosionCtx'] = ctx as unknown as CanvasRenderingContext2D;
-    const img = { complete: true } as HTMLImageElement;
-    game['crackStamps'] = [{ img, x: 100, y: 350, w: 30, h: 90 }];
-
-    game['drawStamps'](game['crackStamps']);
-
-    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
-    expect(ctx.drawImage).toHaveBeenCalledWith(img, 100, 350, 30, 90);
-  });
-
-  it('skips stamps whose image has not loaded yet', () => {
-    const game = new Game(canvas);
-    const ctx = makeCtx();
-    game['erosionCtx'] = ctx as unknown as CanvasRenderingContext2D;
-    const img = { complete: false } as HTMLImageElement;
-    game['holeStamps'] = [{ img, x: 50, y: 360, w: 80, h: 48 }];
-
-    game['drawStamps'](game['holeStamps']);
-
-    expect(ctx.drawImage).not.toHaveBeenCalled();
-  });
-});
-
-describe('Game — tunnel world transition', () => {
+describe('SurfaceGame — tunnel world transition', () => {
   let canvas: HTMLCanvasElement;
 
   function makeGame() {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.player = new Player(canvas);
     game.gameSong.muted = true;
     game.groundErosionActive = true;
@@ -553,7 +514,7 @@ describe('Game — tunnel world transition', () => {
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
   it('tunnelWorldCallback registers the callback', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     const cb = vi.fn();
     game.tunnelWorldCallback(cb);
     expect(game.onTunnelWorld).toBe(cb);
@@ -561,7 +522,7 @@ describe('Game — tunnel world transition', () => {
 
   it('sets isGameOver on tunnel transition', () => {
     const game = makeGame();
-    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
+    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -571,7 +532,7 @@ describe('Game — tunnel world transition', () => {
 
   it('sets isTunnelTransition flag to prevent onGameOver firing', () => {
     const game = makeGame();
-    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
+    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -586,7 +547,7 @@ describe('Game — tunnel world transition', () => {
     const gameOverCb = vi.fn();
     game.tunnelWorldCallback(tunnelCb);
     game.gameOverCallback(gameOverCb);
-    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
+    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
 
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
@@ -607,7 +568,7 @@ describe('Game — tunnel world transition', () => {
     const game = makeGame();
     const gameOverCb = vi.fn();
     game.gameOverCallback(gameOverCb);
-    game['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
+    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
 
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
@@ -623,9 +584,9 @@ describe('Game — tunnel world transition', () => {
 
   it('collapses at 23/24 covered cells, not before', () => {
     const below = makeGame();
-    below['coveredCells'].fill(true);
-    below['coveredCells'][0] = false;
-    below['coveredCells'][1] = false; // 22/24 ≈ 0.917 < 0.95
+    below['renderer']['coveredCells'].fill(true);
+    below['renderer']['coveredCells'][0] = false;
+    below['renderer']['coveredCells'][1] = false; // 22/24 ≈ 0.917 < 0.95
     const bombA = new Bomb(canvas, 100);
     bombA.dy = canvas.height + 1;
     below.bombs.push(bombA);
@@ -633,8 +594,8 @@ describe('Game — tunnel world transition', () => {
     expect(below.isGameOver).toBe(false);
 
     const at = makeGame();
-    at['coveredCells'].fill(true);
-    at['coveredCells'][0] = false; // 23/24 ≈ 0.958 >= 0.95
+    at['renderer']['coveredCells'].fill(true);
+    at['renderer']['coveredCells'][0] = false; // 23/24 ≈ 0.958 >= 0.95
     const bombB = new Bomb(canvas, 100);
     bombB.dy = canvas.height + 1;
     at.bombs.push(bombB);
@@ -644,8 +605,8 @@ describe('Game — tunnel world transition', () => {
 
   it('force-stamps the final hole under the lemming at collapse', () => {
     const game = makeGame();
-    game['coveredCells'].fill(true);
-    game['coveredCells'][0] = false;
+    game['renderer']['coveredCells'].fill(true);
+    game['renderer']['coveredCells'][0] = false;
     game.player!.dx = 200;
 
     const bomb = new Bomb(canvas, 100);
@@ -653,7 +614,7 @@ describe('Game — tunnel world transition', () => {
     game.bombs.push(bomb);
     game.update();
 
-    const holes = game['holeStamps'];
+    const holes = game['renderer']['holeStamps'];
     expect(holes).toHaveLength(1);
     const stamp = holes[0];
     const playerCenter = 200 + game.player!.dWidth / 2;
@@ -662,19 +623,19 @@ describe('Game — tunnel world transition', () => {
   });
 });
 
-describe('Game — unmuted sting exit routes (seam-test gate)', () => {
+describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
   let canvas: HTMLCanvasElement;
 
   /* Unmuted: triggerTunnelWorld holds on the collapse sting and exits via
      whichever of ended/error/watchdog/play-rejection resolves first */
   function collapseUnmuted() {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.player = new Player(canvas);
     game.gameSong.muted = false;
     game.groundErosionActive = true;
     const tunnelCb = vi.fn();
     game.tunnelWorldCallback(tunnelCb);
-    game['coveredCells'].fill(true);
+    game['renderer']['coveredCells'].fill(true);
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -717,14 +678,14 @@ describe('Game — unmuted sting exit routes (seam-test gate)', () => {
   });
 
   it('fires the callback exactly once when play() rejects', async () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.player = new Player(canvas);
     game.gameSong.muted = false;
     game.groundErosionActive = true;
     const tunnelCb = vi.fn();
     game.tunnelWorldCallback(tunnelCb);
     game.tentonSfx.play = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
-    game['coveredCells'].fill(true);
+    game['renderer']['coveredCells'].fill(true);
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
@@ -749,7 +710,7 @@ describe('Game — unmuted sting exit routes (seam-test gate)', () => {
   });
 });
 
-describe('Game — level-up visual effects', () => {
+describe('SurfaceGame — level-up visual effects', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
@@ -773,7 +734,7 @@ describe('Game — level-up visual effects', () => {
         <span class="hud-value level-value">1</span>
       </span>
     `;
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
@@ -784,7 +745,7 @@ describe('Game — level-up visual effects', () => {
   });
 
   it('announces level 1 at game start', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
 
     game['showLevelUpEffect']();
@@ -795,7 +756,7 @@ describe('Game — level-up visual effects', () => {
   });
 
   it('shows the level-up banner with the new level number', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
@@ -807,7 +768,7 @@ describe('Game — level-up visual effects', () => {
   });
 
   it('flashes the crt-frame on level-up', () => {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
@@ -818,7 +779,7 @@ describe('Game — level-up visual effects', () => {
 
   it('triggers the earthquake shake when ground erosion activates (level 3)', () => {
     vi.useFakeTimers();
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.currentLevel = 1;
     game.score = 36;
@@ -833,7 +794,7 @@ describe('Game — level-up visual effects', () => {
 
   it('does not trigger the earthquake shake on earlier level-ups', () => {
     vi.useFakeTimers();
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
@@ -844,7 +805,7 @@ describe('Game — level-up visual effects', () => {
   });
 });
 
-describe('Game — fixed-timestep score', () => {
+describe('SurfaceGame — fixed-timestep score', () => {
   /* Captures rAF callbacks so the test drives Game's loop with chosen timestamps */
   function startWithHarness() {
     const callbacks: FrameRequestCallback[] = [];
@@ -854,7 +815,7 @@ describe('Game — fixed-timestep score', () => {
     }));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
 
-    const game = new Game(makeCanvas(468, 468));
+    const game = new SurfaceGame(makeCanvas(468, 468));
     game.gameSong.muted = true;
     game.startGame(); // synchronous first step → count is already 1 here
     return {
@@ -889,7 +850,7 @@ describe('Game — fixed-timestep score', () => {
   });
 });
 
-describe('Game — background-tab audio', () => {
+describe('SurfaceGame — background-tab audio', () => {
   let canvas: HTMLCanvasElement;
   const callbacks: FrameRequestCallback[] = [];
 
@@ -914,7 +875,7 @@ describe('Game — background-tab audio', () => {
   });
 
   function startGameWithSpies() {
-    const game = new Game(canvas);
+    const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     const playSpy = vi.fn().mockResolvedValue(undefined);
     const pauseSpy = vi.fn();
