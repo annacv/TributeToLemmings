@@ -5,6 +5,7 @@ import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH } from './lib/geometry';
+import { loadImages } from './lib/images';
 import { makeBreakdown, livesBonusPoints, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import {
@@ -112,13 +113,8 @@ export class Game {
       render: () => this.renderFrame(),
     });
 
-    const loadImgs = (srcs: readonly string[]) => srcs.map((src) => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
-    this.crackImgs = loadImgs(CRACK_MARK_SVGS);
-    this.holeImgs = loadImgs(GROUND_HOLE_SVGS);
+    this.crackImgs = loadImages(CRACK_MARK_SVGS);
+    this.holeImgs = loadImages(GROUND_HOLE_SVGS);
   }
 
   startGame(): void {

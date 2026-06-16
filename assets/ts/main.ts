@@ -5,6 +5,7 @@ import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from '
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
+import { loadImage } from './lib/images';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
@@ -326,8 +327,7 @@ function main(): void {
     const ctx = canvas.getContext('2d')!;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const undergroundImg = new Image();
-    undergroundImg.src = backgroundSvg;
+    const undergroundImg = loadImage(backgroundSvg);
 
     if (localStorage.getItem('audio-muted') !== '1') {
       safePlay(new Audio(FALLING_SFX));

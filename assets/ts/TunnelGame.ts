@@ -4,6 +4,7 @@ import { RunLifecycle } from './lib/RunLifecycle';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
+import { loadImage, loadImages } from './lib/images';
 import * as audio from './lib/audio';
 import {
   makeBreakdown, livesBonusPoints, CYCLE_CLEAR_POINTS, type ScoreBreakdown,
@@ -164,17 +165,12 @@ export class TunnelGame {
     this.scrapeSfx = new Audio(SCRAPE_SFX);
     this.fallingSfx = new Audio(FALLING_SFX);
 
-    const loadImg = (src: string) => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    };
-    this.backgroundImg = loadImg(TUNNEL_BACKGROUND_SVG);
-    this.ceilingImg = loadImg(TUNNEL_CEILING_SVG);
-    this.crackImgs = CRACK_MARK_SVGS.map(loadImg);
-    this.bombImg = loadImg(SPRITES.bomb);
-    this.booomImg = loadImg(SPRITES.booom);
-    this.groundHoleImgs = GROUND_HOLE_SVGS.map(loadImg);
+    this.backgroundImg = loadImage(TUNNEL_BACKGROUND_SVG);
+    this.ceilingImg = loadImage(TUNNEL_CEILING_SVG);
+    this.crackImgs = loadImages(CRACK_MARK_SVGS);
+    this.bombImg = loadImage(SPRITES.bomb);
+    this.booomImg = loadImage(SPRITES.booom);
+    this.groundHoleImgs = loadImages(GROUND_HOLE_SVGS);
 
     this.gameLoop = new GameLoop({
       step: () => this.step(),
