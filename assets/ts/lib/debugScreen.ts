@@ -1,4 +1,4 @@
-/* Dev-only screen seam. `?screen=tbc` / `?screen=tunnel` jumps straight to that
+/* Dev-only screen seam. `?screen=transition` / `?screen=tunnel` jumps straight to that
    screen for playtesting and marks the run so its score is never submitted to the
    leaderboard. `import.meta.env.DEV` gates it to dev builds, so production tree-
    shakes the whole thing out — it never reaches the shipped bundle.
@@ -7,7 +7,7 @@
    set the query string then dispatch `load`, so it must not be captured at import
    time), and `consumeDebugScreen` clears the param so later reads return null. */
 
-/** The active debug screen (`'tbc'` | `'tunnel'` | …), or null outside dev / when absent. */
+/** The active debug screen (`'transition'` | `'tunnel'` | …), or null outside dev / when absent. */
 export function getDebugScreen(): string | null {
   return import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('screen')

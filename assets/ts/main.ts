@@ -3,7 +3,7 @@ import { TunnelGame } from './TunnelGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
-import { getCanvasSize, LEMMING_SIZE_FRAC, TBC_GEOMETRY } from './lib/geometry';
+import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { loadImage } from './lib/images';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
@@ -18,13 +18,13 @@ type InfoModalOptions = { screenName: string; title: string; bodyHtml: string; s
 const GAME_OVER_TRANSITION_MS = 2000;
 const GAME_OVER_COUNT_HOLD_MS = 4200;
 const SUBMISSION_TIMEOUT_MS = 2500;
-const TBC_FALL_DURATION_MS = 500;
-const TBC_SCROLL_DURATION_MS = 1700;
-const TBC_REST_FADE_MS = 500;
-const TBC_TRANSITION_MS = 3000;
-const TBC_BREATH_MS = 600;
-const TBC_MESSAGE_AT_REST = 1;
-const TBC_MESSAGE_FROM_START = 0.0125;
+const TRANSITION_FALL_DURATION_MS = 500;
+const TRANSITION_SCROLL_DURATION_MS = 1700;
+const TRANSITION_REST_FADE_MS = 500;
+const TRANSITION_TOTAL_MS = 3000;
+const TRANSITION_BREATH_MS = 600;
+const TRANSITION_MESSAGE_AT_REST = 1;
+const TRANSITION_MESSAGE_FROM_START = 0.0125;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -263,7 +263,7 @@ function main(): void {
 
     const game = new Game(canvas);
     game.gameOverCallback(createGameOverScreen);
-    game.tunnelWorldCallback(createToBeContinuedScreen);
+    game.tunnelWorldCallback(createTransitionScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(
@@ -301,30 +301,30 @@ function main(): void {
      tunnel). Reused for tunnel→Abyss by passing the warm stinger, the descent art
      that reddens into the Abyss, and the win-screen arrival (see the tunnel
      completion callback). */
-  function createToBeContinuedScreen(
+  function createTransitionScreen(
     breakdown: ScoreBreakdown,
     stingerHtml = '&gt; somewhere underground...',
     onArrive: (b: ScoreBreakdown) => void = createTunnelScreen,
     backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
-    messageScrollT = TBC_MESSAGE_AT_REST,
+    messageScrollT = TRANSITION_MESSAGE_AT_REST,
   ): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
         <div class="crt-frame">
-          <canvas class="tbc-canvas" aria-hidden="true"></canvas>
-          <div class="tbc-overlay">
-            <p class="tbc-line">${stingerHtml}</p>
+          <canvas class="transition-canvas" aria-hidden="true"></canvas>
+          <div class="transition-overlay">
+            <p class="transition-line">${stingerHtml}</p>
           </div>
         </div>
       </section>
     `);
 
-    const canvas = screen.querySelector('.tbc-canvas') as HTMLCanvasElement;
+    const canvas = screen.querySelector('.transition-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
     /* Focus visible content, never the aria-hidden canvas */
-    const overlay = screen.querySelector('.tbc-overlay') as HTMLElement;
+    const overlay = screen.querySelector('.transition-overlay') as HTMLElement;
     overlay.tabIndex = -1;
     overlay.focus();
     const ctx = canvas.getContext('2d')!;
@@ -337,15 +337,15 @@ function main(): void {
     }
 
     const lemmingSize = size * LEMMING_SIZE_FRAC;
-    const bgSize = size * TBC_GEOMETRY.BG_ZOOM;
-    const surfaceBottomY = bgSize * (1 - TBC_GEOMETRY.BG_CROP_TOP_FRAC);
+    const bgSize = size * TRANSITION_GEOMETRY.BG_ZOOM;
+    const surfaceBottomY = bgSize * (1 - TRANSITION_GEOMETRY.BG_CROP_TOP_FRAC);
     /* Mirrors the shaft geometry baked into background-underground.svg so the
        lemming lands in row 0's hole */
-    const erosionFrameW = size * TBC_GEOMETRY.EROSION_SLOT_WIDTH_FRAC;
-    const erosionFrameH = erosionFrameW * TBC_GEOMETRY.GROUND_EROSION_ASPECT;
-    const erosionStackTop = size * TBC_GEOMETRY.EROSION_STACK_TOP_FRAC;
+    const erosionFrameW = size * TRANSITION_GEOMETRY.EROSION_SLOT_WIDTH_FRAC;
+    const erosionFrameH = erosionFrameW * TRANSITION_GEOMETRY.GROUND_EROSION_ASPECT;
+    const erosionStackTop = size * TRANSITION_GEOMETRY.EROSION_STACK_TOP_FRAC;
     const SCROLL_DISTANCE = surfaceBottomY + 2 * size;
-    const holeCenterY = erosionStackTop + erosionFrameH * TBC_GEOMETRY.HOLE_CENTER_Y_FRAC;
+    const holeCenterY = erosionStackTop + erosionFrameH * TRANSITION_GEOMETRY.HOLE_CENTER_Y_FRAC;
     const holeX = size * 0.5 - lemmingSize / 2;
     const holeY = holeCenterY - lemmingSize / 2;
 
@@ -386,22 +386,22 @@ function main(): void {
 
     function animate(startTime: number, now: number): void {
       const elapsed = now - startTime;
-      const fallT = Math.min(elapsed / TBC_FALL_DURATION_MS, 1);
+      const fallT = Math.min(elapsed / TRANSITION_FALL_DURATION_MS, 1);
       const lemmingY = -lemmingSize + fallT * (holeY + lemmingSize);
-      const scrollT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS, 0) / TBC_SCROLL_DURATION_MS, 1);
+      const scrollT = Math.min(Math.max(elapsed - TRANSITION_FALL_DURATION_MS, 0) / TRANSITION_SCROLL_DURATION_MS, 1);
       /* easeInOutQuart: accelerate into the dark, brake into the final frame */
       const eased = scrollT < 0.5
         ? 8 * scrollT ** 4
         : 1 - (-2 * scrollT + 2) ** 4 / 2;
       const scrollY = eased * SCROLL_DISTANCE;
-      const restT = Math.min(Math.max(elapsed - TBC_FALL_DURATION_MS - TBC_SCROLL_DURATION_MS, 0) / TBC_REST_FADE_MS, 1);
+      const restT = Math.min(Math.max(elapsed - TRANSITION_FALL_DURATION_MS - TRANSITION_SCROLL_DURATION_MS, 0) / TRANSITION_REST_FADE_MS, 1);
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
       drawScene(lemmingY, scrollY, veilAlpha);
       /* The stinger fades in at its reveal point: at rest for surface→tunnel (no
          mid-scroll cliffhanger), early for the Abyss handoff (before the reveal) */
-      if (scrollT >= messageScrollT) screen.querySelector('.tbc-overlay')?.classList.add('show');
-      if (elapsed < TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS + TBC_REST_FADE_MS) {
+      if (scrollT >= messageScrollT) screen.querySelector('.transition-overlay')?.classList.add('show');
+      if (elapsed < TRANSITION_FALL_DURATION_MS + TRANSITION_SCROLL_DURATION_MS + TRANSITION_REST_FADE_MS) {
         requestAnimationFrame((n) => animate(startTime, n));
       }
     }
@@ -414,11 +414,11 @@ function main(): void {
       started = true;
       /* Reduced motion: jump straight to the resting frame — the rest-beat
          fade and the timing of the subsequent beats still resolve */
-      const skipMs = reduceMotion ? TBC_FALL_DURATION_MS + TBC_SCROLL_DURATION_MS : 0;
+      const skipMs = reduceMotion ? TRANSITION_FALL_DURATION_MS + TRANSITION_SCROLL_DURATION_MS : 0;
       requestAnimationFrame((now) => animate(now - skipMs, now));
       /* The arrival routes into the tunnel after a short breath; the breakdown
          passes onward unchanged (surface + surface levels bonus already applied) */
-      setTimeout(() => onArrive(breakdown), TBC_TRANSITION_MS + TBC_BREATH_MS);
+      setTimeout(() => onArrive(breakdown), TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS);
     };
     let pendingImgs = [undergroundImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
@@ -458,9 +458,6 @@ function main(): void {
               </span>
             </div>
           </div>
-          <div class="tbc-overlay">
-            <p class="tbc-line">&gt; the air grows warm...</p>
-          </div>
           <button class="mute-btn" aria-label="Mute sound"></button>
         </div>
         <div class="touch-controls">
@@ -477,12 +474,12 @@ function main(): void {
     canvas.height = size;
 
     const game = new TunnelGame(canvas, breakdown);
-    game.completionCallback((b) => createToBeContinuedScreen(
+    game.completionCallback((b) => createTransitionScreen(
       b,
       '&gt; the air grows warm...',
       (bb) => createGameOverScreen(bb, 'win'),
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
-      TBC_MESSAGE_FROM_START,
+      TRANSITION_MESSAGE_FROM_START,
     ));
     game.gameOverCallback(createGameOverScreen);
 
@@ -801,7 +798,7 @@ function main(): void {
   }
 
   const debugScreen = getDebugScreen();
-  if (debugScreen === 'tbc') createToBeContinuedScreen(makeBreakdown({ surfaceTime: 42 }));
+  if (debugScreen === 'transition') createTransitionScreen(makeBreakdown({ surfaceTime: 42 }));
   else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
   else createStartScreen();
 }

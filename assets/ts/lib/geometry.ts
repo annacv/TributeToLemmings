@@ -9,8 +9,8 @@ export const BOMB_HEIGHT = 32;
 /** Lemming draw size as a fraction of the canvas on cinematic screens. */
 export const LEMMING_SIZE_FRAC = 0.14;
 
-/* Composition constants baked to background-underground.svg's To Be Continued geometry. */
-export const TBC_GEOMETRY = {
+/* Composition constants baked to background-underground.svg's transition-screen geometry. */
+export const TRANSITION_GEOMETRY = {
   /** Hole center within the erosion frame the lemming falls into. */
   HOLE_CENTER_Y_FRAC: 0.435,
   /** Ground erosion intrinsic aspect (h/w). */

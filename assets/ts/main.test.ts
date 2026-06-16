@@ -200,7 +200,7 @@ describe('ranking row outside the top 10', () => {
 });
 
 describe('interstitial routing and score passthrough (seam-test gate)', () => {
-  /* jsdom never loads images: createToBeContinuedScreen waits for the underground
+  /* jsdom never loads images: createTransitionScreen waits for the underground
      SVG to settle before arming its game-over timer. A pre-settled Image stub lets
      the stub/fallback route run start-to-end under fake timers. */
   class SettledImage {
@@ -244,7 +244,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
-    expect(document.querySelector('.tbc-line')?.textContent).toBe('> somewhere underground...');
+    expect(document.querySelector('.transition-line')?.textContent).toBe('> somewhere underground...');
 
     vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + breath elapse
     expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
@@ -437,7 +437,7 @@ describe('win variant end screen (tunnel completion)', () => {
     expect(game.isOver).toBe(true);
     game['renderFrame'](); // settle fires the completion route → Abyss fall transition
     /* The Abyss collapse-shaft transition plays first; the win screen lands after it
-       (TBC_TRANSITION_MS + TBC_BREATH_MS) */
+       (TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS) */
     vi.advanceTimersByTime(3600);
 
     expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
