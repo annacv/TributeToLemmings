@@ -30,7 +30,7 @@ export const TRANSITION_GEOMETRY = {
 export function getCanvasSize(): number {
   const isDesktop = window.innerWidth >= 768;
   const frameVPad = isDesktop ? 44 : 0;
-  const frameHPad = isDesktop ? 44 : 32;
+  const frameHPad = isDesktop ? 44 : 0;
   const uiHeight = 256;
   const maxByHeight = window.innerHeight - uiHeight - frameVPad;
   const viewportWidth = document.documentElement.clientWidth;

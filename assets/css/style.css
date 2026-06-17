@@ -67,7 +67,7 @@
   --text-md: 1rem;                              /* 16      */
   --text-lg: clamp(1.25rem, 3vw, 1.5rem);       /* 20 → 24 */
   --text-xl: clamp(1.5rem, 3.5vw, 1.75rem);     /* 24 → 28 */
-  --text-2xl: clamp(1.625rem, 4vw, 2rem);        /* 26 → 32 */
+  --text-2xl: clamp(1.5rem, 4vw, 2rem);         /* 24 → 32 */
 
   --tracking-pixel: 0.04em;
   --tracking-pixel-medium: 0.05em;
@@ -208,6 +208,15 @@ main {
   position: relative;
 }
 
+@media (max-width: 767px) {
+  .section-container.play,
+  .section-container.game-over-screen,
+  .section-container.to-be-continued-screen,
+  .section-container.ranking-screen {
+    padding: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .section-container.play,
   .section-container.game-over-screen,
@@ -242,6 +251,20 @@ main {
   background-color: var(--brand);
   flex-shrink: 0;
   padding: 1rem 1.5rem;
+}
+
+.site-container:has(.splash-hero) .site-header {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .site-container:not(:has(.splash-hero)) .site-header {
+    flex-grow: 1;
+  }
+
+  .site-container:not(:has(.splash-hero)) main {
+    flex-grow: 0;
+  }
 }
 
 .header-title {
@@ -462,11 +485,24 @@ canvas {
     background: none;
     border-radius: 0;
     box-shadow: none;
+    display: flex;
+    width: 100%;
   }
 
   .crt-frame::before,
   .crt-frame::after {
     inset: 0;
+  }
+
+  .game-canvas,
+  .tunnel-game-canvas,
+  .game-over-canvas,
+  .ranking-canvas,
+  .transition-canvas,
+  .win-tunnel-canvas {
+    width: 100%;
+    height: auto;
+    border-radius: 0;
   }
 }
 
@@ -658,8 +694,8 @@ canvas {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 580px;
-  padding: 0 .5rem;
+  padding: 0 1.5rem;
+  margin-bottom: 1.5rem;
   gap: 1.5rem;
 }
 
@@ -1032,6 +1068,21 @@ button:active {
   text-shadow: 1px 1px 0 rgba(var(--black-rgb), 0.8);
 }
 
+@media (min-width: 375px) {
+  .splash-hero,
+  .splash-form {
+    gap: 1.5rem;
+  }
+
+  .splash-tagline {
+    line-height: var(--leading-body);
+  }
+
+  .splash-name-wrap {
+    margin: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .splash-hero {
     background-size: contain;
@@ -1040,6 +1091,10 @@ button:active {
   .splash-mascot {
     width: 120px;
     height: 120px;
+  }
+
+  .splash-name-wrap {
+    margin: 1rem 0;
   }
 }
 
@@ -1177,7 +1232,6 @@ button:active {
   gap: .75rem;
   width: 100%;
   max-width: 340px;
-  margin: 1rem 0;
 }
 
 .splash-name-input {
