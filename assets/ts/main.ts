@@ -253,7 +253,7 @@ function main(): void {
           <button class="touch-left" aria-label="Move left">&#x2190;</button>
           <button class="touch-right" aria-label="Move right">&#x2192;</button>
         </div>
-        <p class="game-hint">&gt; use arrow keys to move the lemming</p>
+        <p class="game-hint">&gt; Use arrow keys to move the lemming</p>
       </section>
     `);
 
