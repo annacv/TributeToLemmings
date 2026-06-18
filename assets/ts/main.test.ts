@@ -246,7 +246,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
     expect(document.querySelector('.transition-line')?.textContent).toBe('> somewhere underground...');
 
-    vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + breath elapse
+    vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + ceiling + breath elapse
     expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
   });
 

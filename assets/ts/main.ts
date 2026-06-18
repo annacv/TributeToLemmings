@@ -10,6 +10,7 @@ import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score'
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
+  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG,
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
@@ -20,11 +21,17 @@ const GAME_OVER_COUNT_HOLD_MS = 4200;
 const SUBMISSION_TIMEOUT_MS = 2500;
 const TRANSITION_FALL_DURATION_MS = 500;
 const TRANSITION_SCROLL_DURATION_MS = 1700;
+const TRANSITION_CEILING_DURATION_MS = 600;
 const TRANSITION_REST_FADE_MS = 500;
-const TRANSITION_TOTAL_MS = 3000;
-const TRANSITION_BREATH_MS = 600;
+const TRANSITION_TOTAL_MS =
+  TRANSITION_FALL_DURATION_MS + TRANSITION_SCROLL_DURATION_MS +
+  TRANSITION_CEILING_DURATION_MS; // 2800
+const TRANSITION_BREATH_MS = 800;
 const TRANSITION_MESSAGE_AT_REST = 1;
 const TRANSITION_MESSAGE_FROM_START = 0.0125;
+const TUNNEL_CEILING_HANG_FRAC = 0.24;
+const ABYSS_CEILING_HANG_FRAC = 0.5;
+const REVEAL_FLOOR_TOP_SVG = 2688;
 
 const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
@@ -307,6 +314,8 @@ function main(): void {
     onArrive: (b: ScoreBreakdown) => void = createTunnelScreen,
     backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
     messageScrollT = TRANSITION_MESSAGE_AT_REST,
+    ceilingSvg: string = TUNNEL_CEILING_SVG,
+    ceilingHangFrac = TUNNEL_CEILING_HANG_FRAC,
   ): void {
     const size = getCanvasSize();
     const screen = buildDom(`
@@ -331,6 +340,7 @@ function main(): void {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const undergroundImg = loadImage(backgroundSvg);
+    const ceilingImg = loadImage(ceilingSvg);
 
     if (localStorage.getItem('audio-muted') !== '1') {
       safePlay(new Audio(FALLING_SFX));
@@ -348,6 +358,11 @@ function main(): void {
     const holeCenterY = erosionStackTop + erosionFrameH * TRANSITION_GEOMETRY.HOLE_CENTER_Y_FRAC;
     const holeX = size * 0.5 - lemmingSize / 2;
     const holeY = holeCenterY - lemmingSize / 2;
+    /* Where the chamber floor lands on screen once the camera has fully scrolled,
+       and the lemming's resting Y so its feet sit on it (no longer suspended). */
+    const drawYAtFullScroll = surfaceBottomY - size * 0.5 - SCROLL_DISTANCE;
+    const floorScreenY = REVEAL_FLOOR_TOP_SVG * (size / 800) + drawYAtFullScroll;
+    const landY = floorScreenY - lemmingSize;
 
     /* Debris anchored in world space below the ground; streams past during the
        scroll but never comes to rest inside the final dark frame */
@@ -358,7 +373,9 @@ function main(): void {
       h: 6 + Math.random() * 8,
     }));
 
-    function drawScene(lemmingY: number, scrollY: number, veilAlpha: number): void {
+    function drawScene(
+      lemmingY: number, scrollY: number, veilAlpha: number, hairLevel: number, ceilingDrop: number,
+    ): void {
       ctx.clearRect(0, 0, size, size);
       if (undergroundImg.complete && undergroundImg.naturalWidth > 0) {
         ctx.drawImage(undergroundImg, 0, surfaceBottomY - size * 0.5 - scrollY, size, size * 3.5);
@@ -380,28 +397,52 @@ function main(): void {
       ctx.save();
       ctx.translate(holeX, lemmingY);
       ctx.scale(lemmingSize / 142, lemmingSize / 142);
-      drawLemmingShape(ctx, '#FFFFFF', scrollY > 0 ? 4 : 0);
+      drawLemmingShape(ctx, '#FFFFFF', hairLevel);
       ctx.restore();
+      /* The ceiling slams down from above the frame to seal the lemming in. Drawn
+         last so it reads as closing over the scene; the mass stays off-screen and
+         only the lip and teeth hang into the top. */
+      if (ceilingDrop > 0 && ceilingImg.complete && ceilingImg.naturalWidth > 0) {
+        const ceilingH = size * (ceilingImg.naturalHeight / ceilingImg.naturalWidth);
+        const bottomEdge = ceilingHangFrac * size * ceilingDrop;
+        ctx.drawImage(ceilingImg, 0, bottomEdge - ceilingH, size, ceilingH);
+      }
     }
+
+    const scrollStart = TRANSITION_FALL_DURATION_MS;
+    const ceilingStart = scrollStart + TRANSITION_SCROLL_DURATION_MS;
+    const animEnd = ceilingStart + TRANSITION_CEILING_DURATION_MS;
 
     function animate(startTime: number, now: number): void {
       const elapsed = now - startTime;
       const fallT = Math.min(elapsed / TRANSITION_FALL_DURATION_MS, 1);
-      const lemmingY = -lemmingSize + fallT * (holeY + lemmingSize);
-      const scrollT = Math.min(Math.max(elapsed - TRANSITION_FALL_DURATION_MS, 0) / TRANSITION_SCROLL_DURATION_MS, 1);
+      const scrollT = Math.min(Math.max(elapsed - scrollStart, 0) / TRANSITION_SCROLL_DURATION_MS, 1);
       /* easeInOutQuart: accelerate into the dark, brake into the final frame */
       const eased = scrollT < 0.5
         ? 8 * scrollT ** 4
         : 1 - (-2 * scrollT + 2) ** 4 / 2;
       const scrollY = eased * SCROLL_DISTANCE;
-      const restT = Math.min(Math.max(elapsed - TRANSITION_FALL_DURATION_MS - TRANSITION_SCROLL_DURATION_MS, 0) / TRANSITION_REST_FADE_MS, 1);
+      /* The lemming drops into the hole, then keeps falling
+         descending with the camera and easing onto the chamber floor exactly as
+         the reveal settles */
+      const descend = 1 - (1 - scrollT) ** 2;
+      const lemmingY = fallT < 1
+        ? -lemmingSize + fallT * (holeY + lemmingSize)
+        : holeY + descend * (landY - holeY);
+      /* Ceiling: easeOutBack so it slams past the rest point then settles */
+      const ceilingT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_CEILING_DURATION_MS, 1);
+      const c = ceilingT - 1;
+      const ceilingDrop = ceilingT <= 0 ? 0 : 1 + 2.70158 * c ** 3 + 1.70158 * c ** 2;
+      const restT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_REST_FADE_MS, 1);
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
-      drawScene(lemmingY, scrollY, veilAlpha);
+      /* Wild hair through the airborne descent; calms once grounded */
+      const hairLevel = scrollY > 0 && scrollT < 1 ? 4 : 0;
+      drawScene(lemmingY, scrollY, veilAlpha, hairLevel, ceilingDrop);
       /* The stinger fades in at its reveal point: at rest for surface→tunnel (no
          mid-scroll cliffhanger), early for the Abyss handoff (before the reveal) */
       if (scrollT >= messageScrollT) screen.querySelector('.transition-overlay')?.classList.add('show');
-      if (elapsed < TRANSITION_FALL_DURATION_MS + TRANSITION_SCROLL_DURATION_MS + TRANSITION_REST_FADE_MS) {
+      if (elapsed < animEnd) {
         requestAnimationFrame((n) => animate(startTime, n));
       }
     }
@@ -412,15 +453,15 @@ function main(): void {
     const start = () => {
       if (started) return;
       started = true;
-      /* Reduced motion: jump straight to the resting frame — the rest-beat
-         fade and the timing of the subsequent beats still resolve */
-      const skipMs = reduceMotion ? TRANSITION_FALL_DURATION_MS + TRANSITION_SCROLL_DURATION_MS : 0;
+      /* Reduced motion: jump straight to the final frame — lemming grounded,
+         ceiling closed, veil already lifted */
+      const skipMs = reduceMotion ? animEnd : 0;
       requestAnimationFrame((now) => animate(now - skipMs, now));
       /* The arrival routes into the tunnel after a short breath; the breakdown
          passes onward unchanged (surface + surface levels bonus already applied) */
       setTimeout(() => onArrive(breakdown), TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS);
     };
-    let pendingImgs = [undergroundImg].filter((img) => !img.complete);
+    let pendingImgs = [undergroundImg, ceilingImg].filter((img) => !img.complete);
     const onImgSettled = (img: HTMLImageElement) => {
       pendingImgs = pendingImgs.filter((i) => i !== img);
       if (pendingImgs.length === 0) start();
@@ -480,6 +521,8 @@ function main(): void {
       (bb) => createGameOverScreen(bb, 'win'),
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
       TRANSITION_MESSAGE_FROM_START,
+      ABYSS_CEILING_SVG,
+      ABYSS_CEILING_HANG_FRAC,
     ));
     game.gameOverCallback(createGameOverScreen);
 
