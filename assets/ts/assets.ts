@@ -20,6 +20,7 @@ import backgroundUndergroundSvg from '../images/backgrounds/background-undergrou
 import backgroundUndergroundAbyssSvg from '../images/backgrounds/background-underground-abyss.svg';
 import backgroundTunnelSvg from '../images/backgrounds/background-tunnel.svg';
 import tunnelCeilingSvg from '../images/backgrounds/tunnel-ceiling.svg';
+import abyssCeilingSvg from '../images/backgrounds/abyss-ceiling.svg';
 import crackMark1Svg from '../images/backgrounds/crack-mark-1.svg';
 import crackMark2Svg from '../images/backgrounds/crack-mark-2.svg';
 import crackMark3Svg from '../images/backgrounds/crack-mark-3.svg';
@@ -56,6 +57,7 @@ export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
 export const UNDERGROUND_ABYSS_BACKGROUND_SVG = backgroundUndergroundAbyssSvg;
 export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
 export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;
+export const ABYSS_CEILING_SVG = abyssCeilingSvg;
 
 export const CRACK_MARK_SVGS = [
   crackMark1Svg,

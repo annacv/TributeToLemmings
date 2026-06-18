@@ -1,0 +1,125 @@
+<svg width="800" height="1024" viewBox="0 0 800 1024" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <!-- ABYSS CEILING (for the Abyss level, Iteration VI).
+       Same graphic language as tunnel-ceiling.svg — a filled rock mass textured
+       with rounded stone blocks, strata seams and edge accents — recoloured to
+       the Absys palette: cool-scorched up top, reddening to molten at the lip.
+       The END part keeps the red stalactites lifted from the abyss transition.
+       Self-contained: solid fills only, no external gradients. -->
+
+  <!-- Mass: scorched ironstone body. Cool-dark at the top, warming and reddening
+       as it nears the molten lip the teeth grow from. -->
+  <g id="mass">
+    <rect x="0" y="0" width="800" height="560" fill="#3A1208"/>
+    <rect x="0" y="0" width="800" height="220" fill="#2A0E06"/>
+    <rect x="0" y="360" width="800" height="200" fill="#5A1006" opacity="0.7"/>
+
+    <!-- rock blocks: overlapping scorched stone, varied reds (tunnel-ceiling
+         block texture, Absys colours) -->
+    <rect x="60" y="60" width="80" height="28" rx="9" fill="#7A1408"/>
+    <rect x="200" y="52" width="60" height="26" rx="8" fill="#5A1006"/>
+    <rect x="300" y="64" width="88" height="30" rx="10" fill="#8A1E0C"/>
+    <rect x="440" y="56" width="70" height="26" rx="9" fill="#A8341A"/>
+    <rect x="560" y="60" width="76" height="28" rx="9" fill="#7A1408"/>
+    <rect x="680" y="54" width="72" height="26" rx="8" fill="#5A1006"/>
+    <rect x="110" y="150" width="70" height="26" rx="8" fill="#8A1E0C"/>
+    <rect x="250" y="158" width="82" height="28" rx="9" fill="#6A2010"/>
+    <rect x="410" y="150" width="76" height="28" rx="9" fill="#7A1408"/>
+    <rect x="560" y="156" width="68" height="26" rx="8" fill="#A8341A"/>
+    <rect x="690" y="150" width="84" height="28" rx="10" fill="#8A1E0C"/>
+    <rect x="70" y="250" width="84" height="28" rx="10" fill="#5A1006"/>
+    <rect x="220" y="258" width="72" height="26" rx="8" fill="#8A1E0C"/>
+    <rect x="360" y="250" width="80" height="28" rx="9" fill="#A8341A"/>
+    <rect x="520" y="256" width="66" height="26" rx="8" fill="#7A1408"/>
+    <rect x="650" y="250" width="78" height="28" rx="9" fill="#6A2010"/>
+    <rect x="120" y="352" width="76" height="28" rx="9" fill="#8A1E0C"/>
+    <rect x="300" y="346" width="88" height="30" rx="10" fill="#7A1408"/>
+    <rect x="470" y="352" width="70" height="26" rx="9" fill="#A8341A"/>
+    <rect x="620" y="348" width="80" height="28" rx="9" fill="#5A1006"/>
+    <rect x="90" y="452" width="78" height="28" rx="9" fill="#7A1408"/>
+    <rect x="260" y="458" width="82" height="28" rx="9" fill="#8A1E0C"/>
+    <rect x="440" y="452" width="74" height="26" rx="9" fill="#A8341A"/>
+    <rect x="600" y="456" width="76" height="28" rx="9" fill="#6A2010"/>
+
+    <!-- strata: horizontal scorch seams banding the mass -->
+    <rect x="0" y="120" width="800" height="4" fill="#2A0E06" opacity="0.6"/>
+    <rect x="0" y="210" width="800" height="4" fill="#2A0E06" opacity="0.55"/>
+    <rect x="0" y="300" width="800" height="4" fill="#3A1208" opacity="0.5"/>
+    <rect x="0" y="400" width="800" height="4" fill="#5A1006" opacity="0.5"/>
+    <rect x="0" y="490" width="800" height="4" fill="#6A2010" opacity="0.5"/>
+
+    <!-- inner-edge shadow notches -->
+    <rect x="196" y="116" width="22" height="10" rx="4" fill="#2A0E06"/>
+    <rect x="498" y="208" width="22" height="10" rx="4" fill="#2A0E06"/>
+    <rect x="330" y="396" width="22" height="10" rx="4" fill="#3A1208"/>
+
+    <!-- ember fissures glowing in the lower, hotter mass -->
+    <rect x="180" y="424" width="6" height="68" rx="3" fill="#E86820" opacity="0.5"/>
+    <rect x="560" y="436" width="5" height="58" rx="2" fill="#F0903A" opacity="0.45"/>
+    <rect x="384" y="448" width="6" height="64" rx="3" fill="#E86820" opacity="0.5"/>
+
+    <!-- ember sparks pooling along the lip (echoes tunnel-ceiling's moss dots) -->
+    <ellipse cx="120" cy="548" rx="14" ry="4" fill="#F0903A" opacity="0.55"/>
+    <ellipse cx="300" cy="550" rx="11" ry="4" fill="#F0A848" opacity="0.5"/>
+    <ellipse cx="470" cy="548" rx="13" ry="4" fill="#E86820" opacity="0.55"/>
+    <ellipse cx="650" cy="550" rx="12" ry="4" fill="#F0A848" opacity="0.5"/>
+  </g>
+
+  <!-- END part: the molten lip + red stalactites (kept from the abyss transition).
+       Placed so the lip sits at the bottom of the mass (y560); teeth hang below. -->
+  <g transform="translate(0,-1480)">
+    <!-- the molten overhang the teeth grow from -->
+    <rect x="0" y="2040" width="800" height="56" fill="#8A1E0C"/>
+    <rect x="0" y="2040" width="800" height="18" fill="#5A1006"/>
+    <rect x="0" y="2086" width="800" height="12" fill="#C8281A" opacity="0.55"/>
+    <!-- stalactites: body (hot red), dark core, lit edge, cooled stone tip -->
+    <g id="stalactites">
+      <!-- 1 -->
+      <path d="M40 2096 L96 2096 L66 2330 Z" fill="#B81E10"/>
+      <path d="M58 2096 L84 2096 L66 2300 Z" fill="#7A1408"/>
+      <path d="M40 2096 L52 2096 L62 2260 L66 2330 Z" fill="#E04A28"/>
+      <ellipse cx="66" cy="2332" rx="4" ry="7" fill="#C89078"/>
+      <!-- 2 -->
+      <path d="M120 2096 L208 2096 L166 2440 Z" fill="#C8281A"/>
+      <path d="M142 2096 L190 2096 L166 2400 Z" fill="#8A1E0C"/>
+      <path d="M120 2096 L136 2096 L160 2360 L166 2440 Z" fill="#F06838"/>
+      <ellipse cx="166" cy="2442" rx="5" ry="9" fill="#C89078"/>
+      <!-- 3 (short) -->
+      <path d="M232 2096 L292 2096 L262 2270 Z" fill="#B81E10"/>
+      <path d="M250 2096 L278 2096 L262 2244 Z" fill="#7A1408"/>
+      <path d="M278 2096 L292 2096 L262 2270 Z" fill="#E04A28"/>
+      <ellipse cx="262" cy="2272" rx="4" ry="6" fill="#A86850"/>
+      <!-- 4 (longest) -->
+      <path d="M334 2096 L426 2096 L382 2500 Z" fill="#C8281A"/>
+      <path d="M356 2096 L406 2096 L382 2456 Z" fill="#8A1E0C"/>
+      <path d="M334 2096 L350 2096 L376 2420 L382 2500 Z" fill="#F06838"/>
+      <ellipse cx="382" cy="2502" rx="5" ry="10" fill="#C89078"/>
+      <!-- 5 -->
+      <path d="M460 2096 L536 2096 L500 2380 Z" fill="#B81E10"/>
+      <path d="M480 2096 L520 2096 L500 2344 Z" fill="#7A1408"/>
+      <path d="M520 2096 L536 2096 L500 2380 Z" fill="#E04A28"/>
+      <ellipse cx="500" cy="2382" rx="4" ry="8" fill="#C89078"/>
+      <!-- 6 (short) -->
+      <path d="M556 2096 L616 2096 L586 2286 Z" fill="#C8281A"/>
+      <path d="M574 2096 L602 2096 L586 2258 Z" fill="#8A1E0C"/>
+      <path d="M556 2096 L568 2096 L582 2250 L586 2286 Z" fill="#F06838"/>
+      <ellipse cx="586" cy="2288" rx="4" ry="6" fill="#A86850"/>
+      <!-- 7 -->
+      <path d="M640 2096 L728 2096 L686 2436 Z" fill="#B81E10"/>
+      <path d="M662 2096 L710 2096 L686 2396 Z" fill="#7A1408"/>
+      <path d="M640 2096 L656 2096 L680 2356 L686 2436 Z" fill="#E04A28"/>
+      <ellipse cx="686" cy="2438" rx="5" ry="9" fill="#C89078"/>
+      <!-- 8 (short, tucked by the wall) -->
+      <path d="M744 2096 L792 2096 L770 2250 Z" fill="#C8281A"/>
+      <path d="M756 2096 L784 2096 L770 2226 Z" fill="#8A1E0C"/>
+      <ellipse cx="770" cy="2252" rx="4" ry="6" fill="#A86850"/>
+    </g>
+    <!-- secondary teeth filling the gaps, smaller and dimmer -->
+    <g id="stalactites-minor" opacity="0.92">
+      <path d="M100 2096 L122 2096 L111 2188 Z" fill="#8A1E0C"/>
+      <path d="M308 2096 L330 2096 L319 2200 Z" fill="#8A1E0C"/>
+      <path d="M436 2096 L458 2096 L447 2176 Z" fill="#8A1E0C"/>
+      <path d="M540 2096 L560 2096 L550 2184 Z" fill="#8A1E0C"/>
+      <path d="M620 2096 L640 2096 L630 2170 Z" fill="#8A1E0C"/>
+    </g>
+  </g>
+</svg>
