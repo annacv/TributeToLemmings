@@ -98,7 +98,6 @@
   --transition-pixel-btn: background-color .15s ease, color .15s ease;
   --touch-controls-font-size: 1.5rem;
   --touch-control-size: 3rem;
-  --touch-controls-m: 1.5rem;
 }
 
 /* ---- RESET ---- */
@@ -260,15 +259,6 @@ main {
   display: none;
 }
 
-@media (max-width: 767px) {
-  .site-container:has(.section-container.play) .site-header {
-    flex-grow: 1;
-  }
-
-  .site-container:has(.section-container.play) main {
-    flex-grow: 0;
-  }
-}
 
 .header-title {
   font-size: var(--text-3xs);
@@ -285,7 +275,7 @@ main {
   height: auto;
   background-color: var(--bg-dark-navy);
   flex-shrink: 0;
-  padding: 0.25rem 1.5rem 0.75rem;
+  padding: 0.75rem 1.5rem;
 }
 
 .footer-nav {
@@ -517,8 +507,15 @@ canvas {
 
   .game-over-canvas,
   .win-tunnel-canvas,
-  .ranking-canvas {
+  .ranking-canvas,
+  .transition-canvas {
     height: 100%;
+  }
+
+  /* Square canvas buffer fills the taller mobile box; cover keeps the scene
+     undistorted (centred lemming/hole stay put, only the sides crop) */
+  .transition-canvas {
+    object-fit: cover;
   }
 }
 
@@ -710,9 +707,9 @@ canvas {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 var(--touch-controls-m);
+  padding: 0 calc(var(--touch-control-size) / 2);
   margin-bottom: var(--touch-control-size);
-  gap: var(--touch-control-m);
+  gap: var(--gap-lg);
 }
 
 .touch-left,
