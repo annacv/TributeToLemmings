@@ -1,79 +1,88 @@
-# Project's name
-TributeToLemmings
+# Tribute to Lemmings
 
-![TributeToLemmings](public/og-image.png)
+> A retro pixel-art browser game where you skip and escape, stay alive, and climb the leaderboard.
 
 ## Description
-As it was a bonus screen in the original Lemmings' game... WOW!! A classic skip-bomb game!! Try to keep alive your Lemming as much you can!!!!
+
+A loving tribute to DMA Design's classic 1991 *Lemmings* — built as if its bonus screen grew into a game of its own. Guide a single lemming through an escalating run: **skip and escape**, **stay alive** as the world turns against you, and **climb the leaderboard** against everyone else who tried.
+
+It's a tribute first and a score-chase second. Each world reinterprets the original's mood — the Surface, the Tunnel, the Abyss — and ties back to the iconography fans remember: the explosions, the doors, the balloon.
+
+## The two-world arc
+
+The run is a continuous journey across linked worlds, with score banking across the whole arc.
 
 
-## MVP (DOM - CANVAS)
-The MVP is simple: To create a game with one Lemming player, which has to skip failing bombs by using arrow commands and save the score of the amount of minutes alive. Our Lemming has 3 lifes, so it can resist to three collisions before dying.
+| World              | Status      | What you do                                                                                                                                                                       |
+| ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🟦 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
+| 🟫 **The Tunnel**  | ✅ Playable  | Trapped underground. Pick up unexploded bombs, find the crack in the wall, light the fuse, and breach your way out across three cycles — before the lowering ceiling crushes you. |
+| ⬛ **The Abyss**    | 🚧 Roadmap  | A horizontal escape through a hazard-lined corridor toward the iconic exit door, capped by the balloon cinematic.                                                                 |
+| 🎬 **The End**     | 🗺️ Planned | A dedicated finale screen — the win payoff and emotional close of the full game.                                                                                                  |
 
-We'll have 3 screens: Game start screen with a simple start button. Play Game screen (showing counter and lives left). And the Game Over screen with a restart button.
 
-If iterations are completed, we'll add a Rank Screen (and also add button in Game Over screen to access to this page). Rank Screen should also have the restart button.
+Death routes to **Game Over** with your banked score; a successful escape carries you onward to the **Ranking** (global top-10 leaderboard).
+
+## Tech stack
 
 
-## Backlog
+| Area        | Choice                                                             |
+| ----------- | ------------------------------------------------------------------ |
+| Language    | TypeScript (strict)                                                |
+| Rendering   | HTML5 Canvas — characters, hazards, and backgrounds drawn directly |
+| Build       | Vite                                                               |
+| Tests       | Vitest (+ jsdom)                                                   |
+| Leaderboard | Firebase (Firestore free tier)                                     |
+| Lint        | `tsc --noEmit` + ESLint + Prettier                                 |
+| Workflow    | Spec-driven via [OpenSpec](openspec/), one iteration per change    |
 
-##### ITERATION I — Visual Foundations & Brand Identity
-Establish the visual and brand foundations that all subsequent iterations build on.
-1. Replace JPG backgrounds with natively-designed layered SVGs (animatable, resolution-independent).
-2. Redesign the splash screen as a branded "Tribute to Lemmings" hero screen with retro pixel typography and the lemming mascot.
-3. Wrap the game canvas in a CRT/PC monitor bezel to establish the retro-computer aesthetic.
-4. Make the canvas responsive so it scales up on large screens, no longer constrained by JPG resolution.
-5. Programmatic body color: replace the three lemming SVG assets (one per health state) with a single SVG reference and draw the character directly on canvas, changing body/feet color via `ctx.fillStyle` based on lives remaining.
-6. Blink on hit: when the player loses a life the lemming flashes (alternating visible/invisible frames) before settling into the new body color.
-7. Hair animation: extra pixel groups adjacent to the main hair polygon are toggled on/off every few frames to simulate continuous hair movement.
-8. Directional flip: the lemming faces right when moving right and left when moving left via a canvas horizontal mirror transform.
-9. Lives icons: the lives counter displays one small lemming icon per remaining life. When a life is lost the corresponding icon blinks and fades out smoothly before being removed.
 
-##### ITERATION II — Global Leaderboard
-Add shared player identity and competitive scoring via an external data service (Firebase or Supabase free tier). localStorage-only storage is explicitly out of scope — a single-device ranking offers no competitive value.
-1. Optional player name input on the splash screen; blank entry auto-assigns a guest handle (e.g. `Lemming #A3F`).
-2. On game over, write `{ name, score (seconds alive), timestamp }` to the external collection.
-3. Show a Ranking screen after Game Over with the global top-10 ordered by score descending.
-4. Highlight the current player's row; show their global position even if outside the top 10.
-5. Add a one-line data notice on the splash screen: "Your nickname and score will be saved to a public leaderboard."
+## Project structure
 
-##### ITERATION III — Sound & Music
-Reinforce the emotional arc of each game moment with audio feedback sourced from the original Lemmings DOS OST.
-1. Bomb hit SFX: a short explosion pop (300–500 ms) plays each time a bomb hits the player — the biggest audio gap in the current experience.
-2. Game over sting: a distinct Lemmings DOS OST cue plays on the 2-second cinematic Game Over beat, which is currently completely silent.
-3. Ranking screen ambient: a looping Lemmings DOS OST track on the Hall of Fame screen (nice-to-have; subject to finding a suitable track).
-4. All new audio respects the existing `audio-muted` localStorage preference — muting during gameplay mutes SFX and all screens.
-5. All assets sourced from the Lemmings DOS OST for tonal and legal consistency with the tribute concept.
+```
+assets/
+  ts/
+    main.ts                 # Bootstraps the app, screen routing, splash + info modals
+    SurfaceGame.ts          # The Surface world (loop, state, transitions)
+    SurfaceRenderer.ts      # Surface draw layer
+    TunnelGame.ts           # The Tunnel world (loop, state, transitions)
+    TunnelRenderer.ts       # Tunnel draw layer
+    Player.ts  Bomb.ts      # Core entities
+    assets.ts               # Asset references
+    lib/
+      GameLoop.ts           # Fixed-timestep loop
+      RunLifecycle.ts       # Shared run/score lifecycle glue
+      score.ts  Hud.ts      # Scoring + HUD
+      audio.ts  SoundEffectBank.ts
+      firebase.ts  leaderboard.ts
+      fx.ts  geometry.ts  images.ts
+  css/  fonts/  images/  sounds/
+index.html                  # Shell: header, <main> mount, footer
+openspec/                   # Specs + iteration changes (active & archived)
+public/                     # og-image and static assets
+```
 
-##### ITERATION IV — Level Progression & Ground Erosion
-Introduce difficulty escalation and the bridge mechanic to the tunnel world.
-1. Dynamic level system: three discrete levels, each lasting 18 seconds (thresholds at 0/18/36 s survived). Level 1 starts with ~1 second between bomb spawns, decreasing per level to ~0.4 s at the final level. Bomb speed scales separately and more gradually.
-2. Level transition UI with visual and audio cues at each level change; the game opens by announcing "Level 1" (visual only, no SFX), echoing the per-level intros of the original Lemmings.
-3. Level-gated ground erosion: the ground becomes vulnerable only at the last level. Every miss etches a crack mark aligned with where the bomb fell, escalating in phases — light crack variants (1/2) first, heavier ones (3/4) from the fifth miss, and from the fifteenth miss each impact additionally punches a ground hole (4 variants cycling) until collapse. Before the last level, missed bombs exit the canvas harmlessly.
-4. Warning at the start of the last level: an earthquake shake and a warning sting signal the ground is now vulnerable.
-5. "Ground fully destroyed" trigger — when holes cover ~98% of the ground it collapses and transitions to the Tunnel World (Iteration V) via a `triggerTunnelWorld()` stub. Until Iteration V ships, this routes to a "TO BE CONTINUED" interstitial screen before Game Over.
-6. Score is time-based and cumulative across screens. Difficulty level resets to 1 at each new screen.
-7. Audio — level-up SFX: short ascending Lemmings DOS OST cue on each level transition; existing background track continues throughout.
-8. Audio — ground crack SFX: low rumble each time a bomb chips the ground (last level only); one-shot ground collapse sting when the ground is fully destroyed and the transition fires.
+## Roadmap
 
-##### ITERATION V — Tunnel Escape Puzzle
-A new game screen with a puzzle mechanic: the player must blast their way out of an underground tunnel, across three escalating escape cycles.
-1. Tunnel screen: underground environment with a confined layout, distinct from the surface game.
-2. Retro-styled info modal explaining the new controls before play begins.
-3. Unexploded bombs as pickable objects — one spacebar press picks one bomb.
-4. Player explores the tunnel left/right to find a randomly-placed crack in the wall, marked by a single crack-mark SVG that varies per cycle (chosen via `TUNNEL_LEVELS[].crackMark`) so the read differs each cycle.
-5. Place bombs at the crack, then light them with three spacebar presses (fuse animation + visual countdown). On touch devices a single action button (press ≡ Space) replaces spacebar.
-6. Explosion breaks the crack open — triggers the next escape cycle.
-7. Three escape cycles per screen: after each successful escape, the ceiling lowers — and it keeps lowering throughout each cycle, so it can crush the lemming (the tunnel's only death source). Level differences: level 2 = new crack-mark appearance/placement + lower ceiling starting point; level 3 = the same + faster lowering velocity. Crack position randomizes each cycle to prevent memorization.
-8. Crush death and respawn: with lives remaining, the cycle restarts with the ceiling back at that cycle's starting height, the remaining countdown time, the same crack-mark appearance, and a re-randomized crack position; the fuse is cancelled and carried/placed bombs are cleared. Losing the third life routes to Game Over with the banked score only. Levels 1–2 are tuned to be effectively un-lethal within the countdown budget (guarded by a unit test); only level 3 can crush inside it.
-9. After completing all three cycles, the final breach blasts the floor pit open and the run ends right there (no in-tunnel pan into a new chamber); a Tunnel→Abyss transition screen then plays the collapse-shaft fall down and routes to the **win variant** of the end screen with the full both-worlds score count. Death keeps today's `GAME OVER` screen; `THE END` is reserved for its own later iteration (VII) as a dedicated finale screen. Until then, both variants route onward to the ranking.
-10. Scoring — `TOTAL = surface seconds + tunnel seconds left (banked per cycle) + 5 × levels completed (surface levels completed + tunnel cycles completed)`. Lives are a continue resource only and never score — they reset each game, so a lives bonus would double-count survival, which time already pays for. The tunnel runs a visible 60s countdown that floors at 0 and never kills — the ceiling is the kill source; the countdown survives crush respawns (remaining time carries). A line-by-line count renders on the Game Over screen, each line showing the rule behind its points.
-11. Audio — new looping background track on screen entry, distinct from the surface game track. All subsequent audio respects the existing mute gate.
-12. Audio — SFX set: bomb pickup, light presses (match-strike per press ×3), fuse burn (looping tick during the lit fuse, stops on explosion or death), breach explosion (same meaning as on the surface: a bomb breaks earth), ceiling crush (on every life lost, shared with the surface collapse sting), ceiling lower between cycles (short grinding rumble), score count tick and total roll.
+The build runs one iteration at a time, spec-first. Iterations I–V have shipped; VI–VII are next.
 
-##### ITERATION VI — The Abyss: Horizontal Escape
+**Shipped — Iterations I–V**
+
+
+| #   | Iteration                           | Delivered                                                                                                                                                                                                                                              |
+| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| I   | Visual Foundations & Brand Identity | Layered SVG backgrounds, branded splash hero, CRT bezel, responsive canvas, canvas-drawn lemming with per-health color, blink-on-hit, hair animation, directional flip, lives icons.                                                                   |
+| II  | Global Leaderboard                  | Optional name input (guest fallback), Firestore writes on game over, global top-10 Ranking screen with the player's row/position highlighted, data notice.                                                                                             |
+| III | Sound & Music                       | Bomb-hit SFX, game-over sting, ranking ambient, all gated by the existing mute preference; assets from the Lemmings DOS OST.                                                                                                                           |
+| IV  | Level Progression & Ground Erosion  | Three-level difficulty ramp, level-transition UI/audio, level-gated ground erosion (cracks → holes → collapse), last-level earthquake warning, cumulative time-based scoring, collapse transition into the Tunnel.                                     |
+| V   | Tunnel Escape Puzzle                | Underground screen with info modal, bomb pickup + crack-finding + fuse-lighting across three cycles, lowering-ceiling crush death + respawn, Tunnel→Abyss collapse transition, full both-worlds scoring breakdown, distinct background loop + SFX set. |
+
+
+### Iteration VI — The Abyss: Horizontal Escape
+
 A horizontal side-scroll escape through an underground corridor toward the exit door.
 Art inspiration refs: `assets/images/backgrounds/refs/background-8.png`, `background-10.png`, `background-11.jpg`.
+
 1. Cold open (door-in/door-out tribute, ratified in V's round-4 review): the Abyss arrival beat shows the lemming finding a closed door and entering the new world through it — doors open the chapter that THE exit door will close.
 2. Horizontal rightward scroll: the lemming advances right through the corridor toward the iconic exit door (referencing the original Lemmings game) as the win condition.
 3. Hazards along the corridor: stalactites as fixed ceiling obstacles the player navigates around; bombs fall from trigger zones as the player passes beneath them — two distinct hazard types, not simultaneous falling objects.
@@ -84,147 +93,87 @@ Art inspiration refs: `assets/images/backgrounds/refs/background-8.png`, `backgr
 8. Audio — new looping background track on screen entry: faster and more driving than the tunnel track to convey chase energy.
 9. Audio — stalactite collision SFX (one-shot crunch on hit); door reached sting (triumphant one-shot on win condition); balloon cinematic track: the most iconic available Lemmings DOS OST cue, used as the emotional peak and payoff of the full game.
 
-##### ITERATION VII — The End
+### Iteration VII — The End
+
 A dedicated finale screen: the emotional close and win payoff of the full game. Split out from the Abyss (VI) on purpose so the ending — the screen players carry away — gets its own focus instead of being crammed into VI's plate.
+
 1. Dedicated `TheEnd` screen with its own background art and dramaturgy (composition, pacing, copy, and likely a dedicated music cue).
 2. Formalises the win ending: today the win routes through the parameterized `GAME OVER` *win* variant; `THE END` becomes a bespoke screen that replaces (or sits just ahead of) it — the exact placement relative to the Abyss balloon cinematic and the ranking is a scope-time decision. Death keeps the `GAME OVER` screen.
 3. Sequencing & gate: ships after the Abyss (VI) — it is the beat the player reaches once the Abyss escape completes — and is blocked on the dedicated background artwork being provided (not generated).
 
-
-## Data structure
-Classes and methods definition.:
-
-*Lemming*
-1. Properties
-  * canvas
-  * ctx
-  * image
-  * image.src
-  * dx
-  * dy
-  * dwidth
-  * dheight
-  * lives
-  * direction
-  * speed
-  
-2. Methods
-  * setDirection
-  * move
-  * drawImage
-
-*Bombs*
-1. Properties
-  * canvas
-  * ctx
-  * image
-  * image.src
-  * dx
-  * dy
-  * dwidth
-  * dheight
-  * direction
-  * speed
-  * isExploding
-
-2. Methods
-  * move
-  * drawImage
-
-
-## States y States Transitions
-Definition of the different states and their transition (transition functions)
-
-*1. splashScreen*
-  * create screen
-  * start event (button)
-
-*2. gameScreen*
-  * create screen
-  * game loop
-  * count score & save data
-  * display lives
-  * update / move / clear
-  * check collisions
-
-*3. gameoverScreen*
-  * create screen
-  * display score
-  * restart game
-  
-*4. rankingScreen (2nd Iteration)*
-  * create screen
-  * show rank list
-  * highlight position in rank
-
-*5. toBeContiniuedScreen (4th Iteration stub)*
-  * create interstitial screen
-  * display "TO BE CONTINUED" in retro pixel style
-  * route to gameoverScreen
-
-*6. tunnelEscapeScreen (5th Iteration)*
-  * create screen
-  * display info modal on first entry
-  * bomb pickup loop
-  * crack detection
-  * bomb placement + fuse sequence
-  * cycle state (3 escapes, ceiling lowers per cycle + drifts down within each cycle, randomise crack position)
-  * crush death + respawn (ceiling resets to cycle start height, countdown and crack appearance carry, crack position re-randomised)
-
-*7. abyssScreen (6th Iteration)*
-  * create screen
-  * horizontal scroll loop
-  * hazard placement (stalactites + bomb trigger zones)
-  * collision detection
-  * door win-condition check
-
-*8. balloonEscapeScreen (6th Iteration endgame)*
-  * non-interactive cinematic (~3–5s)
-  * balloon lift animation
-  * transition to rankingScreen
-
-*9. theEndScreen (7th Iteration)*
-  * create dedicated finale screen (own background + dramaturgy)
-  * win-ending payoff (replaces / precedes the parameterized win variant)
-  * route to rankingScreen
-
-
-## Task
-Task definition in order of priority
-1. Create screens
-2. Create game loops
-3. Create Player object
-4. Create Enemy object
-5. Player methods
-6. Object methods
-7. Test in canvas
-8. Iterations
-
 ## Development
 
 ### Prerequisites
+
 Node 18+ and npm 9+.
 
 ### Setup
+
 ```bash
 npm install
 ```
 
 ### Commands
-| Command | Description |
-|---|---|
-| `npm run dev` | Start the Vite dev server at `http://localhost:5173` |
-| `npm run build` | Bundle for production into `dist/` |
-| `npm test` | Run the Vitest test suite |
-| `npm run lint` | Type-check with `tsc` and lint with ESLint |
+
+
+| Command         | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| `npm run dev`   | Start the Vite dev server at `http://localhost:5173` |
+| `npm run build` | Bundle for production into `dist/`                   |
+| `npm test`      | Run the Vitest test suite                            |
+| `npm run lint`  | Type-check with `tsc` and lint with ESLint           |
+
 
 > **Note:** Open the game via `npm run dev`, not by double-clicking `index.html` — the file must be served through Vite for ES modules and asset paths to resolve correctly.
 
 ## Credits
 
-Audio cues are sourced from the original Lemmings DOS OST (fan-tribute posture, tonal and legal consistency with the tribute concept). Iteration V adds the underground cave loop (`113_-_Lemmings_-_DOS_-_Tim_5.ogg`) and reuses the DOS SFX set (`EXPLODE`, `SCRAPE`, `FIRE`, `BANG`, `TENTON`, `CHAIN`, `TING`, `DIE`).
+Audio comes from two fan-tribute sources, both chosen for tonal and legal consistency with the tribute concept:
+
+- The original **Lemmings DOS OST** — the music loops and the `.WAV` SFX set.
+- A set of **modern Lemmings voices** — the two `intro-` cues, cut from the *"Lemmings Voice Evolution! (1991–2021)"* compilation and distributed via [101soundboards](https://www.101soundboards.com/boards/76128-lemmings-soundboard) / [Voicy](https://www.voicy.network/official-soundboards/games/lemmings).
+
+**Music & loops**
+
+
+| File                                                 | Used for                       |
+| ---------------------------------------------------- | ------------------------------ |
+| `03_-_Lemmings_-_DOS_-_Lemming_2.ogg`                | Surface background music       |
+| `113_-_Lemmings_-_DOS_-_Tim_5.ogg`                   | Tunnel / underground cave loop |
+| `14_-_Lemmings_-_DOS_-_Dance_of_the_Reed-Flutes.ogg` | Ranking (Hall of Fame) screen  |
+
+
+**Sound effects (DOS SFX set)**
+
+
+| File           | Used for                                                         |
+| -------------- | ---------------------------------------------------------------- |
+| `FIRE.WAV`     | Surface bomb hit · Tunnel fuse burn                              |
+| `YIPPEE.WAV`   | Surface level-up cue                                             |
+| `ELECTRIC.WAV` | Surface last-level warning (ground-vulnerable / earthquake beat) |
+| `BANG.WAV`     | Bomb breaks earth — Surface ground crack · Tunnel breach         |
+| `TENTON.WAV`   | Earth comes down — Surface collapse sting · Tunnel ceiling crush |
+| `DIE.WAV`      | Death Game Over sting                                            |
+| `EXPLODE.WAV`  | Tunnel bomb pickup                                               |
+| `SCRAPE.WAV`   | Tunnel match-strike (fuse-light press)                           |
+| `CHAIN.WAV`    | Tunnel ceiling-lower grinding rumble                             |
+| `TING.WAV`     | Game Over score-tally tick                                       |
+| `MOUSEPRE.WAV` | Game Over score-total chime                                      |
+
+
+**Modern Lemmings voices** (101soundboards / Voicy — *not* DOS OST)
+
+
+| File                             | Used for                                                |
+| -------------------------------- | ------------------------------------------------------- |
+| `intro-falling-sound-effect.mp3` | World-boundary fall cue (Surface→Tunnel · Tunnel→Abyss) |
+| `intro-balloon-sound-effect.mp3` | Balloon-escape cinematic (Iteration VI — not yet wired) |
+
+
+All audio respects the in-game mute toggle and pauses when the tab is hidden.
 
 ## Links
 
-### [Link Repo](https://github.com/annacv/TributeToLemmings)
-### [Link Deploy](https://annacv.github.io/TributeToLemmings/)
+- **Repo** — [https://github.com/annacv/TributeToLemmings](https://github.com/annacv/TributeToLemmings)
+- **Play** — [https://annacv.github.io/TributeToLemmings/](https://annacv.github.io/TributeToLemmings/)
+
