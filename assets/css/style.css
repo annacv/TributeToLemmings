@@ -40,16 +40,9 @@
   --neutral-10: #f0f0f0;
   --neutral-30: #a7a7a7;
   --neutral-40: #888;
-  --neutral-80: #191919;
-  --neutral-90: #0f0f0f;
+  --neutral-80: #292929;
+  --neutral-90: #191919;
   --neutral-100: #000;
-
-   /* CRT (Cathode Ray Tube) monitor frame */
-  --crt-hi: #3a3a3a;
-  --crt-mid: #1a1a1a;
-  --crt-lo: #0d0d0d;
-  --crt-ring-hi: #555;
-  --crt-ring-lo: #222;
 
   /* Utility RGB channels for opacity composition */
   --black-rgb: 0, 0, 0;
@@ -166,7 +159,7 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  background: var(--neutral-100);
+  background: var(--neutral-90);
 }
 
 .section-container {
@@ -202,7 +195,8 @@ main {
 .section-container.to-be-continued-screen,
 .section-container.ranking-screen {
   max-width: none;
-  padding: 1.5rem 1rem 2rem;
+  flex: 1 1 auto;
+  min-height: 0;
   justify-content: center;
   align-items: center;
   flex-direction: column;
@@ -210,21 +204,11 @@ main {
   position: relative;
 }
 
-@media (max-width: 767px) {
-  .section-container.play,
-  .section-container.game-over-screen,
-  .section-container.to-be-continued-screen,
-  .section-container.ranking-screen {
-    padding: 0;
-  }
-}
-
 @media (min-width: 768px) {
   .section-container.play,
   .section-container.game-over-screen,
   .section-container.to-be-continued-screen,
   .section-container.ranking-screen {
-    padding: 2rem 1rem 2.5rem;
     justify-content: center;
   }
 }
@@ -344,16 +328,6 @@ canvas {
   max-width: 100%;
 }
 
-.game-canvas,
-.tunnel-game-canvas,
-.game-over-canvas,
-.ranking-canvas,
-.transition-canvas,
-.win-tunnel-canvas {
-  border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 1.125rem rgba(var(--black-rgb), 0.7);
-}
-
 .game-canvas {
   background-image: url("../images/backgrounds/background-game.svg");
   background-position: 50% 50%;
@@ -402,56 +376,28 @@ canvas {
   to   { background-position-x: -320px; }
 }
 
-/* ---- CRT MONITOR FRAME ---- */
+/* ---- GAME STAGE ---- */
 
-.crt-frame {
+.game-stage {
   position: relative;
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  padding: 1.125rem 1.375rem 1.625rem;
-  background: radial-gradient(
-    ellipse at 40% 30%,
-    var(--crt-hi),
-    var(--crt-mid) 60%,
-    var(--crt-lo)
-  );
-  border-radius: 14px;
-  box-shadow:
-    0 0 0 3px var(--crt-ring-hi),
-    0 0 0 6px var(--crt-ring-lo),
-    0 8px 32px rgba(var(--black-rgb), 0.8),
-    inset 0 2px 4px rgba(var(--white-rgb), 0.06);
+  max-width: 100%;
+  max-height: 100%;
 }
 
-.crt-frame::before {
+.game-stage::after {
   content: '';
   position: absolute;
-  inset: 1.125rem 1.375rem 1.625rem;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 3px,
-    rgba(var(--black-rgb), 0.06) 3px,
-    rgba(var(--black-rgb), 0.06) 4px
-  );
-  pointer-events: none;
-  z-index: 3;
-  border-radius: var(--radius-sm);
-}
-
-.crt-frame::after {
-  content: '';
-  position: absolute;
-  inset: 1.125rem 1.375rem 1.625rem;
+  inset: 0;
   background: var(--neutral-0);
   opacity: 0;
   pointer-events: none;
   z-index: 5;
-  border-radius: var(--radius-sm);
 }
 
-.crt-frame.flash-active::after {
+.game-stage.flash-active::after {
   animation: screen-flash 0.4s ease-out;
 }
 
@@ -473,23 +419,14 @@ canvas {
   90% { transform: translate(-3px, 2px); }
 }
 
-.crt-frame.shake-quake {
+.game-stage.shake-quake {
   animation: shake-quake 0.6s ease-in-out;
 }
 
 @media (max-width: 767px) {
-  .crt-frame {
-    padding: 0;
-    background: none;
-    border-radius: 0;
-    box-shadow: none;
+  .game-stage {
     display: flex;
     width: 100%;
-  }
-
-  .crt-frame::before,
-  .crt-frame::after {
-    inset: 0;
   }
 
   .game-canvas,
@@ -500,18 +437,11 @@ canvas {
   .win-tunnel-canvas {
     width: 100%;
     height: auto;
-    border-radius: 0;
   }
 
-  .section-container.game-over-screen,
-  .section-container.to-be-continued-screen,
-  .section-container.ranking-screen {
-    flex-grow: 1;
-  }
-
-  .section-container.game-over-screen .crt-frame,
-  .section-container.to-be-continued-screen .crt-frame,
-  .section-container.ranking-screen .crt-frame {
+  .section-container.game-over-screen .game-stage,
+  .section-container.to-be-continued-screen .game-stage,
+  .section-container.ranking-screen .game-stage {
     flex: 1;
     background: var(--neutral-100);
   }
@@ -692,22 +622,6 @@ canvas {
     left: 0.25rem;
     right: 0.25rem;
     padding: 0.375rem 0.5rem;
-  }
-}
-
-/* ---- GAME HINT (below CRT frame) ---- */
-
-.game-hint {
-  font-family: var(--font-pixel);
-  font-size: var(--text-4xs);
-  color: var(--neutral-10);
-  text-align: center;
-  letter-spacing: var(--tracking-pixel);
-}
-
-@media (max-width: 767px) {
-  .game-hint {
-    display: none;
   }
 }
 
@@ -1295,10 +1209,10 @@ button:active {
 
 .ranking-overlay {
   position: absolute;
-  top: 1.5rem;
+  top: .25rem;
   left: 1.5rem;
   right: 1.5rem;
-  bottom: 1.5rem;
+  bottom: .25rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1319,10 +1233,8 @@ button:active {
 
 @media (max-width: 767px) {
   .ranking-overlay {
-    top: .25rem;
     left: .25rem;
     right: .25rem;
-    bottom: .25rem;
   }
 }
 

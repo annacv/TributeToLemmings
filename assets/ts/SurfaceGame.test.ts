@@ -716,7 +716,7 @@ describe('SurfaceGame — level-up visual effects', () => {
   beforeEach(() => {
     canvas = makeCanvas(468, 468);
     document.body.innerHTML = `
-      <div class="crt-frame">
+      <div class="game-stage">
         <p class="level-up-banner"></p>
       </div>
     `;
@@ -767,14 +767,14 @@ describe('SurfaceGame — level-up visual effects', () => {
     expect(banner.classList.contains('show')).toBe(true);
   });
 
-  it('flashes the crt-frame on level-up', () => {
+  it('flashes the game stage on level-up', () => {
     const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
     game['checkLevelUp']();
 
-    expect(document.querySelector('.crt-frame')!.classList.contains('flash-active')).toBe(true);
+    expect(document.querySelector('.game-stage')!.classList.contains('flash-active')).toBe(true);
   });
 
   it('triggers the earthquake shake when ground erosion activates (level 3)', () => {
@@ -785,7 +785,7 @@ describe('SurfaceGame — level-up visual effects', () => {
     game.score = 36;
 
     game['checkLevelUp']();
-    const frame = document.querySelector('.crt-frame')!;
+    const frame = document.querySelector('.game-stage')!;
     expect(frame.classList.contains('shake-quake')).toBe(false);
 
     vi.advanceTimersByTime(300);
@@ -801,7 +801,7 @@ describe('SurfaceGame — level-up visual effects', () => {
     game['checkLevelUp']();
     vi.advanceTimersByTime(300);
 
-    expect(document.querySelector('.crt-frame')!.classList.contains('shake-quake')).toBe(false);
+    expect(document.querySelector('.game-stage')!.classList.contains('shake-quake')).toBe(false);
   });
 });
 

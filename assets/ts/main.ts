@@ -229,10 +229,9 @@ function main(): void {
     
     preloadLeaderboard();
 
-    const size = getCanvasSize();
     const gameScreen = buildDom(`
       <section class="section-container play">
-        <div class="crt-frame">
+        <div class="game-stage">
           <canvas class="game-canvas" role="img" aria-label="Game area — dodge the falling bombs"></canvas>
           <p class="level-up-banner"></p>
           <div class="game-hud">
@@ -260,11 +259,13 @@ function main(): void {
           <button class="touch-left" aria-label="Move left">&#x2190;</button>
           <button class="touch-right" aria-label="Move right">&#x2192;</button>
         </div>
-        <p class="game-hint">&gt; Use arrow keys to move the lemming</p>
       </section>
     `);
 
     const canvas = gameScreen.querySelector('canvas') as HTMLCanvasElement;
+    /* Measure after buildDom mounts the screen: only then is the splash gone and
+       the header visible, so getCanvasSize reads the real header/footer heights. */
+    const size = getCanvasSize();
     canvas.width = size;
     canvas.height = size;
 
@@ -320,7 +321,7 @@ function main(): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container to-be-continued-screen">
-        <div class="crt-frame">
+        <div class="game-stage">
           <canvas class="transition-canvas" aria-hidden="true"></canvas>
           <div class="transition-overlay">
             <p class="transition-line">${stingerHtml}</p>
@@ -477,7 +478,7 @@ function main(): void {
     const size = getCanvasSize();
     const screen = buildDom(`
       <section class="section-container play">
-        <div class="crt-frame">
+        <div class="game-stage">
           <canvas class="tunnel-game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
           <p class="level-up-banner"></p>
           <div class="game-hud">
@@ -506,7 +507,6 @@ function main(): void {
           <button class="touch-action" aria-label="Action">SPACE</button>
           <button class="touch-right" aria-label="Move right">&#x2192;</button>
         </div>
-        <p class="game-hint">&gt; Find the crack. Blast your way out!</p>
       </section>
     `);
 
@@ -581,7 +581,7 @@ function main(): void {
 
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
-        <div class="crt-frame">
+        <div class="game-stage">
         ${variant === 'win' ? 
           '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>' :
           '<canvas class="game-over-canvas" aria-hidden="true"></canvas>'}
@@ -695,7 +695,7 @@ function main(): void {
     const size = getCanvasSize();
     buildDom(`
       <section class="section-container ranking-screen">
-        <div class="crt-frame">
+        <div class="game-stage">
           <canvas class="ranking-canvas" aria-hidden="true"></canvas>
           <div class="ranking-overlay">
             <h1 class="ranking-title">Hall of Fame</h1>

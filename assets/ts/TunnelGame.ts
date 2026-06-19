@@ -51,7 +51,7 @@ const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
 export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
-/* Inner faces of the CRT cave's side-wall columns, as fractions of the 800-wide
+/* Inner faces of the cave's side-wall columns, as fractions of the 800-wide
    artwork. The lemming's sprite box is bounded inside there to stop at the walls 
    instead of clipping the rock bumps. */
 const WALL_LEFT_FRAC = 66 / 800;
