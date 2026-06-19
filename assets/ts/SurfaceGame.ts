@@ -179,11 +179,11 @@ export class SurfaceGame implements SurfaceView {
 
   private showLevelUpEffect(): void {
     this.hud.showLevelBanner(`Level ${this.currentLevel + 1}`);
-    restartAnimation(document.querySelector('.crt-frame'), 'flash-active');
+    restartAnimation(document.querySelector('.game-stage'), 'flash-active');
   }
 
   private triggerEarthquake(): void {
-    const frame = document.querySelector('.crt-frame') as HTMLElement | null;
+    const frame = document.querySelector('.game-stage') as HTMLElement | null;
     if (!frame) return;
     setTimeout(() => restartAnimation(frame, 'shake-quake'), 300);
   }

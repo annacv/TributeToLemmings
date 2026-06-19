@@ -94,12 +94,6 @@ describe('TunnelGame — skeleton and countdown', () => {
     expect(game.isOver).toBe(false); // the countdown never kills
   });
 
-  it('does not advance the countdown without steps (hidden tab freeze)', () => {
-    const game = makeTunnel(canvas);
-    const before = game.secondsLeft();
-    expect(game.secondsLeft()).toBe(before);
-  });
-
   it('pause early-returns the step: no drift, no countdown', () => {
     const game = makeTunnel(canvas);
     game.paused = true;

@@ -51,7 +51,11 @@ const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
 export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
-/* Bombs spawn in the middle band, apart from each other, so the route matters */
+/* Inner faces of the cave's side-wall columns, as fractions of the 800-wide
+   artwork. The lemming's sprite box is bounded inside there to stop at the walls 
+   instead of clipping the rock bumps. */
+const WALL_LEFT_FRAC = 66 / 800;
+const WALL_RIGHT_FRAC = 734 / 800;
 const BOMB_MIN_X_FRAC = 0.18;
 const BOMB_MAX_X_FRAC = 0.82;
 const BOMB_MIN_GAP_FRAC = 0.12;
@@ -196,6 +200,8 @@ export class TunnelGame implements TunnelView {
     this.player = new Player(this.canvas);
     this.player.dx = this.canvas.width * PLAYER_SPAWN_X_FRAC;
     this.player.dy = this.canvas.height * FLOOR_FRAC - this.player.dHeight;
+    this.player.minX = this.canvas.width * WALL_LEFT_FRAC;
+    this.player.maxX = this.canvas.width * WALL_RIGHT_FRAC - this.player.dWidth;
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
     this.hud.setText('.lives-value', String(this.player.lives));
     /* The score slot now counts down */

@@ -118,6 +118,8 @@ export class Player {
   lives: number;
   direction: number;
   speed: number;
+  minX: number;
+  maxX: number;
   blinkFramesLeft: number;
   blinkColor: string;
   blinkVisible: boolean;
@@ -132,6 +134,8 @@ export class Player {
     this.lives = 3;
     this.direction = 0;
     this.speed = 1;
+    this.minX = 0;
+    this.maxX = canvas.width - this.dWidth - 1;
     this.blinkFramesLeft = 0;
     this.blinkColor = '#FFFFFF';
     this.blinkVisible = true;
@@ -139,13 +143,12 @@ export class Player {
 
   move(): void {
     this.dx = this.dx + this.direction * this.speed;
-    const maxX = this.canvas.width - this.dWidth - 1;
     const next = this.dx + this.direction * this.speed;
 
-    if (next <= 0 || next >= maxX) {
+    if (next <= this.minX || next >= this.maxX) {
       this.direction = -this.direction;
     }
-    this.dx = Math.max(0, Math.min(this.dx, maxX));
+    this.dx = Math.max(this.minX, Math.min(this.dx, this.maxX));
   }
 
   triggerBlink(livesSnapshot?: number): void {

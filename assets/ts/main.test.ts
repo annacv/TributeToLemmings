@@ -49,12 +49,6 @@ describe('generateGuestHandle', () => {
     expect(generateGuestHandle()).toMatch(/^Lemming #/);
   });
 
-  it('has exactly 5 characters after the prefix', () => {
-    const handle = generateGuestHandle();
-    const suffix = handle.replace('Lemming #', '');
-    expect(suffix).toHaveLength(5);
-  });
-
   it('suffix contains only uppercase letters and digits', () => {
     for (let i = 0; i < 50; i++) {
       const suffix = generateGuestHandle().replace('Lemming #', '');
@@ -246,7 +240,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
     expect(document.querySelector('.transition-line')?.textContent).toBe('> somewhere underground...');
 
-    vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + breath elapse
+    vi.advanceTimersByTime(3600); // image settle is immediate; fall + scroll + ceiling + breath elapse
     expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
   });
 

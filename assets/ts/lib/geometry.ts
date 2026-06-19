@@ -24,16 +24,13 @@ export const TRANSITION_GEOMETRY = {
   EROSION_STACK_TOP_FRAC: 0.02,
 } as const;
 
-/** Square canvas size shared by all screens: viewport-fit between 280 and 580,
-    leaving room for the HUD/UI chrome. Screens with different chrome change
-    this function — they do not fork it. */
+/** Square canvas maximum size shared by all screens. */
+const MAX_CANVAS_SIZE = 532;
+
 export function getCanvasSize(): number {
-  const isDesktop = window.innerWidth >= 768;
-  const frameVPad = isDesktop ? 44 : 0;
-  const frameHPad = isDesktop ? 44 : 32;
-  const uiHeight = 256;
-  const maxByHeight = window.innerHeight - uiHeight - frameVPad;
-  const viewportWidth = document.documentElement.clientWidth;
-  const maxByWidth = viewportWidth - frameHPad;
-  return Math.max(280, Math.min(maxByWidth, maxByHeight, 580));
+  const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
+  const footerHeight = document.querySelector('.site-footer')?.getBoundingClientRect().height ?? 0;
+  const maxByHeight = window.innerHeight - headerHeight - footerHeight;
+  const maxByWidth = document.documentElement.clientWidth;
+  return Math.max(280, Math.min(maxByWidth, maxByHeight, MAX_CANVAS_SIZE));
 }

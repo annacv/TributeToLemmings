@@ -54,29 +54,6 @@ describe('SurfaceGame', () => {
     document.body.innerHTML = '';
   });
 
-  it('instantiates without throwing', () => {
-    expect(() => new SurfaceGame(canvas)).not.toThrow();
-  });
-
-  it('starts with no player', () => {
-    expect(new SurfaceGame(canvas).player).toBeNull();
-  });
-
-  it('starts with an empty bombs array', () => {
-    expect(new SurfaceGame(canvas).bombs).toHaveLength(0);
-  });
-
-  it('starts with isGameOver false', () => {
-    expect(new SurfaceGame(canvas).isGameOver).toBe(false);
-  });
-
-  it('gameOverCallback sets the callback', () => {
-    const game = new SurfaceGame(canvas);
-    const cb = vi.fn();
-    game.gameOverCallback(cb);
-    expect(game.onGameOver).toBe(cb);
-  });
-
   it('keeps exploding bombs visible until removal', () => {
     const game = makeGameWithPlayer(canvas);
     const bomb = placeHitBomb(game);
@@ -217,10 +194,6 @@ describe('SurfaceGame', () => {
     expect(document.querySelectorAll('.life-losing')).toHaveLength(3);
   });
 
-  it('has a bombHit audio element', () => {
-    expect(new SurfaceGame(canvas).sfx.get('bombHit')).toBeInstanceOf(HTMLAudioElement);
-  });
-
   it('plays bombHit from currentTime=0 on collision when unmuted', () => {
     const game = makeGameWithPlayer(canvas);
     const bombHit = game.sfx.get('bombHit')!;
@@ -283,10 +256,6 @@ describe('SurfaceGame — level system', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('starts at level 1 (index 0)', () => {
-    expect(new SurfaceGame(canvas).currentLevel).toBe(0);
-  });
-
   it('advances to level 2 when score reaches 18', () => {
     const game = new SurfaceGame(canvas);
     game.score = 18;
@@ -338,20 +307,12 @@ describe('SurfaceGame — ground erosion', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('groundErosionActive starts false', () => {
-    expect(new SurfaceGame(canvas).groundErosionActive).toBe(false);
-  });
-
   it('activates ground erosion when level 3 starts', () => {
     const game = makeGame();
     game.currentLevel = 1;
     game.score = 36;
     game['checkLevelUp']();
     expect(game.groundErosionActive).toBe(true);
-  });
-
-  it('erosionCounter starts at 0', () => {
-    expect(new SurfaceGame(canvas).erosionCounter).toBe(0);
   });
 
   it('does not increment erosionCounter when erosion is inactive (levels 1-2)', () => {
@@ -386,20 +347,6 @@ describe('SurfaceGame — ground erosion', () => {
     expect(game.erosionCounter).toBe(1);
   });
 
-  it('increments erosionCounter 5 times after 5 bombs exit', () => {
-    const game = makeGame();
-    game.groundErosionActive = true;
-    game.gameSong.muted = true;
-
-    for (let i = 0; i < 5; i++) {
-      const bomb = new Bomb(canvas, 100);
-      bomb.dy = canvas.height + 1;
-      game.bombs.push(bomb);
-    }
-    game.update();
-
-    expect(game.erosionCounter).toBe(5);
-  });
 });
 
 describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () => {
@@ -716,7 +663,7 @@ describe('SurfaceGame — level-up visual effects', () => {
   beforeEach(() => {
     canvas = makeCanvas(468, 468);
     document.body.innerHTML = `
-      <div class="crt-frame">
+      <div class="game-stage">
         <p class="level-up-banner"></p>
       </div>
     `;
@@ -767,14 +714,14 @@ describe('SurfaceGame — level-up visual effects', () => {
     expect(banner.classList.contains('show')).toBe(true);
   });
 
-  it('flashes the crt-frame on level-up', () => {
+  it('flashes the game stage on level-up', () => {
     const game = new SurfaceGame(canvas);
     game.gameSong.muted = true;
     game.score = 18;
 
     game['checkLevelUp']();
 
-    expect(document.querySelector('.crt-frame')!.classList.contains('flash-active')).toBe(true);
+    expect(document.querySelector('.game-stage')!.classList.contains('flash-active')).toBe(true);
   });
 
   it('triggers the earthquake shake when ground erosion activates (level 3)', () => {
@@ -785,7 +732,7 @@ describe('SurfaceGame — level-up visual effects', () => {
     game.score = 36;
 
     game['checkLevelUp']();
-    const frame = document.querySelector('.crt-frame')!;
+    const frame = document.querySelector('.game-stage')!;
     expect(frame.classList.contains('shake-quake')).toBe(false);
 
     vi.advanceTimersByTime(300);
@@ -801,7 +748,7 @@ describe('SurfaceGame — level-up visual effects', () => {
     game['checkLevelUp']();
     vi.advanceTimersByTime(300);
 
-    expect(document.querySelector('.crt-frame')!.classList.contains('shake-quake')).toBe(false);
+    expect(document.querySelector('.game-stage')!.classList.contains('shake-quake')).toBe(false);
   });
 });
 

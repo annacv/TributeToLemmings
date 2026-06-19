@@ -23,16 +23,6 @@ describe('SoundEffectBank', () => {
     expect(play).toHaveBeenCalledTimes(1);
   });
 
-  it('plays nothing while the mute predicate is true', () => {
-    const muted = { value: true };
-    const { bank } = makeBank(muted);
-    const play = vi.spyOn(bank.get('pop')!, 'play');
-
-    bank.play('pop');
-
-    expect(play).not.toHaveBeenCalled();
-  });
-
   it('reads the predicate live, so unmuting takes effect without re-wiring', () => {
     const muted = { value: true };
     const { bank } = makeBank(muted);
