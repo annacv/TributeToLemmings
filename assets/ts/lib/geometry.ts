@@ -25,7 +25,7 @@ export const TRANSITION_GEOMETRY = {
 } as const;
 
 /** Square canvas maximum size shared by all screens. */
-const MAX_CANVAS_SIZE = 600;
+const MAX_CANVAS_SIZE = 532;
 
 export function getCanvasSize(): number {
   const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;

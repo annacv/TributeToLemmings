@@ -33,12 +33,12 @@ const TUNNEL_CEILING_HANG_FRAC = 0.24;
 const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
 
-const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
+const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
   <path d="M10.5 6.5a2 2 0 010 3M12 4.5a5 5 0 010 7" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round"/>
 </svg>`;
 
-const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
+const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
   <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
   <path d="M11 6.5l3 3M14 6.5l-3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 </svg>`;
