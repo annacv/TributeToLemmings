@@ -105,7 +105,7 @@ A dedicated finale screen: the emotional close and win payoff of the full game. 
 
 ### Prerequisites
 
-Node 18+ and npm 9+.
+Node 24 and npm 10+.
 
 ### Setup
 
