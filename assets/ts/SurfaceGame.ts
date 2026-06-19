@@ -1,7 +1,6 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
-import { GameLoop } from './lib/GameLoop';
-import { RunLifecycle } from './lib/RunLifecycle';
+import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH } from './lib/geometry';
@@ -45,10 +44,10 @@ export interface SurfaceView {
 export class SurfaceGame implements SurfaceView {
   player: Player | null;
   bombs: Bomb[];
-  isGameOver: boolean;
+  isOver: boolean;
   canvas: HTMLCanvasElement;
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
+  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
   score: number;
   count: number;
   currentLevel: number;
@@ -58,26 +57,27 @@ export class SurfaceGame implements SurfaceView {
   gameSong: HTMLAudioElement;
   tentonSfx: HTMLAudioElement;
   sfx: SoundEffectBank;
-  private isTunnelTransition: boolean;
+  /* Neutral halt is outcome-neutral; this records which outcome occurred so
+     teardown routes to onGameOver (death) or leaves onComplete to the sting. */
+  private outcome: 'death' | 'complete';
   private renderer: SurfaceRenderer;
   private hud: Hud;
-  private gameLoop: GameLoop;
-  private run = new RunLifecycle();
+  private host: RunHost;
 
   constructor(canvas: HTMLCanvasElement) {
     this.player = null;
     this.bombs = [];
-    this.isGameOver = false;
+    this.isOver = false;
     this.canvas = canvas;
     this.onGameOver = null;
-    this.onTunnelWorld = null;
+    this.onComplete = null;
     this.score = 0;
     this.count = 0;
     this.currentLevel = 0;
     this.lastSpawnFrame = 0;
     this.groundErosionActive = false;
     this.erosionCounter = 0;
-    this.isTunnelTransition = false;
+    this.outcome = 'death';
     this.hud = new Hud();
 
     this.gameSong = new Audio(GAME_SONG);
@@ -91,9 +91,11 @@ export class SurfaceGame implements SurfaceView {
 
     this.renderer = new SurfaceRenderer(canvas);
 
-    this.gameLoop = new GameLoop({
+    this.host = new RunHost({
       step: () => this.step(),
-      render: () => this.renderFrame(),
+      render: () => this.renderer.render(this),
+      isOver: () => this.isOver,
+      onEnd: () => this.endRun(),
     });
   }
 
@@ -106,16 +108,16 @@ export class SurfaceGame implements SurfaceView {
     audio.safePlay(this.gameSong);
 
     audio.pauseWhileHidden(this.gameSong, {
-      signal: this.run.signal,
-      shouldResume: () => !this.isGameOver,
+      signal: this.host.signal,
+      shouldResume: () => !this.isOver,
     });
 
-    this.gameLoop.start();
+    this.host.start();
   }
 
   /** Aborts when the run ends — attach run-scoped listeners with this signal. */
   get runSignal(): AbortSignal {
-    return this.run.signal;
+    return this.host.signal;
   }
 
   /** One fixed 1/60 s simulation step; returns false when the run has ended. */
@@ -139,20 +141,15 @@ export class SurfaceGame implements SurfaceView {
     this.checkCollisions();
     this.displayLives();
 
-    return !this.isGameOver;
+    return !this.isOver;
   }
 
-  private renderFrame(): void {
-    this.renderer.render(this);
-    /* Extra frames can draw after the halt — the teardown must fire only once */
-    this.run.settle(this.isGameOver, () => this.endRun());
-  }
-
-  /** Stops the song and hands off to game over (unless the tunnel transition
-      takes it from here); run-scoped listeners were already dropped by settle. */
+  /** Stops the song and, on a death, hands off to game over. A completion routes
+      to onComplete through triggerTunnelWorld's sting, not here; run-scoped
+      listeners were already dropped by the host's settle. */
   private endRun(): void {
     this.gameSong.pause();
-    if (!this.isTunnelTransition) {
+    if (this.outcome === 'death') {
       this.onGameOver?.(this.currentBreakdown());
     }
   }
@@ -233,7 +230,7 @@ export class SurfaceGame implements SurfaceView {
       if (this.player) {
         this.player.lives--;
         if (this.player.lives < 1) {
-          this.isGameOver = true;
+          this.isOver = true;
         }
       }
     }
@@ -298,8 +295,8 @@ export class SurfaceGame implements SurfaceView {
     this.onGameOver = callback;
   }
 
-  tunnelWorldCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onTunnelWorld = callback;
+  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
+    this.onComplete = callback;
   }
 
   private currentBreakdown(levelsCompleted = this.currentLevel): ScoreBreakdown {
@@ -310,8 +307,8 @@ export class SurfaceGame implements SurfaceView {
   }
 
   private triggerTunnelWorld(): void {
-    this.isGameOver = true;
-    this.isTunnelTransition = true;
+    this.isOver = true;
+    this.outcome = 'complete';
     this.gameSong.pause();
 
     /* The breakdown snapshots at the moment of collapse: surface seconds + all
@@ -326,8 +323,8 @@ export class SurfaceGame implements SurfaceView {
       fired = true;
       clearTimeout(watchdog);
 
-      if (this.onTunnelWorld) {
-        this.onTunnelWorld(breakdown);
+      if (this.onComplete) {
+        this.onComplete(breakdown);
       } else {
         this.onGameOver?.(breakdown);
       }

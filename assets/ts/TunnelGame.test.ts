@@ -376,8 +376,8 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
     const onComplete = vi.fn();
     game.gameOverCallback(onGameOver);
     game.completionCallback(onComplete);
-    game['renderFrame']();
-    game['renderFrame']();
+    game['host']['frame']();
+    game['host']['frame']();
     expect(onGameOver).toHaveBeenCalledTimes(1);
     expect(onComplete).not.toHaveBeenCalled();
     /* Levels sum: 3 surface (base 15) + 1 tunnel cycle cleared × 5 = 20 */
@@ -413,8 +413,8 @@ describe('TunnelGame — completion routing', () => {
     const onComplete = vi.fn();
     game.gameOverCallback(onGameOver);
     game.completionCallback(onComplete);
-    game['renderFrame']();
-    game['renderFrame']();
+    game['host']['frame']();
+    game['host']['frame']();
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onGameOver).not.toHaveBeenCalled();
 

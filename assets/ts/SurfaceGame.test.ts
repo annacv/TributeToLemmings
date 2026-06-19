@@ -132,7 +132,7 @@ describe('SurfaceGame', () => {
     }
   });
 
-  it('sets isGameOver when last life is lost', () => {
+  it('sets isOver when last life is lost', () => {
     const game = makeGameWithPlayer(canvas);
     game.player.lives = 1;
     placeHitBomb(game);
@@ -140,7 +140,7 @@ describe('SurfaceGame', () => {
     runFrames(game);
 
     expect(game.player.lives).toBe(0);
-    expect(game.isGameOver).toBe(true);
+    expect(game.isOver).toBe(true);
   });
 
   it('a surface death scores only completed levels, never the level died on', () => {
@@ -153,10 +153,10 @@ describe('SurfaceGame', () => {
 
     placeHitBomb(game);
     runFrames(game);
-    expect(game.isGameOver).toBe(true);
+    expect(game.isOver).toBe(true);
 
-    game['renderFrame']();
-    game['renderFrame']();
+    game['host']['frame']();
+    game['host']['frame']();
 
     expect(onGameOver).toHaveBeenCalledWith(
       makeBreakdown({ surfaceTime: 40, levelsBonus: 2 * LEVEL_POINTS }),
@@ -460,39 +460,39 @@ describe('SurfaceGame — tunnel world transition', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('tunnelWorldCallback registers the callback', () => {
+  it('completionCallback registers the callback', () => {
     const game = new SurfaceGame(canvas);
     const cb = vi.fn();
-    game.tunnelWorldCallback(cb);
-    expect(game.onTunnelWorld).toBe(cb);
+    game.completionCallback(cb);
+    expect(game.onComplete).toBe(cb);
   });
 
-  it('sets isGameOver on tunnel transition', () => {
+  it('sets isOver on tunnel transition', () => {
     const game = makeGame();
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
-    expect(game.isGameOver).toBe(true);
+    expect(game.isOver).toBe(true);
   });
 
-  it('sets isTunnelTransition flag to prevent onGameOver firing', () => {
+  it('records the complete outcome on tunnel transition (so teardown skips onGameOver)', () => {
     const game = makeGame();
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
-    expect(game['isTunnelTransition']).toBe(true);
+    expect(game['outcome']).toBe('complete');
   });
 
-  it('fires onTunnelWorld callback (not onGameOver) after the muted hold elapses', () => {
+  it('fires onComplete callback (not onGameOver) after the muted hold elapses', () => {
     vi.useFakeTimers();
     const game = makeGame();
     const tunnelCb = vi.fn();
     const gameOverCb = vi.fn();
-    game.tunnelWorldCallback(tunnelCb);
+    game.completionCallback(tunnelCb);
     game.gameOverCallback(gameOverCb);
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
 
@@ -510,7 +510,7 @@ describe('SurfaceGame — tunnel world transition', () => {
     vi.useRealTimers();
   });
 
-  it('falls back to onGameOver when onTunnelWorld is null (muted)', () => {
+  it('falls back to onGameOver when onComplete is null (muted)', () => {
     vi.useFakeTimers();
     const game = makeGame();
     const gameOverCb = vi.fn();
@@ -538,7 +538,7 @@ describe('SurfaceGame — tunnel world transition', () => {
     bombA.dy = canvas.height + 1;
     below.bombs.push(bombA);
     below.update();
-    expect(below.isGameOver).toBe(false);
+    expect(below.isOver).toBe(false);
 
     const at = makeGame();
     at['renderer']['coveredCells'].fill(true);
@@ -547,7 +547,7 @@ describe('SurfaceGame — tunnel world transition', () => {
     bombB.dy = canvas.height + 1;
     at.bombs.push(bombB);
     at.update();
-    expect(at.isGameOver).toBe(true);
+    expect(at.isOver).toBe(true);
   });
 
   it('force-stamps the final hole under the lemming at collapse', () => {
@@ -581,7 +581,7 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
     game.gameSong.muted = false;
     game.groundErosionActive = true;
     const tunnelCb = vi.fn();
-    game.tunnelWorldCallback(tunnelCb);
+    game.completionCallback(tunnelCb);
     game['renderer']['coveredCells'].fill(true);
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
@@ -630,7 +630,7 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
     game.gameSong.muted = false;
     game.groundErosionActive = true;
     const tunnelCb = vi.fn();
-    game.tunnelWorldCallback(tunnelCb);
+    game.completionCallback(tunnelCb);
     game.tentonSfx.play = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
     game['renderer']['coveredCells'].fill(true);
     const bomb = new Bomb(canvas, 100);
@@ -844,7 +844,7 @@ describe('SurfaceGame — background-tab audio', () => {
 
   it('does not resume the song once the run has ended (dead instance stays silent)', () => {
     const { game, playSpy } = startGameWithSpies();
-    game.isGameOver = true;
+    game.isOver = true;
     callbacks.shift()?.(1000); // the halting render runs the teardown
     playSpy.mockClear();
     setHidden(true);
@@ -856,7 +856,7 @@ describe('SurfaceGame — background-tab audio', () => {
     const { game } = startGameWithSpies();
     const gameOverCb = vi.fn();
     game.gameOverCallback(gameOverCb);
-    game.isGameOver = true;
+    game.isOver = true;
     callbacks.shift()?.(1000);
     callbacks.shift()?.(1008);
     callbacks.shift()?.(1012);

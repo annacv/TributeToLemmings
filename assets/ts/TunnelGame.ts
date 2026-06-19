@@ -1,6 +1,5 @@
 import { Player } from './Player';
-import { GameLoop } from './lib/GameLoop';
-import { RunLifecycle } from './lib/RunLifecycle';
+import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
@@ -125,9 +124,8 @@ export class TunnelGame implements TunnelView {
   private warningArmed: boolean;
   readonly reduceMotion: boolean;
   private hud: Hud;
-  private gameLoop: GameLoop;
+  private host: RunHost;
   private renderer: TunnelRenderer;
-  private run = new RunLifecycle();
   padArriveSteps = 0;
   padNudgeSteps = 0;
   padNudgeDir = 1;
@@ -178,14 +176,16 @@ export class TunnelGame implements TunnelView {
 
     this.renderer = new TunnelRenderer(canvas);
 
-    this.gameLoop = new GameLoop({
+    this.host = new RunHost({
       step: () => this.step(),
-      render: () => this.renderFrame(),
+      render: () => this.renderer.render(this),
+      isOver: () => this.isOver,
+      onEnd: () => this.endRun(),
     });
   }
 
   get runSignal(): AbortSignal {
-    return this.run.signal;
+    return this.host.signal;
   }
 
   gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
@@ -208,7 +208,7 @@ export class TunnelGame implements TunnelView {
     this.hud.setScore(this.secondsLeft());
     this.hud.blinkItem('.hud-score');
     this.beginCycle(0);
-    this.gameLoop.start();
+    this.host.start();
   }
 
   /** Perform the current action verb */
@@ -497,12 +497,6 @@ export class TunnelGame implements TunnelView {
       this.sfx.play('rumble');
       restartAnimation(this.canvas, 'shake-light');
     }
-  }
-
-  private renderFrame(): void {
-    this.renderer.render(this);
-    /* Frames can still draw after the halt; the latch fires teardown once */
-    this.run.settle(this.isOver, () => this.endRun());
   }
 
   private endRun(): void {
