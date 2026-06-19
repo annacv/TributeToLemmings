@@ -26,6 +26,8 @@
   /* Brand */
   --brand: #54bbfe;
   --brand-rgb: 84, 187, 254;
+  --brand-dark: #0c062b;
+  --brand-light: #cce8ff;
 
   /* Accent */
   --accent: #FEBD00;
@@ -33,19 +35,16 @@
   /* Error */
   --error: #ff6b6b;
 
-  /* Backgrounds */
-  --bg-black: #000;
-  --bg-near-black: #0a0a0a;
-  --bg-dark-navy: #0d062b;
+  /* Neutrals */
+  --neutral-0: #fff;
+  --neutral-10: #f0f0f0;
+  --neutral-30: #a7a7a7;
+  --neutral-40: #888;
+  --neutral-80: #191919;
+  --neutral-90: #0f0f0f;
+  --neutral-100: #000;
 
-  /* Text */
-  --text-white: #fff;
-  --text-header: #0c062b;
-  --text-muted: #888;
-  --text-subtle: #a7a7a7;
-  --text-soft-blue: #cce8ff;
-
-  /* CRT (Cathode Ray Tube) monitor frame */
+   /* CRT (Cathode Ray Tube) monitor frame */
   --crt-hi: #3a3a3a;
   --crt-mid: #1a1a1a;
   --crt-lo: #0d0d0d;
@@ -167,6 +166,7 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: var(--neutral-100);
 }
 
 .section-container {
@@ -262,7 +262,7 @@ main {
 
 .header-title {
   font-size: var(--text-3xs);
-  color: var(--text-header);
+  color: var(--brand-dark);
   font-family: var(--font-pixel);
   text-transform: uppercase;
   letter-spacing: var(--tracking-pixel-medium);
@@ -273,7 +273,7 @@ main {
 .site-footer {
   align-self: flex-end;
   height: auto;
-  background-color: var(--bg-dark-navy);
+  background-color: var(--neutral-80);
   flex-shrink: 0;
   padding: 0.75rem 1.5rem;
 }
@@ -286,17 +286,28 @@ main {
   flex-wrap: wrap;
 }
 
-.footer-link {
+.footer-identity {
   display: flex;
   align-items: center;
   gap: .5rem;
-  color: var(--text-white);
-  text-decoration: none;
+  color: var(--neutral-0);
   font-family: var(--font-pixel);
   font-size: var(--text-4xs);
-  letter-spacing: var(--tracking-pixel);
+  letter-spacing: var(--tracking-pixel)
+}
+
+.footer-icons {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.footer-link {
+  display: flex;
+  align-items: center;
+  color: var(--neutral-0);
+  text-decoration: none;
   transition: color .15s ease;
-  text-transform: uppercase;
 }
 
 .footer-link:hover {
@@ -310,7 +321,7 @@ main {
   flex-shrink: 0;
 }
 
-.footer-github-icon {
+.footer-social-icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
@@ -322,7 +333,7 @@ main {
   }
 
   .footer-nav {
-    gap: 2rem;
+    gap: 1rem;
   }
 }
 
@@ -433,7 +444,7 @@ canvas {
   content: '';
   position: absolute;
   inset: 1.125rem 1.375rem 1.625rem;
-  background: var(--text-white);
+  background: var(--neutral-0);
   opacity: 0;
   pointer-events: none;
   z-index: 5;
@@ -502,7 +513,7 @@ canvas {
   .section-container.to-be-continued-screen .crt-frame,
   .section-container.ranking-screen .crt-frame {
     flex: 1;
-    background: var(--bg-black);
+    background: var(--neutral-100);
   }
 
   .game-over-canvas,
@@ -530,7 +541,7 @@ canvas {
   padding: 0;
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: var(--neutral-40);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -563,7 +574,7 @@ canvas {
   font-family: var(--font-pixel);
   font-size: var(--text-xl);
   word-spacing: var(--word-spacing-pixel);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-align: center;
   letter-spacing: var(--tracking-pixel-wide);
   text-transform: uppercase;
@@ -610,12 +621,12 @@ canvas {
   align-items: center;
   gap: 0.375rem;
   font-size: var(--text-2xs);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-shadow:
-    1px 1px 0 var(--bg-black),
-    -1px 0 0 var(--bg-black),
-    0 -1px 0 var(--bg-black),
-    1px -1px 0 var(--bg-black);
+    1px 1px 0 var(--neutral-100),
+    -1px 0 0 var(--neutral-100),
+    0 -1px 0 var(--neutral-100),
+    1px -1px 0 var(--neutral-100);
 }
 
 .hud-label {
@@ -689,7 +700,7 @@ canvas {
 .game-hint {
   font-family: var(--font-pixel);
   font-size: var(--text-4xs);
-  color: var(--text-muted);
+  color: var(--neutral-10);
   text-align: center;
   letter-spacing: var(--tracking-pixel);
 }
@@ -725,7 +736,7 @@ canvas {
   text-align: center;
   border: var(--border-brand-thick);
   color: var(--brand);
-  background-color: var(--bg-black);
+  background-color: var(--neutral-100);
   border-radius: var(--radius-pixel);
   cursor: pointer;
   user-select: none;
@@ -748,7 +759,7 @@ canvas {
   text-align: center;
   border: var(--border-brand-thick);
   color: var(--brand);
-  background-color: var(--bg-black);
+  background-color: var(--neutral-100);
   border-radius: var(--radius-pixel);
   cursor: pointer;
   user-select: none;
@@ -765,7 +776,7 @@ canvas {
 .touch-right:focus,
 .touch-action:focus {
   outline: none;
-  background-color: var(--bg-black);
+  background-color: var(--neutral-100);
   color: var(--brand);
 }
 
@@ -780,7 +791,7 @@ canvas {
 .touch-right:active,
 .touch-action:active:not(:disabled) {
   background-color: var(--brand);
-  color: var(--bg-black);
+  color: var(--neutral-100);
 }
 
 .touch-action:disabled {
@@ -836,7 +847,7 @@ canvas {
 
 .go-count-rule {
   font-size: var(--text-3xs);
-  color: var(--text-subtle);
+  color: var(--neutral-30);
   text-align: right;
   width: 100%;
 }
@@ -906,7 +917,7 @@ canvas {
   font-size: var(--text-sm);
   color: var(--brand);
   text-shadow:
-    1px 1px 0 var(--bg-black),
+    1px 1px 0 var(--neutral-100),
     2px 2px 0 rgba(var(--black-rgb), 0.5);
   letter-spacing: var(--tracking-pixel-extra-wide);
 }
@@ -914,7 +925,7 @@ canvas {
 .go-title {
   font-family: var(--font-pixel);
   font-size: var(--text-xl);
-  color: var(--text-white);
+  color: var(--neutral-0);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-pixel-medium);
   text-shadow: var(--shadow-glow-brand);
@@ -923,8 +934,8 @@ canvas {
 .go-score {
   font-family: var(--font-pixel);
   font-size: var(--text-md);
-  color: var(--text-white);
-  text-shadow: 1px 1px 0 var(--bg-black);
+  color: var(--neutral-0);
+  text-shadow: 1px 1px 0 var(--neutral-100);
   letter-spacing: var(--tracking-pixel-extra-wide);
   margin-bottom: 1.5rem;
 }
@@ -945,7 +956,7 @@ canvas {
 /* ---- TRANSITION SCREEN ---- */
 
 .transition-canvas {
-  background-color: var(--bg-black);
+  background-color: var(--neutral-100);
 }
 
 .transition-overlay {
@@ -982,7 +993,7 @@ canvas {
   letter-spacing: .2em;
   margin: 1.5rem 0 0;
   padding-inline: 1rem;
-  text-shadow: 2px 2px 0 var(--bg-black);
+  text-shadow: 2px 2px 0 var(--neutral-100);
 }
 
 /* Reduced motion can't read a flash; the ~0.01ms animation would land on the
@@ -1008,8 +1019,8 @@ button {
   padding: .5rem 1.5rem;
   font-size: var(--text-xs);
   text-transform: uppercase;
-  color: var(--text-white);
-  background-color: var(--bg-black);
+  color: var(--neutral-0);
+  background-color: var(--neutral-100);
 }
 
 button:hover,
@@ -1022,8 +1033,8 @@ button:active {
 .info-modal-btn {
   font-family: var(--font-pixel);
   border: var(--border-brand-thick);
-  color: var(--text-white);
-  background-color: var(--bg-black);
+  color: var(--neutral-0);
+  background-color: var(--neutral-100);
   text-transform: uppercase;
   letter-spacing: var(--tracking-pixel-extra-wide);
   cursor: pointer;
@@ -1036,7 +1047,7 @@ button:active {
 .info-modal-btn:hover,
 .info-modal-btn:active {
   background-color: var(--brand);
-  color: var(--bg-black);
+  color: var(--neutral-100);
 }
 
 /* ---- SPLASH SCREEN ---- */
@@ -1065,7 +1076,7 @@ button:active {
 .splash-title {
   font-family: var(--font-pixel);
   font-size: var(--text-2xl);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-align: center;
   line-height: 1.6;
   text-shadow: var(--shadow-glow-brand);
@@ -1076,7 +1087,7 @@ button:active {
 .splash-tagline {
   font-family: var(--font-pixel);
   font-size: var(--text-xs);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-align: center;
   letter-spacing: var(--tracking-pixel-wide);
   text-shadow: 1px 1px 0 rgba(var(--black-rgb), 0.8);
@@ -1126,7 +1137,7 @@ button:active {
 
 .info-modal {
   position: relative;
-  background: var(--bg-near-black);
+  background: var(--neutral-90);
   border: var(--border-brand-thick);
   padding: 2.5rem 2rem 2rem;
   max-width: 440px;
@@ -1159,7 +1170,7 @@ button:active {
 
 .info-modal-close:hover {
   background: var(--brand);
-  color: var(--bg-black);
+  color: var(--neutral-100);
 }
 
 .info-modal-screen {
@@ -1176,7 +1187,7 @@ button:active {
   font-family: var(--font-pixel);
   font-size: var(--text-sm);
   line-height: var(--leading-tight);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-align: center;
   letter-spacing: var(--tracking-pixel-medium);
 }
@@ -1184,7 +1195,7 @@ button:active {
 .info-modal-instruction {
   font-family: var(--font-pixel);
   font-size: var(--text-2xs);
-  color: var(--text-soft-blue);
+  color: var(--brand-light);
   text-align: center;
   line-height: var(--leading-loose);
   letter-spacing: var(--tracking-pixel);
@@ -1213,7 +1224,7 @@ button:active {
 .info-modal-checkbox-label {
   font-family: var(--font-pixel);
   font-size: var(--text-4xs);
-  color: var(--text-subtle);
+  color: var(--neutral-30);
   display: flex;
   align-items: center;
   gap: .6rem;
@@ -1253,8 +1264,8 @@ button:active {
   padding: .75rem 1rem;
   font-family: var(--font-pixel);
   font-size: var(--text-2xs);
-  color: var(--text-white);
-  background: var(--bg-black);
+  color: var(--neutral-0);
+  background: var(--neutral-100);
   border: var(--border-brand-thick);
   letter-spacing: .06em;
   outline: none;
@@ -1262,18 +1273,18 @@ button:active {
 }
 
 .splash-name-input::placeholder {
-  color: var(--text-muted);
+  color: var(--neutral-40);
   opacity: 1;
 }
 
 .splash-name-input:focus {
-  border-color: var(--text-white);
+  border-color: var(--neutral-0);
 }
 
 .splash-name-notice {
   font-family: var(--font-pixel);
   font-size: var(--text-4xs);
-  color: var(--text-white);
+  color: var(--neutral-0);
   text-align: center;
   letter-spacing: var(--tracking-pixel);
   line-height: var(--leading-body);
@@ -1318,7 +1329,7 @@ button:active {
 .ranking-title {
   font-family: var(--font-pixel);
   font-size: var(--text-lg);
-  color: var(--text-white);
+  color: var(--neutral-0);
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-pixel-medium);
   text-shadow: var(--shadow-glow-brand);
@@ -1345,7 +1356,7 @@ button:active {
 .ranking-error {
   font-family: var(--font-pixel);
   font-size: var(--text-3xs);
-  color: var(--text-muted);
+  color: var(--neutral-40);
   letter-spacing: var(--tracking-pixel-medium);
 }
 
@@ -1375,7 +1386,7 @@ button:active {
   padding: .3rem .5rem;
   font-family: var(--font-pixel);
   font-size: var(--text-xs);
-  color: var(--text-white);
+  color: var(--neutral-0);
   letter-spacing: var(--tracking-pixel);
   background: rgba(var(--black-rgb), 0.55);
 }
@@ -1392,7 +1403,7 @@ button:active {
   width: 1.8em;
   text-align: right;
   flex-shrink: 0;
-  color: var(--text-muted);
+  color: var(--neutral-40);
 }
 
 .ranking-row--current .ranking-rank {
@@ -1413,7 +1424,7 @@ button:active {
 }
 
 .ranking-row--current .ranking-score {
-  color: var(--text-white);
+  color: var(--neutral-0);
 }
 
 .ranking-divider {
@@ -1426,7 +1437,7 @@ button:active {
 .ranking-not-top10 {
   font-family: var(--font-pixel);
   font-size: var(--text-3xs);
-  color: var(--text-white);
+  color: var(--neutral-0);
   letter-spacing: var(--tracking-pixel);
   text-align: center;
   text-transform: uppercase;
@@ -1436,11 +1447,5 @@ button:active {
 @media (max-width: 767px) {
   .ranking-row {
     font-size: var(--text-xs);
-  }
-}
-
-@media (min-width: 768px) {
-  .ranking-play-again {
-    margin-top: var(--touch-controls-m);
   }
 }
