@@ -4,6 +4,8 @@ import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
+import { buildPlayScreen } from './lib/playScreen';
+import { setupMuteButton } from './lib/muteButton';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { loadImage } from './lib/images';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
@@ -32,16 +34,6 @@ const TRANSITION_MESSAGE_FROM_START = 0.0125;
 const TUNNEL_CEILING_HANG_FRAC = 0.24;
 const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
-
-const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
-  <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
-  <path d="M10.5 6.5a2 2 0 010 3M12 4.5a5 5 0 010 7" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round"/>
-</svg>`;
-
-const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
-  <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
-  <path d="M11 6.5l3 3M14 6.5l-3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-</svg>`;
 
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -72,19 +64,6 @@ function main(): void {
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
     return mainElement;
-  }
-
-  function setupMuteButton(btn: HTMLButtonElement, onToggle: (muted: boolean) => void): void {
-    const muted = localStorage.getItem('audio-muted') === '1';
-    btn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
-    btn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
-    btn.addEventListener('click', () => {
-      const nowMuted = localStorage.getItem('audio-muted') !== '1';
-      localStorage.setItem('audio-muted', nowMuted ? '1' : '0');
-      btn.innerHTML = nowMuted ? ICON_MUTED : ICON_SOUND;
-      btn.setAttribute('aria-label', nowMuted ? 'Unmute sound' : 'Mute sound');
-      onToggle(nowMuted);
-    });
   }
 
   /* INFO MODALS */
@@ -226,79 +205,24 @@ function main(): void {
   }
 
   function createGameScreen(): void {
-    
     preloadLeaderboard();
 
-    const gameScreen = buildDom(`
-      <section class="section-container play">
-        <div class="game-stage">
-          <canvas class="game-canvas" role="img" aria-label="Game area — dodge the falling bombs"></canvas>
-          <p class="level-up-banner"></p>
-          <div class="game-hud">
-            <div class="hud-lives">
-              <span class="hud-item lives-item">
-                <span class="hud-label">lives</span>
-                <span class="hud-value lives-value">3</span>
-              </span>
-              <div class="lives-icons"></div>
-            </div>
-            <div class="hud-score">
-              <span class="hud-item">
-                <span class="hud-value seconds-value">0</span>
-                <span class="hud-label">sec</span>
-              </span>
-              <span class="hud-item level-item">
-                <span class="hud-label">level</span>
-                <span class="hud-value level-value">1</span>
-              </span>
-            </div>
-          </div>
-          <button class="mute-btn" aria-label="Mute sound"></button>
-        </div>
-        <div class="touch-controls">
-          <button class="touch-left" aria-label="Move left">&#x2190;</button>
-          <button class="touch-right" aria-label="Move right">&#x2192;</button>
-        </div>
-      </section>
-    `);
-
-    const canvas = gameScreen.querySelector('canvas') as HTMLCanvasElement;
-    /* Measure after buildDom mounts the screen: only then is the splash gone and
-       the header visible, so getCanvasSize reads the real header/footer heights. */
-    const size = getCanvasSize();
-    canvas.width = size;
-    canvas.height = size;
+    const { canvas, wireMovement, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'game-canvas',
+      canvasAriaLabel: 'Game area — dodge the falling bombs',
+      secondsStart: 0,
+      withAction: false,
+    });
 
     const game = new SurfaceGame(canvas);
     game.gameOverCallback(createGameOverScreen);
     game.completionCallback(createTransitionScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
-    setupMuteButton(
-      gameScreen.querySelector('.mute-btn') as HTMLButtonElement,
-      (muted) => { game.gameSong.muted = muted; },
-    );
+    wireMute((muted) => { game.gameSong.muted = muted; });
+    wireMovement(() => game.player, game.runSignal);
 
-    const arrowRight = gameScreen.querySelector('.touch-right') as HTMLElement;
-    arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
-    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
-
-    const arrowLeft = gameScreen.querySelector('.touch-left') as HTMLElement;
-    arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
-    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
-
-    /* Dies with the run (runSignal aborts at halt), so listeners don't
-       stack up across play-again cycles */
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.key === 'ArrowRight') game.player?.setDirection(1);
-      else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    }, { signal: game.runSignal });
-
-    /* Screen swaps blow away the focused element; re-anchor focus so keyboard
-       and screen-reader users aren't dropped to <body> */
-    canvas.tabIndex = -1;
     canvas.focus();
-
     showInfoModal(SURFACE_MODAL, () => {
       canvas.focus();
       game.startGame();
@@ -475,44 +399,12 @@ function main(): void {
   }
 
   function createTunnelScreen(breakdown: ScoreBreakdown): void {
-    const size = getCanvasSize();
-    const screen = buildDom(`
-      <section class="section-container play">
-        <div class="game-stage">
-          <canvas class="tunnel-game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
-          <p class="level-up-banner"></p>
-          <div class="game-hud">
-            <div class="hud-lives">
-              <span class="hud-item lives-item">
-                <span class="hud-label">lives</span>
-                <span class="hud-value lives-value">3</span>
-              </span>
-              <div class="lives-icons"></div>
-            </div>
-            <div class="hud-score">
-              <span class="hud-item">
-                <span class="hud-value seconds-value">60</span>
-                <span class="hud-label">sec</span>
-              </span>
-              <span class="hud-item level-item">
-                <span class="hud-label">level</span>
-                <span class="hud-value level-value">1</span>
-              </span>
-            </div>
-          </div>
-          <button class="mute-btn" aria-label="Mute sound"></button>
-        </div>
-        <div class="touch-controls">
-          <button class="touch-left" aria-label="Move left">&#x2190;</button>
-          <button class="touch-action" aria-label="Action">SPACE</button>
-          <button class="touch-right" aria-label="Move right">&#x2192;</button>
-        </div>
-      </section>
-    `);
-
-    const canvas = screen.querySelector('canvas') as HTMLCanvasElement;
-    canvas.width = size;
-    canvas.height = size;
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'tunnel-game-canvas',
+      canvasAriaLabel: 'Tunnel — find the crack and blast your way out',
+      secondsStart: 60,
+      withAction: true,
+    });
 
     const game = new TunnelGame(canvas, breakdown);
     game.completionCallback((b) => createTransitionScreen(
@@ -533,38 +425,13 @@ function main(): void {
     playLoop(caveLoop, game.muted);
     pauseWhileHidden(caveLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
 
-    setupMuteButton(
-      screen.querySelector('.mute-btn') as HTMLButtonElement,
-      (muted) => { game.muted = muted; game.sfx.applyMute(muted); caveLoop.muted = muted; },
-    );
+    wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); caveLoop.muted = muted; });
+    /* Gate input while the info modal holds the run paused, so Space activates the
+       modal button rather than the (not-yet-started) action verb */
+    wireMovement(() => game.player, game.runSignal, () => game.paused);
+    wireAction(() => game.action(), game.runSignal, () => game.paused);
 
-    /* One verb per state: Space (or the action button) is pick up / place /
-       light; auto-repeat is ignored and a focused control never activates */
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (game.paused) return;
-      if (event.key === 'ArrowRight') game.player?.setDirection(1);
-      else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-      else if (event.key === ' ') {
-        event.preventDefault();
-        if (event.repeat) return;
-        game.action();
-      }
-    }, { signal: game.runSignal });
-
-    const arrowRight = screen.querySelector('.touch-right') as HTMLElement;
-    arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
-    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
-    
-    const arrowLeft = screen.querySelector('.touch-left') as HTMLElement;
-    arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
-    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
-
-    const actionBtn = screen.querySelector('.touch-action') as HTMLButtonElement;
-    actionBtn.addEventListener('click', () => game.action());
-
-    canvas.tabIndex = -1;
     game.paused = true;
-
     showInfoModal(TUNNEL_MODAL, () => {
       game.paused = false;
       canvas.focus();

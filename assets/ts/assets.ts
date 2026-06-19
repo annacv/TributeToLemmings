@@ -29,6 +29,8 @@ import groundHole1Svg from '../images/backgrounds/ground-hole-1.svg';
 import groundHole2Svg from '../images/backgrounds/ground-hole-2.svg';
 import groundHole3Svg from '../images/backgrounds/ground-hole-3.svg';
 import groundHole4Svg from '../images/backgrounds/ground-hole-4.svg';
+import soundIconSvg from '../images/icons/sound.svg?raw';
+import mutedIconSvg from '../images/icons/muted.svg?raw';
 
 export const SPRITES = {
   bomb: bombSvg,
@@ -49,8 +51,6 @@ export const CAVE_LOOP = caveLoopOgg;
 export const EXPLODE_SFX = explodeSfxWav;
 export const CHAIN_SFX = chainSfxWav;
 export const SCRAPE_SFX = scrapeSfxWav;
-export const TING_SFX = tingSfxWav;
-export const MOUSEPRE_SFX = mousepreSfxWav;
 export const COUNT_TICK_SFX: string | null = tingSfxWav;
 export const COUNT_CHIME_SFX: string | null = mousepreSfxWav;
 export const UNDERGROUND_BACKGROUND_SVG = backgroundUndergroundSvg;
@@ -58,6 +58,8 @@ export const UNDERGROUND_ABYSS_BACKGROUND_SVG = backgroundUndergroundAbyssSvg;
 export const TUNNEL_BACKGROUND_SVG = backgroundTunnelSvg;
 export const TUNNEL_CEILING_SVG = tunnelCeilingSvg;
 export const ABYSS_CEILING_SVG = abyssCeilingSvg;
+export const ICON_SOUND_SVG = soundIconSvg;
+export const ICON_MUTED_SVG = mutedIconSvg;
 
 export const CRACK_MARK_SVGS = [
   crackMark1Svg,

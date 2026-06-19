@@ -149,6 +149,19 @@ describe('game screen keyboard wiring', () => {
     expect(activeGame().startGame).toHaveBeenCalledTimes(1);
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
   });
+
+  it('builds the surface play screen from the scaffold: shared HUD, no action control', () => {
+    expect(document.querySelector('.game-canvas')).not.toBeNull();
+    expect(document.querySelector('.lives-value')).not.toBeNull();
+    expect(document.querySelector('.level-value')?.textContent).toBe('1');
+    expect(document.querySelector('.seconds-value')?.textContent).toBe('0');
+    expect(document.querySelector('.touch-left')).not.toBeNull();
+    expect(document.querySelector('.touch-right')).not.toBeNull();
+    /* withAction:false — the surface omits the tunnel's action control */
+    expect(document.querySelector('.touch-action')).toBeNull();
+    /* The mute icon markup is injected from the ?raw-imported SVG (currentColor-themed) */
+    expect(document.querySelector('.mute-btn svg')).not.toBeNull();
+  });
 });
 
 describe('ranking row outside the top 10', () => {
