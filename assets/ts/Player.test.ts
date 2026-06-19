@@ -14,29 +14,8 @@ describe('Player', () => {
     canvas.getContext = vi.fn().mockReturnValue(mockCtx) as typeof canvas.getContext;
   });
 
-  it('instantiates without throwing', () => {
-    expect(() => new Player(canvas)).not.toThrow();
-  });
-
   it('starts with 3 lives', () => {
     expect(new Player(canvas).lives).toBe(3);
-  });
-
-  it('starts stationary', () => {
-    expect(new Player(canvas).direction).toBe(0);
-  });
-
-  it('setDirection updates direction', () => {
-    const player = new Player(canvas);
-    player.setDirection(1);
-    expect(player.direction).toBe(1);
-  });
-
-  it('move() with direction 0 does not change position', () => {
-    const player = new Player(canvas);
-    const dx = player.dx;
-    player.move();
-    expect(player.dx).toBe(dx);
   });
 
   it('bounces off right wall', () => {

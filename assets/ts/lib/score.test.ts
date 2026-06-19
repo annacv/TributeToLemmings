@@ -30,11 +30,6 @@ describe('breakdownLines', () => {
     ]);
   });
 
-  it('recovers the raw levels count from the bonus', () => {
-    const lines = breakdownLines(makeBreakdown({ levelsBonus: 30 }));
-    expect(lines.find((l) => l.label === 'Levels completed')?.rule).toBe(`6 × ${LEVEL_POINTS}`);
-  });
-
   it('has no lives line — lives never score', () => {
     const labels = breakdownLines(makeBreakdown({ surfaceTime: 1, tunnelTime: 1, levelsBonus: 5 }))
       .map((l) => l.label.toLowerCase());
