@@ -271,7 +271,7 @@ function main(): void {
 
     const game = new SurfaceGame(canvas);
     game.gameOverCallback(createGameOverScreen);
-    game.tunnelWorldCallback(createTransitionScreen);
+    game.completionCallback(createTransitionScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
     setupMuteButton(

@@ -9,7 +9,7 @@ interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
   gameSong: { muted: boolean };
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
+  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
   startGame: ReturnType<typeof vi.fn>;
 }
 
@@ -29,7 +29,7 @@ vi.mock('./SurfaceGame', () => ({
     player = { setDirection: vi.fn() };
     gameSong = { muted: false };
     onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
-    onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null = null;
+    onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
     startGame = vi.fn();
     private runController = new AbortController();
     get runSignal(): AbortSignal { return this.runController.signal; }
@@ -38,8 +38,8 @@ vi.mock('./SurfaceGame', () => ({
     gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
       this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
-    tunnelWorldCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onTunnelWorld = (breakdown) => { this.runController.abort(); cb(breakdown); };
+    completionCallback(cb: (breakdown: ScoreBreakdown) => void): void {
+      this.onComplete = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
   },
 }));
@@ -100,7 +100,7 @@ describe('game screen keyboard wiring', () => {
 
   it('detaches the keydown listener on the tunnel transition', () => {
     const game = activeGame();
-    game.onTunnelWorld!(makeBreakdown());
+    game.onComplete!(makeBreakdown());
     game.player.setDirection.mockClear();
     pressArrowRight();
     expect(game.player.setDirection).not.toHaveBeenCalled();
@@ -232,9 +232,9 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     return gameInstances[gameInstances.length - 1];
   }
 
-  it('onTunnelWorld renders the arrival interstitial, then routes into the tunnel', () => {
+  it('onComplete renders the arrival interstitial, then routes into the tunnel', () => {
     vi.useFakeTimers();
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
@@ -249,7 +249,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     /* surface-modal-dismissed is already set in beforeEach — the surface key
        must not suppress the tunnel modal (separate storage key) */
     localStorage.removeItem('tunnel-modal-dismissed');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 42 }));
     vi.advanceTimersByTime(3600);
     expect(document.querySelector('.info-modal-backdrop')).not.toBeNull();
     expect(document.querySelector('.info-modal-title')?.textContent).toBe('How to play');
@@ -278,7 +278,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
 
   it('plays no falling SFX through the interstitial when muted', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 5 }));
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     expect(play).not.toHaveBeenCalled();
     play.mockRestore();
@@ -287,7 +287,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('plays the falling SFX exactly once when unmuted', () => {
     localStorage.setItem('audio-muted', '0');
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 5 }));
     expect(play).toHaveBeenCalledTimes(1);
     play.mockRestore();
   });
@@ -429,7 +429,7 @@ describe('win variant end screen (tunnel completion)', () => {
     game.step();
     for (let i = 0; i < 300 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
-    game['renderFrame'](); // settle fires the completion route → Abyss fall transition
+    game['host']['frame'](); // settle fires the completion route → Abyss fall transition
     /* The Abyss collapse-shaft transition plays first; the win screen lands after it
        (TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS) */
     vi.advanceTimersByTime(3600);
