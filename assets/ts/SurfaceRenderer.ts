@@ -89,9 +89,7 @@ export class SurfaceRenderer {
 
   /** Fraction of the ground band currently covered by hole stamps. */
   coverage(): number {
-    let covered = 0;
-    for (const cell of this.coveredCells) if (cell) covered++;
-    return covered / this.coveredCells.length;
+    return this.coveredCells.filter(Boolean).length / this.coveredCells.length;
   }
 
   /** Marks every coverage-grid cell the given stamp rect touches. */
