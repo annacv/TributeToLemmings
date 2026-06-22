@@ -7,7 +7,7 @@ import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geo
 import { buildPlayScreen } from './lib/playScreen';
 import { setupMuteButton } from './lib/muteButton';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
-import { loadImage } from './lib/images';
+import { loadImage, whenImagesSettled } from './lib/images';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
@@ -190,6 +190,7 @@ function main(): void {
 
     const nameInput = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
     const startBtn = mainElement.querySelector('.splash-start') as HTMLButtonElement;
+
     if (playerName) {
       nameInput.value = playerName;
       startBtn.focus();
@@ -260,6 +261,7 @@ function main(): void {
     const canvas = screen.querySelector('.transition-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
+
     /* Focus visible content, never the aria-hidden canvas */
     const overlay = screen.querySelector('.transition-overlay') as HTMLElement;
     overlay.tabIndex = -1;
@@ -345,15 +347,17 @@ function main(): void {
       const elapsed = now - startTime;
       const fallT = Math.min(elapsed / TRANSITION_FALL_DURATION_MS, 1);
       const scrollT = Math.min(Math.max(elapsed - scrollStart, 0) / TRANSITION_SCROLL_DURATION_MS, 1);
-      /* easeInOutQuart: accelerate into the dark, brake into the final frame */
+
       const eased = scrollT < 0.5
         ? 8 * scrollT ** 4
         : 1 - (-2 * scrollT + 2) ** 4 / 2;
+
       const scrollY = eased * SCROLL_DISTANCE;
       /* The lemming drops into the hole, then keeps falling
          descending with the camera and easing onto the chamber floor exactly as
          the reveal settles */
       const descend = 1 - (1 - scrollT) ** 2;
+
       const lemmingY = fallT < 1
         ? -lemmingSize + fallT * (holeY + lemmingSize)
         : holeY + descend * (landY - holeY);
@@ -366,21 +370,17 @@ function main(): void {
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
       /* Wild hair through the airborne descent; calms once grounded */
       const hairLevel = scrollY > 0 && scrollT < 1 ? 4 : 0;
+
       drawScene(lemmingY, scrollY, veilAlpha, hairLevel, ceilingDrop);
       /* The stinger fades in at its reveal point: at rest for surface→tunnel (no
          mid-scroll cliffhanger), early for the Abyss handoff (before the reveal) */
       if (scrollT >= messageScrollT) screen.querySelector('.transition-overlay')?.classList.add('show');
-      if (elapsed < animEnd) {
-        requestAnimationFrame((n) => animate(startTime, n));
-      }
+      if (elapsed < animEnd) requestAnimationFrame((n) => animate(startTime, n));
     }
 
-    /* The handoff timer arms only once the animation starts, so a slow image
-       load can't tear the screen down mid-scroll */
-    let started = false;
-    const start = () => {
-      if (started) return;
-      started = true;
+    /* The handoff arms only once the animation starts, so a slow image load
+       can't tear the screen down mid-scroll (whenImagesSettled fires start once) */
+    const start = (): void => {
       /* Reduced motion: jump straight to the final frame — lemming grounded,
          ceiling closed, veil already lifted */
       const skipMs = reduceMotion ? animEnd : 0;
@@ -389,16 +389,8 @@ function main(): void {
          passes onward unchanged (surface + surface levels bonus already applied) */
       setTimeout(() => onArrive(breakdown), TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS);
     };
-    let pendingImgs = [undergroundImg, ceilingImg].filter((img) => !img.complete);
-    const onImgSettled = (img: HTMLImageElement) => {
-      pendingImgs = pendingImgs.filter((i) => i !== img);
-      if (pendingImgs.length === 0) start();
-    };
-    if (pendingImgs.length === 0) start();
-    else pendingImgs.forEach((img) => {
-      img.addEventListener('load', () => onImgSettled(img), { once: true });
-      img.addEventListener('error', () => onImgSettled(img), { once: true });
-    });
+
+    whenImagesSettled([undergroundImg, ceilingImg], start);
   }
 
   function createTunnelScreen(breakdown: ScoreBreakdown): void {
@@ -446,13 +438,13 @@ function main(): void {
     const size = getCanvasSize();
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
-
     const hasCount = breakdown.tunnelTime + breakdown.levelsBonus > 0;
-
     const isWin = variant === 'win';
+
     const canvasHtml = isWin
       ? '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>'
       : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
+
     const headingHtml = isWin
       ? '<h1 class="go-title">&gt; You made it!<br>For now...</h1>'
       : '<p class="go-boom">BOOOM!!!</p><h1 class="go-title">GAME OVER</h1>';
@@ -490,6 +482,7 @@ function main(): void {
          let the visibility listener resume on return */
       if (!document.hidden) safePlay(rankingMusic);
     };
+
     if (rankingMusic) {
       rankingMusic.pause();
       rankingMusic = null;
