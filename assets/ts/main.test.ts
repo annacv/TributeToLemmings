@@ -272,7 +272,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
     activeGame().onGameOver!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
-    
+
     expect(document.querySelectorAll('.go-count-line')).toHaveLength(2);
     vi.advanceTimersByTime(2000);
     expect(document.querySelector('.go-score-value')?.textContent).toBe('57');

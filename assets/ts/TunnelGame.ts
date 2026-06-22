@@ -51,7 +51,7 @@ export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
 /* Inner faces of the cave's side-wall columns, as fractions of the 800-wide
-   artwork. The lemming's sprite box is bounded inside there to stop at the walls 
+   artwork. The lemming's sprite box is bounded inside there to stop at the walls
    instead of clipping the rock bumps. */
 const WALL_LEFT_FRAC = 66 / 800;
 const WALL_RIGHT_FRAC = 734 / 800;
@@ -453,7 +453,7 @@ export class TunnelGame implements TunnelView {
     /* Tick the pad one-shots; snap on first arrival at the charge while placed */
     if (this.padArriveSteps > 0) this.padArriveSteps--;
     if (this.padNudgeSteps > 0) this.padNudgeSteps--;
-    
+
     if (this.state === 'placed') {
       const at = this.atCrack();
       if (at && !this.wasAtCrack) this.padArriveSteps = PAD_ARRIVE_STEPS;

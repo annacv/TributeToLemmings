@@ -22,4 +22,10 @@ export default [
     },
   },
   prettier,
+  {
+    files: ['assets/ts/**/*.ts'],
+    rules: {
+      'no-trailing-spaces': 'error',
+    },
+  },
 ];

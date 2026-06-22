@@ -160,7 +160,7 @@ function main(): void {
   }
 
   /* SCREENS */
-  
+
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
@@ -522,7 +522,7 @@ function main(): void {
           li.classList.add('show');
           playOptionalSfx(COUNT_TICK_SFX);
         }, 300 + i * 250));
-        
+
         const rollStartMs = 300 + lineEls.length * 250;
         const ROLL_MS = 500;
 
@@ -641,7 +641,7 @@ function main(): void {
       ]);
 
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-      
+
       const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
 
       if (!mainElement.querySelector('.ranking-list')) return;
@@ -658,8 +658,8 @@ function main(): void {
       const isPlayerRow = (s: { id: string; name: string }): boolean =>
         (submittedDocId !== null && s.id === submittedDocId)
         || (playerName !== '' && s.name === playerName);
-      
-        const playerInTop10 = scores.some(isPlayerRow);
+
+      const playerInTop10 = scores.some(isPlayerRow);
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
@@ -680,7 +680,7 @@ function main(): void {
         const rank = await getPlayerRank(effectiveScore).catch(() => null);
 
         if (!mainElement.querySelector('.ranking-list')) return;
-        
+
         if (rank !== null) {
           html += `
             <hr class="ranking-divider">
@@ -705,7 +705,7 @@ function main(): void {
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
       `;
-      
+
       listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
         listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
