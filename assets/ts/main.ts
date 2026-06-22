@@ -49,6 +49,21 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/* Runs the splash mascot's idle loop on its canvas; returns a stop handle for teardown. */
+function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
+  canvas.width = 142;
+  canvas.height = 142;
+  const ctx = canvas.getContext('2d')!;
+
+  let frame = 0;
+  let rafId = requestAnimationFrame(function tick() {
+    drawLemmingMascot(ctx, 142, frame++);
+    rafId = requestAnimationFrame(tick);
+  });
+
+  return () => cancelAnimationFrame(rafId);
+}
+
 function main(): void {
   const mainElement = document.querySelector('#site-main') as HTMLElement;
   let playerName = '';
@@ -171,18 +186,7 @@ function main(): void {
       </section>
     `);
 
-    const mascotCanvas = mainElement.querySelector('.splash-mascot') as HTMLCanvasElement;
-    mascotCanvas.width = 142;
-    mascotCanvas.height = 142;
-    const mascotCtx = mascotCanvas.getContext('2d')!;
-
-    let mascotFrame = 0;
-    let mascotRafId: number;
-    function animateMascot(): void {
-      drawLemmingMascot(mascotCtx, 142, mascotFrame++);
-      mascotRafId = requestAnimationFrame(animateMascot);
-    }
-    animateMascot();
+    const stopMascot = startMascotAnimation(mainElement.querySelector('.splash-mascot') as HTMLCanvasElement);
 
     const nameInput = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
     const startBtn = mainElement.querySelector('.splash-start') as HTMLButtonElement;
@@ -196,7 +200,7 @@ function main(): void {
     const form = mainElement.querySelector('.splash-form') as HTMLFormElement;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      cancelAnimationFrame(mascotRafId);
+      stopMascot();
       playerName = nameInput.value.trim() || generateGuestHandle();
       consumeDebugScreen();
       createGameScreen();
