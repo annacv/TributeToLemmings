@@ -198,26 +198,8 @@ export class SurfaceGame implements SurfaceView {
       if (!bomb.isExploding) {
         if (bomb.dy > this.canvas.height) {
           this.bombs.splice(i, 1);
-
-          if (this.groundErosionActive) {
-            this.erosionCounter++;
-            const impactX = bomb.dx + bomb.dWidth / 2;
-            this.renderer.stampCrack(impactX, this.erosionCounter <= EARLY_CRACK_MISSES ? 0 : 2);
-
-            if (this.erosionCounter > LATE_CRACK_MISSES) {
-              this.renderer.stampHole(impactX);
-            }
-            this.triggerGroundShake();
-            this.sfx.play('bang');
-
-            if (this.renderer.coverage() >= COLLAPSE_COVERAGE) {
-              // force a hole under the lemming so the fall always lines up
-              if (this.player) {
-                this.renderer.stampHole(this.player.dx + this.player.dWidth / 2, true);
-              }
-              this.triggerTunnelWorld();
-              return;
-            }
+          if (this.groundErosionActive && this.erodeGround(bomb.dx + bomb.dWidth / 2)) {
+            return; // ground collapsed — the world is handing off to the tunnel
           }
         }
         continue;
@@ -238,6 +220,29 @@ export class SurfaceGame implements SurfaceView {
     if (this.player && preLives !== undefined && this.player.lives < preLives) {
       this.player.triggerBlink(preLives);
     }
+  }
+
+  /** Registers one bomb impact on the eroding ground: stamps a crack (and a hole
+      once misses pile up), shakes, and reports whether the ground has now collapsed
+      enough to drop the lemming into the tunnel. */
+  private erodeGround(impactX: number): boolean {
+    this.erosionCounter++;
+    this.renderer.stampCrack(impactX, this.erosionCounter <= EARLY_CRACK_MISSES ? 0 : 2);
+
+    if (this.erosionCounter > LATE_CRACK_MISSES) {
+      this.renderer.stampHole(impactX);
+    }
+    this.triggerGroundShake();
+    this.sfx.play('bang');
+
+    if (this.renderer.coverage() < COLLAPSE_COVERAGE) return false;
+
+    // force a hole under the lemming so the fall always lines up
+    if (this.player) {
+      this.renderer.stampHole(this.player.dx + this.player.dWidth / 2, true);
+    }
+    this.triggerTunnelWorld();
+    return true;
   }
 
   /** Brief, subtle shake on the canvas itself for each individual ground hit. */

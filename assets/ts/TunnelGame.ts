@@ -214,32 +214,40 @@ export class TunnelGame implements TunnelView {
   /** Perform the current action verb */
   action(): void {
     if (this.paused || this.isOver || this.crush.hitstop > 0) return;
-    if (this.state === 'explore') {
-      const i = this.nearBombIndex();
-      if (i < 0) return;
-      this.floorBombs.splice(i, 1);
-      this.carrying = true;
-      this.state = 'carry';
-      this.sfx.play('pickup');
-    } else if (this.state === 'carry' && this.atCrack()) {
-      this.carrying = false;
-      this.placedCount++;
-      this.sfx.play('pickup');
-      this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
-      this.lightPresses = 0;
-    } else if (this.state === 'placed' && this.atCrack()) {
-      this.lightPresses++;
-      this.sfx.play('scrape', { volume: 1 });
-      if (this.lightPresses >= LIGHT_PRESSES) {
-        this.state = 'armed';
-        this.fuseStepsLeft = FUSE_STEPS;
-        if (this.player) this.player.direction = 0;
-        this.sfx.loop('fuse');
+    switch (this.state) {
+      case 'explore': {
+        const i = this.nearBombIndex();
+        if (i < 0) return;
+        this.floorBombs.splice(i, 1);
+        this.carrying = true;
+        this.state = 'carry';
+        this.sfx.play('pickup');
+        break;
       }
-    } else if (this.state === 'placed') {
-      this.padNudgeSteps = PAD_NUDGE_STEPS;
-      this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
-      this.sfx.play('scrape', { volume: 0.3 });
+      case 'carry':
+        if (!this.atCrack()) break;
+        this.carrying = false;
+        this.placedCount++;
+        this.sfx.play('pickup');
+        this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
+        this.lightPresses = 0;
+        break;
+      case 'placed':
+        if (this.atCrack()) {
+          this.lightPresses++;
+          this.sfx.play('scrape', { volume: 1 });
+          if (this.lightPresses >= LIGHT_PRESSES) {
+            this.state = 'armed';
+            this.fuseStepsLeft = FUSE_STEPS;
+            if (this.player) this.player.direction = 0;
+            this.sfx.loop('fuse');
+          }
+        } else {
+          this.padNudgeSteps = PAD_NUDGE_STEPS;
+          this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
+          this.sfx.play('scrape', { volume: 0.3 });
+        }
+        break;
     }
   }
 
