@@ -326,11 +326,8 @@ export class SurfaceGame implements SurfaceView {
       fired = true;
       clearTimeout(watchdog);
 
-      if (this.onComplete) {
-        this.onComplete(breakdown);
-      } else {
-        this.onGameOver?.(breakdown);
-      }
+      const finish = this.onComplete ?? this.onGameOver;
+      finish?.(breakdown);
     };
 
     if (this.gameSong.muted) {

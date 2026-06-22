@@ -508,11 +508,8 @@ export class TunnelGame implements TunnelView {
   private endRun(): void {
     if (this.caveLoop) audio.stopLoop(this.caveLoop);
     this.sfx.stopLoop('fuse');
-    if (this.cyclesCleared >= TOTAL_CYCLES) {
-      this.onComplete?.(this.currentBreakdown());
-    } else {
-      this.onGameOver?.(this.currentBreakdown());
-    }
+    const finish = this.cyclesCleared >= TOTAL_CYCLES ? this.onComplete : this.onGameOver;
+    finish?.(this.currentBreakdown());
   }
 
   /** Near-crush warning: crouch frame + rumble before the kill line. */

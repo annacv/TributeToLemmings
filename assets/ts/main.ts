@@ -445,16 +445,20 @@ function main(): void {
 
     const hasCount = breakdown.tunnelTime + breakdown.levelsBonus > 0;
 
+    const isWin = variant === 'win';
+    const canvasHtml = isWin
+      ? '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>'
+      : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
+    const headingHtml = isWin
+      ? '<h1 class="go-title">&gt; You made it!<br>For now...</h1>'
+      : '<p class="go-boom">BOOOM!!!</p><h1 class="go-title">GAME OVER</h1>';
+
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="game-stage">
-        ${variant === 'win' ? 
-          '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>' :
-          '<canvas class="game-over-canvas" aria-hidden="true"></canvas>'}
+          ${canvasHtml}
           <div class="game-over-overlay">
-            ${variant === 'win' ? 
-              '<h1 class="go-title">&gt; You made it!<br>For now...</h1>' : 
-              '<p class="go-boom">BOOOM!!!</p>' + '<h1 class="go-title">GAME OVER</h1>'}
+            ${headingHtml}
             ${hasCount ? '<ul class="go-count"></ul>' : ''}
             <p class="go-score">score <span class="go-score-value"></span></p>
           </div>

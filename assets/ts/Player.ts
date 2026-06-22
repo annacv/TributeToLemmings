@@ -178,13 +178,8 @@ export class Player {
     const bodyColor = blinking ? this.blinkColor : getBodyColor(this.lives);
 
     ctx.save();
-    if (direction < 0) {
-      ctx.translate(dx + dWidth, dy);
-      ctx.scale(-scale, scale);
-    } else {
-      ctx.translate(dx, dy);
-      ctx.scale(scale, scale);
-    }
+    ctx.translate(direction < 0 ? dx + dWidth : dx, dy);
+    ctx.scale(direction < 0 ? -scale : scale, scale);
     drawLemmingShape(ctx, bodyColor, getHairLevel(frameCount));
     ctx.restore();
   }

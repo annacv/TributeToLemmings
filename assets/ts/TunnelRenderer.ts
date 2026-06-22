@@ -141,7 +141,9 @@ export class TunnelRenderer {
     const t = Math.min(1, (view.breachStep - BREACH_BOOM_STEPS) / BREACH_PAN_STEPS);
     const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2; // easeInOutQuad
 
-    return (view.reduceMotion ? (t >= 1 ? 1 : 0) : eased) * this.canvas.height;
+    /* Reduced motion snaps to the rest frame (full drop only once the pan completes) */
+    const snap = t >= 1 ? 1 : 0;
+    return (view.reduceMotion ? snap : eased) * this.canvas.height;
   }
 
   /** Ground-hole frame for this breach step: opens 0→last (boom), then held open
