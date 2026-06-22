@@ -35,7 +35,6 @@ export class Hud {
     return true;
   }
 
-  /** Toggles the low-time warning styling on the countdown digits. */
   setTimeWarning(on: boolean): void {
     this.el('.seconds-value')?.classList.toggle('time-warning', on);
   }

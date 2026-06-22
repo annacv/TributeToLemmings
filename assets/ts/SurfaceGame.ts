@@ -32,8 +32,7 @@ const EARLY_CRACK_MISSES = 4;
 const LATE_CRACK_MISSES = 14;
 const TUNNEL_STING_WATCHDOG_MS = 4000;
 
-/** The read-only slice of surface state the renderer draws from each frame. Keeps
-    the renderer decoupled from gameplay: it reads this view, never mutates it. */
+/** The read-only slice of surface state the renderer draws from each frame. */
 export interface SurfaceView {
   readonly groundErosionActive: boolean;
   readonly player: Player | null;
@@ -115,7 +114,6 @@ export class SurfaceGame implements SurfaceView {
     this.host.start();
   }
 
-  /** Aborts when the run ends — attach run-scoped listeners with this signal. */
   get runSignal(): AbortSignal {
     return this.host.signal;
   }

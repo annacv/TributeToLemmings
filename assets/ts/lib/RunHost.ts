@@ -2,9 +2,7 @@ import { GameLoop } from './GameLoop';
 import { RunLifecycle } from './RunLifecycle';
 
 export interface RunHostHooks {
-  /** Advance the simulation by one fixed 1/60 s step; return false to halt the run. */
   step: () => boolean;
-  /** Draw the current state; called exactly once per display frame. */
   render: () => void;
   /** Whether the run has ended; read after each render to gate teardown. */
   isOver: () => boolean;

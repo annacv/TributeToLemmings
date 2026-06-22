@@ -69,8 +69,7 @@ const PAD_NUDGE_STEPS = 10;
 
 export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'breach' | 'event';
 
-/** The read-only slice of tunnel state the renderer draws from each frame. Keeps
-    the renderer decoupled from gameplay: it reads this view, never mutates it. */
+/** The read-only slice of tunnel state the renderer draws from each frame. */
 export interface TunnelView {
   readonly state: TunnelState;
   readonly cycle: number;
@@ -211,7 +210,6 @@ export class TunnelGame implements TunnelView {
     this.host.start();
   }
 
-  /** Perform the current action verb */
   action(): void {
     if (this.paused || this.isOver || this.crush.hitstop > 0) return;
     switch (this.state) {

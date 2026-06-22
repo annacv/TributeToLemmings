@@ -159,7 +159,6 @@ describe('game screen keyboard wiring', () => {
     expect(document.querySelector('.touch-right')).not.toBeNull();
     /* withAction:false — the surface omits the tunnel's action control */
     expect(document.querySelector('.touch-action')).toBeNull();
-    /* The mute icon markup is injected from the ?raw-imported SVG (currentColor-themed) */
     expect(document.querySelector('.mute-btn svg')).not.toBeNull();
   });
 });

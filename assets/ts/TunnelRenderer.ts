@@ -16,7 +16,6 @@ const CEILING_TOOTH_FRAC = 794 / 800; // deepest tooth: the collision line, neve
 const CRACK_MARK_HEIGHT_FRAC = 0.12;
 const RUST_ACCENT = '#A85A1C';
 
-/** Eager-load guard */
 function ready(img: HTMLImageElement): boolean {
   return img.complete && img.naturalWidth > 0;
 }
