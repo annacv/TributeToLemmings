@@ -1,5 +1,6 @@
 import { SurfaceGame } from './SurfaceGame';
 import { TunnelGame } from './TunnelGame';
+import { AbyssGame } from './AbyssGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
@@ -12,7 +13,7 @@ import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score'
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
-  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG,
+  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG, ABYSS_LOOP,
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
@@ -707,9 +708,35 @@ function main(): void {
     }
   }
 
+  function createAbyssScreen(breakdown: ScoreBreakdown): void {
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'tunnel-game-canvas',
+      canvasAriaLabel: 'The Abyss — gather bombs and bring down the stalactites',
+      secondsStart: 72,
+      withAction: true,
+    });
+
+    const game = new AbyssGame(canvas, breakdown);
+    game.completionCallback((b) => createGameOverScreen(b, 'win'));
+    game.gameOverCallback(createGameOverScreen);
+
+    const abyssLoop = new Audio(ABYSS_LOOP);
+    game.abyssLoop = abyssLoop;
+    playLoop(abyssLoop, game.muted);
+    pauseWhileHidden(abyssLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
+
+    wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); abyssLoop.muted = muted; });
+    wireMovement(() => game.player, game.runSignal, () => game.paused);
+    wireAction(() => game.action(), game.runSignal, () => game.paused);
+
+    canvas.focus();
+    game.startGame();
+  }
+
   const debugScreen = getDebugScreen();
   if (debugScreen === 'transition') createTransitionScreen(makeBreakdown({ surfaceTime: 42 }));
   else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+  else if (debugScreen === 'abyss') createAbyssScreen(makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }));
   else createStartScreen();
 }
 
