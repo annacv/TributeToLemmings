@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="46" height="100" viewBox="0 0 100 220" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <g id="crack-light" stroke="none" fill-rule="evenodd">
+    <path d="M48 24 L40 58 L48 70 L44 96 L50 96 L52 68 L46 58 L54 26 Z" fill="#3A0A04"/>
+    <path d="M50 26 L46 56 L52 68 L48 94 L50 94 L53 68 L48 56 L52 26 Z" fill="#FFD9B0" opacity="0.7"/>
+    <rect x="56" y="40" width="4" height="22" fill="#3A0A04"/>
+  </g>
+</svg>

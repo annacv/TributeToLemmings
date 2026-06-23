@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="46" height="100" viewBox="0 0 100 220" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <g id="crack-heavy" stroke="none" fill-rule="evenodd">
+    <!-- main forked fracture down the body -->
+    <path d="M50 18 L40 52 L50 78 L42 110 L50 138 L46 96 L54 70 L46 48 L56 20 Z" fill="#3A0A04"/>
+    <!-- fresh-break highlight tracing the main fracture -->
+    <path d="M51 20 L46 50 L53 76 L47 108 L50 134 L49 96 L55 70 L49 50 L53 20 Z" fill="#FFD9B0" opacity="0.75"/>
+    <!-- right branch fracture -->
+    <path d="M55 44 L66 58 L62 92 L58 92 L60 60 L52 50 Z" fill="#3A0A04"/>
+    <!-- chipped-out flake on the lit flank (a piece already gone) -->
+    <path d="M34 70 L44 84 L40 104 L30 96 Z" fill="#2A0703"/>
+    <path d="M35 72 L43 84 L40 100 L33 94 Z" fill="#FFD9B0" opacity="0.5"/>
+    <!-- short upper hairlines -->
+    <rect x="58" y="30" width="3" height="16" fill="#3A0A04"/>
+    <rect x="40" y="36" width="3" height="14" fill="#3A0A04"/>
+  </g>
+</svg>
