@@ -438,7 +438,7 @@ function main(): void {
     const size = getCanvasSize();
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
-    const hasCount = breakdown.tunnelTime + breakdown.levelsBonus > 0;
+    const hasCount = breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus > 0;
     const isWin = variant === 'win';
 
     const canvasHtml = isWin
