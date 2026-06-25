@@ -273,7 +273,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
     expect(onDone).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1300);
     expect(onDone).toHaveBeenCalledTimes(1);
-    expect(play).toHaveBeenCalledWith('falling', { playbackRate: 2 }); // quick whoosh as it drops in
+    expect(play).toHaveBeenCalledWith('falling', { playbackRate: 2, volume: 0.5 });
     expect(play).toHaveBeenCalledWith('thud'); // lands on the corridor floor
   });
 

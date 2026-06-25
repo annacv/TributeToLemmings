@@ -219,7 +219,7 @@ export class AbyssGame implements AbyssView {
     };
     requestAnimationFrame(tick);
     setTimeout(() => this.sfx.play('door'), COLD_OPEN_SETTLE_MS);
-    setTimeout(() => this.sfx.play('falling', { playbackRate: 2 }), COLD_OPEN_FALL_START_MS);
+    setTimeout(() => this.sfx.play('falling', { playbackRate: 2, volume: 0.5 }), COLD_OPEN_FALL_START_MS);
     setTimeout(() => this.sfx.play('thud'), COLD_OPEN_TOTAL_MS); // lands on the corridor floor
     setTimeout(onDone, COLD_OPEN_TOTAL_MS);
   }
