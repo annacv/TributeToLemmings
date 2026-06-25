@@ -239,6 +239,8 @@ function main(): void {
     wireMute((muted) => { game.gameSong.muted = muted; });
     wireMovement(() => game.player, game.runSignal);
 
+    game.startSong();
+
     canvas.focus();
     showInfoModal(SURFACE_MODAL, () => {
       canvas.focus();

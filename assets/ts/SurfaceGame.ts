@@ -98,11 +98,7 @@ export class SurfaceGame implements SurfaceView {
     });
   }
 
-  startGame(): void {
-    this.player = new Player(this.canvas);
-    this.initLivesIcons();
-    this.updateLevel();
-    this.showLevelUpEffect();
+  startSong(): void {
     this.gameSong.loop = true;
     audio.safePlay(this.gameSong);
 
@@ -110,7 +106,13 @@ export class SurfaceGame implements SurfaceView {
       signal: this.host.signal,
       shouldResume: () => !this.isOver,
     });
+  }
 
+  startGame(): void {
+    this.player = new Player(this.canvas);
+    this.initLivesIcons();
+    this.updateLevel();
+    this.showLevelUpEffect();
     this.host.start();
   }
 

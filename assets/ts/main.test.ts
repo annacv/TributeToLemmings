@@ -11,6 +11,7 @@ interface MockGame {
   gameSong: { muted: boolean };
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
   onComplete: ((breakdown: ScoreBreakdown) => void) | null;
+  startSong: ReturnType<typeof vi.fn>;
   startGame: ReturnType<typeof vi.fn>;
 }
 
@@ -31,6 +32,7 @@ vi.mock('./SurfaceGame', () => ({
     gameSong = { muted: false };
     onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
     onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
+    startSong = vi.fn();
     startGame = vi.fn();
     private runController = new AbortController();
     get runSignal(): AbortSignal { return this.runController.signal; }

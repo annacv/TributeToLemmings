@@ -828,6 +828,7 @@ describe('SurfaceGame — background-tab audio', () => {
     const pauseSpy = vi.fn();
     game.gameSong.play = playSpy;
     game.gameSong.pause = pauseSpy;
+    game.startSong();
     game.startGame();
     playSpy.mockClear();
     pauseSpy.mockClear();
