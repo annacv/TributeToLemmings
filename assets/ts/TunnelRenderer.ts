@@ -1,5 +1,5 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
-import { loadImage, loadImages } from './lib/images';
+import { loadImage, loadImages, ready } from './lib/images';
 import {
   TUNNEL_LEVELS, FLOOR_FRAC, CRACK_RANGE_FRAC,
   BREACH_BOOM_STEPS, BREACH_PAN_STEPS,
@@ -15,10 +15,6 @@ const CEILING_ASPECT = 800 / 800;     // tunnel-ceiling.svg strip
 const CEILING_TOOTH_FRAC = 794 / 800; // deepest tooth: the collision line, never per-tooth
 const CRACK_MARK_HEIGHT_FRAC = 0.12;
 const RUST_ACCENT = '#A85A1C';
-
-function ready(img: HTMLImageElement): boolean {
-  return img.complete && img.naturalWidth > 0;
-}
 
 /* Draws the tunnel chamber each frame from a read-only TunnelView. It owns the
    canvas context and the world artwork; gameplay state stays in TunnelGame and is

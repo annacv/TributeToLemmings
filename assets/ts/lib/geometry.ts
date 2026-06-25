@@ -6,6 +6,11 @@
 export const BOMB_WIDTH = 28;
 export const BOMB_HEIGHT = 32;
 
+/** Bomb-vs-lemming hitbox insets, shared by the surface and abyss collision checks. */
+export const PLAYER_HITBOX_INSET_X = 8;   // torso/head span x≈15–35 of 50
+export const PLAYER_HITBOX_INSET_TOP = 5; // hair top starts at y≈5 of 50
+export const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs never mirror
+
 /** Lemming draw size as a fraction of the canvas on cinematic screens. */
 export const LEMMING_SIZE_FRAC = 0.14;
 

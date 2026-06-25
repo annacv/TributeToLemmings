@@ -12,6 +12,12 @@ export function loadImages(srcs: readonly string[]): HTMLImageElement[] {
   return srcs.map(loadImage);
 }
 
+/* True once an image has finished decoding and is safe to draw — the guard every
+   canvas screen applies before drawImage (a not-yet-loaded image has naturalWidth 0). */
+export function ready(img: HTMLImageElement): boolean {
+  return img.complete && img.naturalWidth > 0;
+}
+
 /* Runs `onSettled` once every image has finished (loaded or errored), so a slow
    decode can't leave a screen half-drawn. Already-complete images count
    immediately — if all are, the callback fires synchronously. Listeners are

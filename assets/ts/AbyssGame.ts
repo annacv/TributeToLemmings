@@ -5,7 +5,9 @@ import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
 import { SoundEffectBank } from './lib/SoundEffectBank';
-import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
+import {
+  BOMB_WIDTH, BOMB_HEIGHT, PLAYER_HITBOX_INSET_X, PLAYER_HITBOX_INSET_TOP, BOMB_HITBOX_TRIM_RIGHT,
+} from './lib/geometry';
 import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
 } from './lib/score';
@@ -62,10 +64,6 @@ const EXIT_TOTAL_MS = EXIT_WALK_MS + EXIT_VANISH_MS; // the lemming disappears
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 const easeInQuad = (progress: number): number => progress * progress; // gravity-ish fall
-
-const PLAYER_HITBOX_INSET_X = 8;
-const PLAYER_HITBOX_INSET_TOP = 5;
-const BOMB_HITBOX_TRIM_RIGHT = 6;
 
 export interface ThrownBomb {
   readonly target: Stalactite;

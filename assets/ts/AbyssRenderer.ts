@@ -1,5 +1,5 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
-import { loadImage, loadImages } from './lib/images';
+import { loadImage, loadImages, ready } from './lib/images';
 import { Stalactite } from './Stalactite';
 import {
   ABYSS_FLOOR_FRAC, ABYSS_CEILING_FRAC, THROW_RANGE_FRAC, THROW_FLIGHT_STEPS, type AbyssView,
@@ -15,10 +15,6 @@ const STALACTITE_HEIGHT_FRAC = { small: 0.16, medium: 0.22, large: 0.30 } as con
 const STALACTITE_GLOW_COLOR = '#FFD27A';
 const SHAKE_AMP_FRAC = 0.01;
 const BACKDROP_PARALLAX = 0.3; // backdrop pans at this fraction of the camera for depth
-
-function ready(img: HTMLImageElement): boolean {
-  return img.complete && img.naturalWidth > 0;
-}
 
 export class AbyssRenderer {
   private readonly ctx: CanvasRenderingContext2D;

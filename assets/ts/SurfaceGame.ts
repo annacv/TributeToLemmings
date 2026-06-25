@@ -3,7 +3,9 @@ import { Bomb } from './Bomb';
 import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
-import { BOMB_WIDTH } from './lib/geometry';
+import {
+  BOMB_WIDTH, PLAYER_HITBOX_INSET_X, PLAYER_HITBOX_INSET_TOP, BOMB_HITBOX_TRIM_RIGHT,
+} from './lib/geometry';
 import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import { SoundEffectBank } from './lib/SoundEffectBank';
@@ -23,9 +25,6 @@ const LEVEL_CONFIG = [
 ] as const;
 
 const LEVEL_THRESHOLDS = [0, 18, 36];
-const PLAYER_HITBOX_INSET_X = 8;   // torso/head span x≈15–35 of 50
-const PLAYER_HITBOX_INSET_TOP = 5; // hair top starts at y≈5 of 50
-const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs never mirror
 const COLLAPSE_COVERAGE = 0.95;
 const COLLAPSE_HOLD_MS = 500;
 const EARLY_CRACK_MISSES = 4;
