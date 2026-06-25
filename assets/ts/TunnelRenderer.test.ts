@@ -26,7 +26,6 @@ function makeView(overrides: Partial<TunnelView> = {}): TunnelView {
     padNudgeDir: 1,
     reduceMotion: false,
     playerCenterFrac: () => 0.5,
-    inWarningBand: () => false,
     ...overrides,
   };
 }

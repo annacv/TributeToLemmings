@@ -21,7 +21,7 @@ const STEPS_PER_SECOND = 60;
 export const FLOOR_FRAC = 690 / 800; // walkable line in background-tunnel.svg
 
 /* Kill line and warning band, both as floor-to-ceiling headroom.
-   The rule: the crouch warning must always show before the crush can fire. */
+   The rule: the warning must always show before the crush can fire. */
 export const CRUSH_HEADROOM_FRAC = 0.09;
 export const WARNING_HEADROOM_FRAC = 0.17;
 
@@ -87,7 +87,6 @@ export interface TunnelView {
   readonly padNudgeDir: number;
   readonly reduceMotion: boolean;
   playerCenterFrac(): number;
-  inWarningBand(): boolean;
 }
 
 export class TunnelGame implements TunnelView {
@@ -507,7 +506,7 @@ export class TunnelGame implements TunnelView {
     finish?.(this.currentBreakdown());
   }
 
-  /** Near-crush warning: crouch frame + rumble before the kill line. */
+  /** Near-crush warning: rumble before the kill line. */
   inWarningBand(): boolean {
     return this.headroomFrac() <= WARNING_HEADROOM_FRAC;
   }

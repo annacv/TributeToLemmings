@@ -100,18 +100,7 @@ export class TunnelRenderer {
     }
 
     if (view.player) {
-      const crouching = view.state !== 'breach' && view.inWarningBand();
-
-      if (crouching) {
-        /* Crouch read: vertical squash anchored at the feet */
-        ctx.save();
-        ctx.translate(0, floorY * 0.2);
-        ctx.scale(1, 0.8);
-        view.player.drawImage(view.stepCount);
-        ctx.restore();
-      } else {
-        view.player.drawImage(view.stepCount);
-      }
+      view.player.drawImage(view.stepCount);
     }
 
     /* Ceiling strip last; it scrolls up with the world during the breach drop */
