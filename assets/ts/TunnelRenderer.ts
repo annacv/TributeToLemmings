@@ -43,18 +43,18 @@ export class TunnelRenderer {
 
   render(view: TunnelView): void {
     const { ctx, canvas } = this;
-    const size = canvas.width;
-    const h = canvas.height;
+    const width = canvas.width;
+    const height = canvas.height;
     const drop = this.dropOffsetPx(view);
-    const floorY = h * FLOOR_FRAC;
-    ctx.clearRect(0, 0, size, h);
+    const floorY = height * FLOOR_FRAC;
+    ctx.clearRect(0, 0, width, height);
 
     if (ready(this.backgroundImg)) {
-      ctx.drawImage(this.backgroundImg, 0, -drop, size, h);
+      ctx.drawImage(this.backgroundImg, 0, -drop, width, height);
 
       if (drop !== 0) {
         /* The next-deeper chamber slides up from below */
-        ctx.drawImage(this.backgroundImg, 0, -drop + h, size, h);
+        ctx.drawImage(this.backgroundImg, 0, -drop + height, width, height);
       }
     }
 
@@ -65,9 +65,9 @@ export class TunnelRenderer {
       const crackImg = this.crackImgs[TUNNEL_LEVELS[view.cycle].crackMark];
 
       if (ready(crackImg)) {
-        const markH = size * CRACK_MARK_HEIGHT_FRAC;
+        const markH = width * CRACK_MARK_HEIGHT_FRAC;
         const markW = markH * (crackImg.naturalWidth / crackImg.naturalHeight);
-        ctx.drawImage(crackImg, view.crackXFrac * size - markW / 2, floorY, markW, markH);
+        ctx.drawImage(crackImg, view.crackXFrac * width - markW / 2, floorY, markW, markH);
       }
     }
 
@@ -76,13 +76,13 @@ export class TunnelRenderer {
 
     if (ready(this.bombImg)) {
       for (const x of view.floorBombs) {
-        ctx.drawImage(this.bombImg, x * size - BOMB_WIDTH / 2, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
+        ctx.drawImage(this.bombImg, x * width - BOMB_WIDTH / 2, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
       }
 
       /* Bombs stacked on the crack, fanned around its x (none until the player places) */
       if (view.state !== 'breach') {
         for (let i = 0; i < view.placedCount; i++) {
-          const stackX = view.crackXFrac * size - BOMB_WIDTH / 2
+          const stackX = view.crackXFrac * width - BOMB_WIDTH / 2
             + (i - (view.placedCount - 1) / 2) * BOMB_WIDTH * 0.7;
           ctx.drawImage(this.bombImg, stackX, floorY - BOMB_HEIGHT, BOMB_WIDTH, BOMB_HEIGHT);
         }
@@ -92,10 +92,10 @@ export class TunnelRenderer {
     /* Visual fuse countdown: code-drawn digits over the armed stack */
     if (view.state === 'armed') {
       const fuseSeconds = Math.ceil(view.fuseStepsLeft / 60);
-      ctx.font = `${Math.round(size * 0.05)}px monospace`;
+      ctx.font = `${Math.round(width * 0.05)}px monospace`;
       ctx.fillStyle = RUST_ACCENT;
       ctx.textAlign = 'center';
-      ctx.fillText(String(fuseSeconds), view.crackXFrac * size, floorY - BOMB_HEIGHT - 8);
+      ctx.fillText(String(fuseSeconds), view.crackXFrac * width, floorY - BOMB_HEIGHT - 8);
       ctx.textAlign = 'start';
     }
 
@@ -105,15 +105,15 @@ export class TunnelRenderer {
 
     /* Ceiling strip last; it scrolls up with the world during the breach drop */
     if (ready(this.ceilingImg)) {
-      const drawH = size * CEILING_ASPECT;
-      const drawY = view.ceilingFrac * h - drawH * CEILING_TOOTH_FRAC - drop;
-      ctx.drawImage(this.ceilingImg, 0, drawY, size, drawH);
+      const drawH = width * CEILING_ASPECT;
+      const drawY = view.ceilingFrac * height - drawH * CEILING_TOOTH_FRAC - drop;
+      ctx.drawImage(this.ceilingImg, 0, drawY, width, drawH);
     }
 
     if (view.crushFlash > 0) {
       ctx.globalAlpha = 0.55;
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, size, h);
+      ctx.fillRect(0, 0, width, height);
       ctx.globalAlpha = 1;
     }
   }
@@ -148,8 +148,8 @@ export class TunnelRenderer {
       proximity, snaps on arrival, and leans toward him on a stray press. */
   private drawLightPad(view: TunnelView, floorY: number): void {
     const { ctx, canvas } = this;
-    const size = canvas.width;
-    const cx = view.crackXFrac * size;
+    const width = canvas.width;
+    const cx = view.crackXFrac * width;
     const dist = Math.abs(view.playerCenterFrac() - view.crackXFrac);
     const prox = 1 - Math.min(1, dist / CRACK_RANGE_FRAC);    // 0 far → 1 on the charge
     const pulse = view.reduceMotion ? 1 : 0.5 + 0.5 * Math.sin(view.stepCount / 8);
@@ -159,11 +159,11 @@ export class TunnelRenderer {
     if (view.padArriveSteps > 0) alpha = 1;                   // "locked in" snap
     if (view.padNudgeSteps > 0) alpha = Math.max(alpha, 0.9); // beckon on a stray press
 
-    const lean = view.padNudgeSteps > 0 ? view.padNudgeDir * size * 0.02 : 0;
+    const lean = view.padNudgeSteps > 0 ? view.padNudgeDir * width * 0.02 : 0;
 
-    const padW = size * 0.16;
-    const tickW = Math.max(3, size * 0.012);
-    const tickH = size * 0.05 * (0.6 + 0.4 * prox) * (view.reduceMotion ? 1 : 0.8 + 0.2 * pulse);
+    const padW = width * 0.16;
+    const tickW = Math.max(3, width * 0.012);
+    const tickH = width * 0.05 * (0.6 + 0.4 * prox) * (view.reduceMotion ? 1 : 0.8 + 0.2 * pulse);
 
     ctx.save();
     ctx.globalAlpha = Math.min(1, alpha);
@@ -181,10 +181,10 @@ export class TunnelRenderer {
       camera drops into the new chamber. */
   private drawBreachPit(view: TunnelView, drop: number): void {
     const { ctx, canvas } = this;
-    const size = canvas.width;
+    const width = canvas.width;
     const holeImg = this.groundHoleImgs[this.breachHoleFrame(view)];
-    const holeCx = view.crackXFrac * size;
-    const holeW = size * 0.4;
+    const holeCx = view.crackXFrac * width;
+    const holeW = width * 0.4;
 
     if (holeImg && ready(holeImg)) {
       /* Opens in the old floor, scrolling up with the chamber */
@@ -194,7 +194,7 @@ export class TunnelRenderer {
     }
 
     if (view.breachStep <= BREACH_BOOM_STEPS && ready(this.booomImg)) {
-      const boomW = size * 0.3;
+      const boomW = width * 0.3;
       const boomY = canvas.height * FLOOR_FRAC - drop;
       ctx.drawImage(this.booomImg, holeCx - boomW / 2, boomY - boomW / 2, boomW, boomW);
     }

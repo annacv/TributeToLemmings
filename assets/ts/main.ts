@@ -35,6 +35,10 @@ const TRANSITION_MESSAGE_FROM_START = 0.0125;
 const TUNNEL_CEILING_HANG_FRAC = 0.24;
 const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
+/* easeOutBack overshoot coefficients: the ceiling slams past its rest point then
+   settles. Standard curve constants (C3 = C1 + 1). */
+const EASE_OUT_BACK_C1 = 1.70158;
+const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
 
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -378,8 +382,8 @@ function main(): void {
         : holeY + descend * (landY - holeY);
       /* Ceiling: easeOutBack so it slams past the rest point then settles */
       const ceilingT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_CEILING_DURATION_MS, 1);
-      const c = ceilingT - 1;
-      const ceilingDrop = ceilingT <= 0 ? 0 : 1 + 2.70158 * c ** 3 + 1.70158 * c ** 2;
+      const overshoot = ceilingT - 1;
+      const ceilingDrop = ceilingT <= 0 ? 0 : 1 + EASE_OUT_BACK_C3 * overshoot ** 3 + EASE_OUT_BACK_C1 * overshoot ** 2;
       const restT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_REST_FADE_MS, 1);
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));

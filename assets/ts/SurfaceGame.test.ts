@@ -382,7 +382,7 @@ describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () =>
     const game = makeGame();
     const bomb = dropBomb(game, 100);
     const stamp = game['renderer']['crackStamps'][0];
-    expect(stamp.x + stamp.w / 2).toBeCloseTo(100 + bomb.dWidth / 2);
+    expect(stamp.x + stamp.width / 2).toBeCloseTo(100 + bomb.dWidth / 2);
   });
 
   it('triggers a light shake on the canvas for each ground hit', () => {
@@ -440,9 +440,9 @@ describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () =>
     for (let i = 0; i < 10; i++) dropBomb(game, i % 2 === 0 ? 0 : canvas.width - 10);
     for (const stamp of [...game['renderer']['crackStamps'], ...game['renderer']['holeStamps']]) {
       expect(stamp.x).toBeGreaterThanOrEqual(0);
-      expect(stamp.x + stamp.w).toBeLessThanOrEqual(canvas.width);
+      expect(stamp.x + stamp.width).toBeLessThanOrEqual(canvas.width);
       expect(stamp.y).toBeGreaterThanOrEqual(canvas.height * 0.71);
-      expect(stamp.y + stamp.h).toBeLessThanOrEqual(canvas.height);
+      expect(stamp.y + stamp.height).toBeLessThanOrEqual(canvas.height);
     }
   });
 });
@@ -565,8 +565,8 @@ describe('SurfaceGame — tunnel world transition', () => {
     expect(holes).toHaveLength(1);
     const stamp = holes[0];
     const playerCenter = 200 + game.player!.dWidth / 2;
-    expect(stamp.x + stamp.w / 2).toBeCloseTo(playerCenter, 5);
-    expect(stamp.y + stamp.h).toBeCloseTo(canvas.height, 5);
+    expect(stamp.x + stamp.width / 2).toBeCloseTo(playerCenter, 5);
+    expect(stamp.y + stamp.height).toBeCloseTo(canvas.height, 5);
   });
 });
 
