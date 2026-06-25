@@ -6,7 +6,7 @@ import {
 } from './AbyssGame';
 import {
   SPRITES, STALACTITE_SVGS, STALACTITE_CRACK_SVGS,
-  ABYSS_CEILING_SVG, ABYSS_BACKGROUND_SVG,
+  ABYSS_BACKGROUND_SVG,
   ABYSS_DOOR_ENTRANCE_SVG, ABYSS_DOOR_ENTRANCE_OPEN_SVG, ABYSS_DOOR_EXIT_SVG,
 } from './assets';
 
@@ -20,7 +20,6 @@ export class AbyssRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly canvas: HTMLCanvasElement;
   private readonly backgroundImg: HTMLImageElement;
-  private readonly ceilingImg: HTMLImageElement;
   private readonly stalactiteImgs: HTMLImageElement[];
   private readonly crackImgs: HTMLImageElement[];
   private readonly bombImg: HTMLImageElement;
@@ -33,7 +32,6 @@ export class AbyssRenderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.backgroundImg = loadImage(ABYSS_BACKGROUND_SVG);
-    this.ceilingImg = loadImage(ABYSS_CEILING_SVG);
     this.stalactiteImgs = loadImages(STALACTITE_SVGS);
     this.crackImgs = loadImages(STALACTITE_CRACK_SVGS);
     this.bombImg = loadImage(SPRITES.bomb);
@@ -51,7 +49,7 @@ export class AbyssRenderer {
     const ceilingY = height * ABYSS_CEILING_FRAC;
     ctx.clearRect(0, 0, width, height);
 
-    this.drawCorridor(view, floorY, ceilingY);
+    this.drawCorridor(view);
     this.drawThrowHints(view, floorY);
     // Entrance: a clean two-state swap — the closed art shows until DOOR.WAV fires the
     // open, then the open art replaces it (no synthetic cover; the two assets carry the state).
@@ -124,39 +122,13 @@ export class AbyssRenderer {
     }
   }
 
-  private drawCorridor(view: AbyssView, floorY: number, ceilingY: number): void {
+  private drawCorridor(view: AbyssView): void {
     const { ctx, canvas } = this;
-    const width = canvas.width;
-    const height = canvas.height;
 
     ctx.fillStyle = '#0b0706';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (ready(this.backgroundImg)) {
-      this.drawBackdrop(view);
-      return;
-    }
-
-    if (ready(this.ceilingImg)) {
-      const tileHeight = ceilingY + height * 0.06;
-      const tileWidth = tileHeight * (this.ceilingImg.naturalWidth / this.ceilingImg.naturalHeight);
-      let tileX = -((view.cameraX % tileWidth) + tileWidth) % tileWidth;
-      for (; tileX < width; tileX += tileWidth) ctx.drawImage(this.ceilingImg, tileX, 0, tileWidth, tileHeight);
-    } else {
-      ctx.fillStyle = '#2a0e06';
-      ctx.fillRect(0, 0, width, ceilingY);
-    }
-
-    // damaged floor band
-    ctx.fillStyle = '#3a1208';
-    ctx.fillRect(0, floorY, width, height - floorY);
-    ctx.fillStyle = '#5a1006';
-    ctx.fillRect(0, floorY, width, 4);
-    // scrolling erosion notches
-    ctx.fillStyle = '#1a0a06';
-    const notchGap = width * 0.18;
-    let notchX = -((view.cameraX % notchGap) + notchGap) % notchGap;
-    for (; notchX < width; notchX += notchGap) ctx.fillRect(notchX, floorY, width * 0.05, 6);
+    if (ready(this.backgroundImg)) this.drawBackdrop(view);
   }
 
   /** Painted panorama as a parallax backdrop. Scale to canvas height, then pick a
@@ -194,7 +166,6 @@ export class AbyssRenderer {
         ctx.save();
         ctx.shadowColor = STALACTITE_GLOW_COLOR;
         ctx.shadowBlur = 6 + pulse * 12;
-        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight); // a second pass deepens the halo
         ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
         ctx.restore();
       } else {
