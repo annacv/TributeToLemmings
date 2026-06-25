@@ -134,7 +134,6 @@ describe('TunnelGame — mechanic state machine', () => {
       placePlayerAt(game, game.floorBombs[0]);
       game.action();
       expect(game.state).toBe('carry');
-      expect(game.carrying).toBe(true);
 
       placePlayerAt(game, atCrackFrac(game));
       game.action();
@@ -324,7 +323,6 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   it('crush mid-fuse cancels the armed state, stops the tick, and restores the bomb layout', () => {
     const game = makeTunnel(canvas);
     const stopTick = vi.spyOn(game.sfx.get('fuse')!, 'pause');
-    game.carrying = false;
     game.placedCount = TUNNEL_LEVELS[0].bombs;
     game.floorBombs = [];
     game.state = 'armed';

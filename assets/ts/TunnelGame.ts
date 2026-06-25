@@ -102,7 +102,6 @@ export class TunnelGame implements TunnelView {
   floorBombs: number[];
   bombSpawns: number[]; // this cycle's spawn layout (for crush respawn)
   placedCount: number;
-  carrying: boolean;
   lightPresses: number;
   fuseStepsLeft: number;
   stepCount: number;
@@ -148,7 +147,6 @@ export class TunnelGame implements TunnelView {
     this.floorBombs = [];
     this.bombSpawns = [];
     this.placedCount = 0;
-    this.carrying = false;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
     this.stepCount = 0;
@@ -217,14 +215,12 @@ export class TunnelGame implements TunnelView {
         const i = this.nearBombIndex();
         if (i < 0) return;
         this.floorBombs.splice(i, 1);
-        this.carrying = true;
         this.state = 'carry';
         this.sfx.play('pickup');
         break;
       }
       case 'carry':
         if (!this.atCrack()) break;
-        this.carrying = false;
         this.placedCount++;
         this.sfx.play('pickup');
         this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
@@ -321,7 +317,6 @@ export class TunnelGame implements TunnelView {
   /** Clear in-progress carry/place/light/fuse and restore the floor bombs from
       this cycle's spawn layout. Shared by cycle setup and crush respawn. */
   private resetCycleProgress(): void {
-    this.carrying = false;
     this.placedCount = 0;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
