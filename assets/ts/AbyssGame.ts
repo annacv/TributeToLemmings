@@ -10,16 +10,13 @@ import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
 } from './lib/score';
 import {
-  SPRITES, EXPLODE_SFX, MANTRAP_SFX, THUD_SFX, DOOR_SFX, LETSGO_SFX, FALLING_SFX,
+  SPRITES, EXPLODE_SFX, MANTRAP_SFX, THUD_SFX, DOOR_SFX, LETSGO_SFX, FALLING_SFX, FIRE_SFX, YIPPEE_SFX,
 } from './assets';
 
 const STEPS_PER_SECOND = 60;
 export const ABYSS_LEVEL_THRESHOLDS_S = [0, 18, 36] as const;
 export const ABYSS_TIME_BUDGET_S = 72;
 
-/* Per-level pacing. L1 reuses Surface-L1 values (60-frame interval, 1.2 speed);
-   each level shortens the bomb interval, speeds bombs up, tightens the stalactite
-   spacing, and adds one larger size needing one more hit (cost = level index + 1). */
 export const ABYSS_LEVELS = [
   { spawnIntervalFrames: 60, bombSpeed: 1.2, stalactiteGapFrac: 0.55, sizes: ['small'] },
   { spawnIntervalFrames: 42, bombSpeed: 1.5, stalactiteGapFrac: 0.46, sizes: ['small', 'medium'] },
@@ -31,18 +28,19 @@ export const ABYSS_L3_RANDOM_COST = false;
 export const ABYSS_FLOOR_FRAC = 0.82;   // walkable line (ground starts damaged)
 export const ABYSS_CEILING_FRAC = 0.30; // ceiling band the stalactites hang from
 
-const CAMERA_SPEED_FRAC = 0.004;        // steady auto-scroll, in canvas-widths/step
-const STEER_SPEED_FRAC = 0.006;         // ←→ nudge within the screen window
-const PLAYER_MIN_SCREEN_FRAC = 0.18;    // the dodge window the camera pins the lemming inside
-const PLAYER_MAX_SCREEN_FRAC = 0.62;
+/* Player-driven scroll: the lemming moves at the shared player speed and
+   the camera follows it rightward only. */
+const CAMERA_FOLLOW_FRAC = 0.5;         // camera trails the lemming once it passes mid-screen
+const SCREEN_LEFT_MARGIN_FRAC = 0.04;   // nearest the lemming gets to the canvas's left edge
+const CORRIDOR_START_FRAC = 0.34;       // inner face of the left framing column; the lemming starts right of it
 const SPAWN_AHEAD_FRAC = 1.2;           // stalactites seeded just past the right edge
 const CULL_BEHIND_FRAC = 1.0;           // drop hazards this far behind the camera
 
-const CARRY_CAP = 3;
+const CARRY_CAP = 10;                   // max. number of bombs the lemming can carry
 const PICKUP_RANGE_FRAC = 0.07;         // "standing on a floor bomb"
-const THROW_RANGE_FRAC = 0.09;          // "stalactite overhead" (x-overlap)
-const BOMB_SPAWN_AHEAD_FRAC = 0.12;     // bombs drop just ahead of the lemming's path
-const BOMB_SPAWN_SPREAD_FRAC = 0.4;
+export const THROW_RANGE_FRAC = 0.18;   // "near a stalactite" — wide enough to throw without standing dead-centre
+export const THROW_FLIGHT_STEPS = 10;   // frames a thrown bomb takes to fly up to the stalactite
+const BOMB_SPAWN_MAX_FRAC = 0.88;       // right edge of the bomb-spawn band
 
 /* Stalactite feedback durations (render-only). */
 const SHAKE_STEPS = 12;
@@ -50,18 +48,41 @@ const BOOM_STEPS = 14;
 const SHATTER_STEPS = 36;
 const FALL_SPEED_FRAC = 0.02;
 
-/* Player hitbox insets, shared with the Surface tuning. */
+/* Cold-open and exit-door cinematics. Elapsed-time tweens on rAF timestamps. */
+const COLD_OPEN_SETTLE_MS = 600;   // the lemming waits on the ledge
+const COLD_OPEN_DOOR_MS = 500;     // DOOR.WAV + the hatch tweens open
+const COLD_OPEN_HALF_BEAT_MS = 300; // half a beat after the door opens
+const COLD_OPEN_FALL_MS = 450;     // the lemming drops into the corridor
+const COLD_OPEN_FALL_START_MS = COLD_OPEN_SETTLE_MS + COLD_OPEN_DOOR_MS + COLD_OPEN_HALF_BEAT_MS; // the lemming starts falling
+const COLD_OPEN_TOTAL_MS = COLD_OPEN_FALL_START_MS + COLD_OPEN_FALL_MS; // the lemming lands on the corridor floor
+const COLD_OPEN_LEDGE_FRAC = 0.12; // the ledge sits just below the hatch
+const EXIT_WALK_MS = 700;          // the lemming walks into the demon-mouth
+const EXIT_VANISH_MS = 300;        // a breath after it disappears
+const EXIT_TOTAL_MS = EXIT_WALK_MS + EXIT_VANISH_MS; // the lemming disappears
+
+const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
+const easeInQuad = (progress: number): number => progress * progress; // gravity-ish fall
+
 const PLAYER_HITBOX_INSET_X = 8;
 const PLAYER_HITBOX_INSET_TOP = 5;
 const BOMB_HITBOX_TRIM_RIGHT = 6;
+
+export interface ThrownBomb {
+  readonly target: Stalactite;
+  readonly originWorldX: number;
+  stepsLeft: number;
+}
 
 /** The read-only slice of abyss state the renderer draws from each frame. */
 export interface AbyssView {
   readonly cameraX: number;
   readonly stalactites: readonly Stalactite[];
   readonly fallingBombs: readonly Bomb[];
-  readonly floorBombs: readonly number[]; // world x of bombs resting on the floor
+  readonly thrownBombs: readonly ThrownBomb[];
+  readonly floorBombs: readonly number[];
   readonly carried: number;
+  readonly carryCap: number;
+  readonly availableSizes: readonly StalactiteSize[];
   readonly breaks: Readonly<StalactiteBreaks>;
   readonly currentLevel: number;
   readonly player: Player | null;
@@ -88,12 +109,11 @@ export class AbyssGame implements AbyssView {
   breaks: StalactiteBreaks = { small: 0, medium: 0, large: 0 };
   stalactites: Stalactite[] = [];
   fallingBombs: Bomb[] = [];
+  thrownBombs: ThrownBomb[] = [];
   floorBombs: number[] = [];
-  /* Door beats are driven by the cold-open/exit state machine (Iteration VI,
-     task 4). Defaults here keep the renderer's door path live for core play:
-     the entrance reads open, the exit closed until the win beat tweens it. */
   entranceOpenFrac = 1;
   exitOpenFrac = 0;
+  exitWorldX = Number.MAX_SAFE_INTEGER;
   readonly reduceMotion: boolean;
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
   onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
@@ -122,6 +142,8 @@ export class AbyssGame implements AbyssView {
       door: DOOR_SFX,
       letsgo: LETSGO_SFX,
       falling: FALLING_SFX,
+      bombHit: FIRE_SFX,
+      levelUp: YIPPEE_SFX,
     }, () => this.muted);
     this.renderer = new AbyssRenderer(canvas);
     this.host = new RunHost({
@@ -145,42 +167,105 @@ export class AbyssGame implements AbyssView {
   }
 
   startGame(): void {
-    const w = this.canvas.width;
+    const canvasWidth = this.canvas.width;
     this.player = new Player(this.canvas);
     this.player.dy = this.canvas.height * ABYSS_FLOOR_FRAC - this.player.dHeight;
-    this.playerWorldX = w * PLAYER_MIN_SCREEN_FRAC;
-    this.player.dx = this.playerWorldX;
+    this.playerWorldX = this.entranceWorldX; // land below the opened ceiling door
+    this.player.dx = this.playerScreenX();
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
     this.hud.setText('.lives-value', String(this.player.lives));
     this.hud.setScore(0);
     this.hud.setLevel('1');
-    this.nextStalactiteWorldX = w * 0.8;
+    this.nextStalactiteWorldX = canvasWidth * 0.8;
     this.spawnStalactitesAhead();
+    this.updateHint();
     this.host.start();
+  }
+
+  /** Door cold-open: the lemming waits on the ledge by the closed hatch, the door
+      opens (DOOR.WAV), holds a half-beat, then it drops into the corridor — all on
+      the Abyss screen, no second transition. Non-interactive; the screen keeps the
+      run paused until `onDone` hands off to the modal + `startGame`. Reduced motion
+      resolves straight to the grounded, door-open state. */
+  coldOpen(onDone: () => void): void {
+    const canvasHeight = this.canvas.height;
+    this.player = new Player(this.canvas);
+    this.cameraX = 0;
+    this.playerWorldX = this.entranceWorldX;
+    this.player.dx = this.playerScreenX();
+    const ledgeY = canvasHeight * COLD_OPEN_LEDGE_FRAC;
+    const groundY = canvasHeight * ABYSS_FLOOR_FRAC - this.player.dHeight;
+
+    if (this.reduceMotion) {
+      this.entranceOpenFrac = 1;
+      this.player.dy = groundY;
+      this.sfx.play('thud'); // lands on the corridor floor at once
+      this.renderer.render(this);
+      onDone();
+      return;
+    }
+
+    this.entranceOpenFrac = 0;
+    this.player.dy = ledgeY;
+    let startTs: number | null = null;
+    const tick = (now: number): void => {
+      if (startTs === null) startTs = now;
+      const elapsed = now - startTs;
+      this.entranceOpenFrac = clamp01((elapsed - COLD_OPEN_SETTLE_MS) / COLD_OPEN_DOOR_MS);
+      const fallProgress = clamp01((elapsed - COLD_OPEN_FALL_START_MS) / COLD_OPEN_FALL_MS);
+      if (this.player) this.player.dy = ledgeY + easeInQuad(fallProgress) * (groundY - ledgeY);
+      this.renderer.render(this);
+      if (elapsed < COLD_OPEN_TOTAL_MS) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    setTimeout(() => this.sfx.play('door'), COLD_OPEN_SETTLE_MS);
+    setTimeout(() => this.sfx.play('falling', { playbackRate: 2 }), COLD_OPEN_FALL_START_MS);
+    setTimeout(() => this.sfx.play('thud'), COLD_OPEN_TOTAL_MS); // lands on the corridor floor
+    setTimeout(onDone, COLD_OPEN_TOTAL_MS);
   }
 
   /** The single action verb: pick up a floor bomb underfoot, else throw a carried
       bomb up at the stalactite overhead. */
   action(): void {
     if (this.paused || this.isOver || !this.player) return;
-    const fi = this.floorBombUnderPlayer();
-    if (fi >= 0 && this.carried < CARRY_CAP) {
-      this.floorBombs.splice(fi, 1);
+    const floorIndex = this.floorBombUnderPlayer();
+    if (floorIndex >= 0 && this.carried < CARRY_CAP) {
+      this.floorBombs.splice(floorIndex, 1);
       this.carried++;
       this.sfx.play('pickup');
       return;
     }
     if (this.carried > 0) {
-      const target = this.overheadStalactite();
+      const target = this.nearbyStalactite();
       if (target) {
         this.carried--;
-        this.hitStalactite(target);
+        this.sfx.play('pickup'); // the throw — the hit lands when the bomb arrives
+        this.thrownBombs.push({ target, originWorldX: this.playerWorldX, stepsLeft: THROW_FLIGHT_STEPS });
       }
+    }
+  }
+
+  /** Advance bombs in flight; each lands its hit on the target stalactite on arrival. */
+  private tickThrownBombs(): void {
+    for (let i = this.thrownBombs.length - 1; i >= 0; i--) {
+      const thrown = this.thrownBombs[i];
+      thrown.stepsLeft--;
+      if (thrown.stepsLeft > 0) continue;
+      this.thrownBombs.splice(i, 1);
+      if (!thrown.target.destroyed && this.stalactites.includes(thrown.target)) this.hitStalactite(thrown.target);
     }
   }
 
   survivedSeconds(): number {
     return Math.min(ABYSS_TIME_BUDGET_S, Math.floor(this.stepCount / STEPS_PER_SECOND));
+  }
+
+  get carryCap(): number {
+    return CARRY_CAP;
+  }
+
+  get availableSizes(): readonly StalactiteSize[] {
+    return ABYSS_LEVELS[this.currentLevel].sizes;
   }
 
   worldToScreenX(worldX: number): number {
@@ -193,12 +278,6 @@ export class AbyssGame implements AbyssView {
 
   get entranceWorldX(): number {
     return this.canvas.width * 0.5;
-  }
-
-  /** The exit scrolls into view exactly as the time budget elapses. */
-  get exitWorldX(): number {
-    const budgetSteps = ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND;
-    return CAMERA_SPEED_FRAC * this.canvas.width * budgetSteps + this.canvas.width * PLAYER_MAX_SCREEN_FRAC;
   }
 
   currentBreakdown(): ScoreBreakdown {
@@ -217,7 +296,6 @@ export class AbyssGame implements AbyssView {
     if (this.paused) return true;
 
     this.stepCount++;
-    this.cameraX += CAMERA_SPEED_FRAC * this.canvas.width;
     this.updateLevelByTime();
 
     if (this.hud.setScore(this.survivedSeconds())) {
@@ -234,19 +312,37 @@ export class AbyssGame implements AbyssView {
     this.maybeSpawnBomb();
     this.spawnStalactitesAhead();
     this.updateBombs();
+    this.tickThrownBombs();
     this.tickStalactites();
     this.cull();
     if (this.player) this.hud.displayLives(this.player.lives);
+    this.updateHint();
     return !this.isOver;
   }
 
+  private updateHint(): void {
+    this.hud.setText('.abyss-bombs', `${this.carried}/${CARRY_CAP}`);
+    for (const size of ['small', 'medium', 'large'] as const) {
+      const item = this.hud.el(`.abyss-stal[data-size="${size}"]`);
+      if (!item) continue;
+      const available = this.availableSizes.includes(size);
+      item.toggleAttribute('hidden', !available);
+      if (available) this.hud.setText(`.abyss-stal[data-size="${size}"] .abyss-hint-count`, String(this.breaks[size]));
+    }
+  }
+
+  /** Player-driven, the lemming moves at full control speed; the camera
+      follows it rightward only and never scrolls back; the screen's left edge is a
+      soft wall, so the lemming can stop anywhere. */
   private movePlayer(): void {
     if (!this.player) return;
-    const w = this.canvas.width;
-    this.playerWorldX += this.player.direction * STEER_SPEED_FRAC * w;
-    const minW = this.cameraX + w * PLAYER_MIN_SCREEN_FRAC;
-    const maxW = this.cameraX + w * PLAYER_MAX_SCREEN_FRAC;
-    this.playerWorldX = Math.max(minW, Math.min(this.playerWorldX, maxW));
+    const canvasWidth = this.canvas.width;
+    this.playerWorldX += this.player.direction * this.player.speed;
+    // Left bound: the screen's left margin, but never left of the start column's inner face.
+    const leftBound = Math.max(this.cameraX + canvasWidth * SCREEN_LEFT_MARGIN_FRAC, canvasWidth * CORRIDOR_START_FRAC);
+    if (this.playerWorldX < leftBound) this.playerWorldX = leftBound;
+    const followLine = canvasWidth * CAMERA_FOLLOW_FRAC;
+    if (this.playerScreenX() > followLine) this.cameraX = this.playerWorldX - followLine;
     this.player.dx = this.playerScreenX();
   }
 
@@ -260,16 +356,18 @@ export class AbyssGame implements AbyssView {
       this.currentLevel = level;
       this.hud.setLevel(String(level + 1));
       this.hud.showLevelBanner(`Level ${level + 1}`);
+      this.sfx.play('levelUp');
     }
   }
 
   private maybeSpawnBomb(): void {
     const level = ABYSS_LEVELS[this.currentLevel];
     if (this.stepCount - this.lastBombSpawn < level.spawnIntervalFrames) return;
-    const w = this.canvas.width;
-    const worldX = this.playerWorldX
-      + w * BOMB_SPAWN_AHEAD_FRAC
-      + (Math.random() - 0.3) * w * BOMB_SPAWN_SPREAD_FRAC;
+    const canvasWidth = this.canvas.width;
+    // Keep bombs inside the walkable corridor: never on the left framing column, never past the visible floor.
+    const minWorldX = Math.max(this.cameraX + canvasWidth * SCREEN_LEFT_MARGIN_FRAC, canvasWidth * CORRIDOR_START_FRAC);
+    const maxWorldX = this.cameraX + canvasWidth * BOMB_SPAWN_MAX_FRAC;
+    const worldX = minWorldX + Math.random() * (maxWorldX - minWorldX);
     const bomb = new Bomb(this.canvas, worldX, level.bombSpeed);
     bomb.dy = this.canvas.height * ABYSS_CEILING_FRAC;
     this.fallingBombs.push(bomb);
@@ -277,12 +375,12 @@ export class AbyssGame implements AbyssView {
   }
 
   private spawnStalactitesAhead(): void {
-    const w = this.canvas.width;
-    const limit = this.cameraX + w * SPAWN_AHEAD_FRAC;
+    const canvasWidth = this.canvas.width;
+    const limit = this.cameraX + canvasWidth * SPAWN_AHEAD_FRAC;
     while (this.nextStalactiteWorldX < limit) {
       const level = ABYSS_LEVELS[this.currentLevel];
       this.stalactites.push(new Stalactite(this.nextSize(level.sizes), this.nextStalactiteWorldX));
-      this.nextStalactiteWorldX += w * level.stalactiteGapFrac;
+      this.nextStalactiteWorldX += canvasWidth * level.stalactiteGapFrac;
       this.stalactiteSeq++;
     }
   }
@@ -309,6 +407,7 @@ export class AbyssGame implements AbyssView {
       if (this.player && this.bombHitsPlayer(bomb)) {
         this.fallingBombs.splice(i, 1);
         this.player.lives--;
+        this.sfx.play('bombHit');
         if (this.player.lives < 1) this.isOver = true;
       }
     }
@@ -319,9 +418,9 @@ export class AbyssGame implements AbyssView {
 
   private bombHitsPlayer(bomb: Bomb): boolean {
     if (!this.player) return false;
-    const px = this.playerScreenX();
-    const playerLeft = px + PLAYER_HITBOX_INSET_X;
-    const playerRight = px + this.player.dWidth - PLAYER_HITBOX_INSET_X;
+    const playerX = this.playerScreenX();
+    const playerLeft = playerX + PLAYER_HITBOX_INSET_X;
+    const playerRight = playerX + this.player.dWidth - PLAYER_HITBOX_INSET_X;
     const playerTop = this.player.dy + PLAYER_HITBOX_INSET_TOP;
     const playerBottom = this.player.dy + this.player.dHeight;
     const bombX = this.worldToScreenX(bomb.dx);
@@ -332,30 +431,31 @@ export class AbyssGame implements AbyssView {
 
   private floorBombUnderPlayer(): number {
     const range = this.canvas.width * PICKUP_RANGE_FRAC;
-    return this.floorBombs.findIndex((x) => Math.abs(x - this.playerWorldX) <= range);
+    return this.floorBombs.findIndex((worldX) => Math.abs(worldX - this.playerWorldX) <= range);
   }
 
-  private overheadStalactite(): Stalactite | null {
+  /** The nearest breakable stalactite within throw range of the lemming (not just overhead). */
+  private nearbyStalactite(): Stalactite | null {
     const range = this.canvas.width * THROW_RANGE_FRAC;
-    let best: Stalactite | null = null;
-    let bestDist = Infinity;
-    for (const st of this.stalactites) {
-      if (st.destroyed) continue;
-      const dist = Math.abs(st.worldX - this.playerWorldX);
-      if (dist <= range && dist < bestDist) { best = st; bestDist = dist; }
+    let nearest: Stalactite | null = null;
+    let nearestDist = Infinity;
+    for (const stalactite of this.stalactites) {
+      if (stalactite.destroyed) continue;
+      const dist = Math.abs(stalactite.worldX - this.playerWorldX);
+      if (dist <= range && dist < nearestDist) { nearest = stalactite; nearestDist = dist; }
     }
-    return best;
+    return nearest;
   }
 
-  private hitStalactite(st: Stalactite): void {
-    st.shakeStepsLeft = SHAKE_STEPS;
-    st.boomStepsLeft = BOOM_STEPS;
+  private hitStalactite(stalactite: Stalactite): void {
+    stalactite.shakeStepsLeft = SHAKE_STEPS;
+    stalactite.boomStepsLeft = BOOM_STEPS;
     this.sfx.play('mantrap');
-    st.hitsRemaining--;
-    if (st.hitsRemaining <= 0) {
-      st.destroyed = true;
-      st.shatterStepsLeft = SHATTER_STEPS;
-      this.breaks[st.size]++;
+    stalactite.hitsRemaining--;
+    if (stalactite.hitsRemaining <= 0) {
+      stalactite.destroyed = true;
+      stalactite.shatterStepsLeft = SHATTER_STEPS;
+      this.breaks[stalactite.size]++;
       this.sfx.play('thud');
     }
   }
@@ -363,31 +463,69 @@ export class AbyssGame implements AbyssView {
   private tickStalactites(): void {
     const fallSpeed = this.canvas.height * FALL_SPEED_FRAC;
     for (let i = this.stalactites.length - 1; i >= 0; i--) {
-      const st = this.stalactites[i];
-      if (st.shakeStepsLeft > 0) st.shakeStepsLeft--;
-      if (st.boomStepsLeft > 0) st.boomStepsLeft--;
-      if (st.destroyed) {
-        st.fallY += fallSpeed;
-        st.shatterStepsLeft--;
-        if (st.shatterStepsLeft <= 0) this.stalactites.splice(i, 1);
+      const stalactite = this.stalactites[i];
+      if (stalactite.shakeStepsLeft > 0) stalactite.shakeStepsLeft--;
+      if (stalactite.boomStepsLeft > 0) stalactite.boomStepsLeft--;
+      if (stalactite.destroyed) {
+        stalactite.fallY += fallSpeed;
+        stalactite.shatterStepsLeft--;
+        if (stalactite.shatterStepsLeft <= 0) this.stalactites.splice(i, 1);
       }
     }
   }
 
   private cull(): void {
     const behind = this.cameraX - this.canvas.width * CULL_BEHIND_FRAC;
-    this.stalactites = this.stalactites.filter((st) => st.destroyed || st.worldX >= behind);
-    this.floorBombs = this.floorBombs.filter((x) => x >= behind);
+    this.stalactites = this.stalactites.filter((stalactite) => stalactite.destroyed || stalactite.worldX >= behind);
+    this.floorBombs = this.floorBombs.filter((worldX) => worldX >= behind);
   }
 
   private reachDoor(): void {
     this.outcome = 'complete';
     this.isOver = true;
+    // Camera is player-driven, so the exit has no fixed world X — place it beside the
+    // lemming (right of screen) for the close tween.
+    this.exitWorldX = this.cameraX + this.canvas.width * 0.8;
   }
 
   private endRun(): void {
     if (this.abyssLoop) this.abyssLoop.pause();
-    const finish = this.outcome === 'complete' ? this.onComplete : this.onGameOver;
-    finish?.(this.currentBreakdown());
+    if (this.outcome === 'complete') {
+      this.exitClose(() => this.onComplete?.(this.currentBreakdown()));
+    } else {
+      this.onGameOver?.(this.currentBreakdown());
+    }
+  }
+
+  /** Exit-door close: the demon-mouth opens, the lemming walks in and vanishes,
+      then `onDone` hands off to the win counter. */
+  private exitClose(onDone: () => void): void {
+    if (this.reduceMotion || !this.player) {
+      this.exitOpenFrac = 1;
+      this.player = null;
+      this.sfx.play('letsgo');
+      this.renderer.render(this);
+      onDone();
+      return;
+    }
+    const startX = this.player.dx;
+    const targetX = this.worldToScreenX(this.exitWorldX) - this.player.dWidth / 2;
+    this.player.direction = 1;
+    let startTs: number | null = null;
+    const tick = (now: number): void => {
+      if (startTs === null) startTs = now;
+      const elapsed = now - startTs;
+      const walkProgress = clamp01(elapsed / EXIT_WALK_MS);
+      this.exitOpenFrac = walkProgress;
+      if (this.player) {
+        this.player.dx = startX + walkProgress * (targetX - startX);
+        if (walkProgress >= 1) this.player = null; // vanished into the door
+      }
+      this.renderer.render(this);
+      if (elapsed < EXIT_TOTAL_MS) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    setTimeout(() => this.sfx.play('letsgo'), EXIT_WALK_MS);
+    setTimeout(onDone, EXIT_TOTAL_MS);
   }
 }

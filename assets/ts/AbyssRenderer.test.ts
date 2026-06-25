@@ -19,10 +19,9 @@ beforeAll(() => {
 });
 
 describe('AbyssRenderer', () => {
-  it('clears the canvas and draws the bottom-left HUD hint each frame', () => {
+  it('clears the canvas each frame (the HUD hint is DOM, not canvas-drawn)', () => {
     const canvas = makeCanvas(W, W);
     const game = makeGame(canvas);
-    game.breaks = { small: 2, medium: 1, large: 0 };
     const renderer = new AbyssRenderer(canvas);
     const ctx = canvas.getContext('2d') as unknown as ReturnType<typeof vi.fn> & {
       clearRect: ReturnType<typeof vi.fn>; fillText: ReturnType<typeof vi.fn>;
@@ -31,8 +30,7 @@ describe('AbyssRenderer', () => {
     renderer.render(game);
 
     expect(ctx.clearRect).toHaveBeenCalled();
-    const hintCalls = ctx.fillText.mock.calls.map((c) => c[0]);
-    expect(hintCalls).toContain('S2 M1 L0');
+    expect(ctx.fillText).not.toHaveBeenCalled();
   });
 
   it('renders a destroyed, falling stalactite without indexing a missing crack', () => {

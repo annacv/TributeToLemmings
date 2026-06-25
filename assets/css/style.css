@@ -333,6 +333,12 @@ canvas {
   background-size: cover;
 }
 
+.abyss-game-canvas {
+  background-image: url("../images/backgrounds/background-abyss.svg");
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
 @keyframes shake-light {
   0%, 100% { transform: translate(0, 0); }
   25% { transform: translate(-2px, 1px); }
@@ -424,6 +430,7 @@ canvas {
 
   .game-canvas,
   .tunnel-game-canvas,
+  .abyss-game-canvas,
   .game-over-canvas,
   .ranking-canvas,
   .transition-canvas,
@@ -606,6 +613,41 @@ canvas {
 
 .life-icon.life-losing {
   animation: life-lose 0.6s ease-in forwards;
+}
+
+.abyss-hint {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(8, 4, 3, 0.82);
+  border: 1px solid rgba(240, 168, 72, 0.45);
+  border-radius: 0.35rem;
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xs);
+  color: var(--neutral-0);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.abyss-hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.abyss-hint-icon {
+  width: 1rem;
+  height: 1rem;
+  image-rendering: pixelated;
+}
+
+.abyss-hint-count {
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 767px) {
@@ -1045,8 +1087,8 @@ button:active {
   position: relative;
   background: var(--neutral-90);
   border: var(--border-brand-thick);
-  padding: 2.5rem 2rem 2rem;
-  max-width: 440px;
+  padding: 2rem;
+  max-width: 468px;
   width: 90%;
   display: flex;
   flex-direction: column;

@@ -13,14 +13,14 @@ import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score'
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
-  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG, ABYSS_LOOP,
+  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG, ABYSS_LOOP, SPRITES, STALACTITE_SVGS,
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
 type InfoModalOptions = { screenName: string; title: string; bodyHtml: string; storageKey: string };
 
 const GAME_OVER_TRANSITION_MS = 2000;
-const GAME_OVER_COUNT_HOLD_MS = 4200;
+const GAME_OVER_COUNT_HOLD_MS = 5000;
 const SUBMISSION_TIMEOUT_MS = 2500;
 const TRANSITION_FALL_DURATION_MS = 500;
 const TRANSITION_SCROLL_DURATION_MS = 1700;
@@ -104,6 +104,18 @@ function main(): void {
           2. Stand on the bombs, then <kbd class="key-hint-text">SPACE</kbd> <strong class="key-times">&times;3 times</strong> to light the fuse!<br>
         </p>
         <p class="info-modal-instruction">&gt; Escape fast! bonus per breakout.</p>`,
+  };
+
+  const ABYSS_MODAL: InfoModalOptions = {
+    screenName: 'The Abyss',
+    title: 'How to play',
+    storageKey: 'abyss-modal-dismissed',
+    bodyHtml: `
+        <p class="info-modal-instruction">
+          1. Dodge the falling bombs, stand on them and use <kbd class="key-hint-text">SPACE</kbd> to pick them up (up to 10).<br>
+          2. Use <kbd class="key-hint-text">SPACE</kbd> near a stalactite to throw a bomb up and smash it for points!
+        </p>
+        <p class="info-modal-instruction">&gt; Dodge, destroy and escape!</p>`,
   };
 
   function showInfoModal(opts: InfoModalOptions, onClose: () => void): void {
@@ -406,7 +418,7 @@ function main(): void {
     game.completionCallback((b) => createTransitionScreen(
       b,
       '&gt; the air grows warm...',
-      (bb) => createGameOverScreen(bb, 'win'),
+      createAbyssScreen,
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
       TRANSITION_MESSAGE_FROM_START,
       ABYSS_CEILING_SVG,
@@ -554,7 +566,7 @@ function main(): void {
         .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
         .catch(() => ({ error: true, docId: null, bestScore: null }));
 
-    /* The hold extends to let the count land; surface-only deaths keep today's beat */
+    /* Hold the breakdown long enough to read it; surface-only deaths (no count) keep today's short beat. */
     const holdMs = hasCount && !reduceMotion ? GAME_OVER_COUNT_HOLD_MS : GAME_OVER_TRANSITION_MS;
     setTimeout(() => createRankingScreen(breakdown.total, submission), holdMs);
   }
@@ -710,7 +722,7 @@ function main(): void {
 
   function createAbyssScreen(breakdown: ScoreBreakdown): void {
     const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
-      canvasClass: 'tunnel-game-canvas',
+      canvasClass: 'abyss-game-canvas',
       canvasAriaLabel: 'The Abyss — gather bombs and bring down the stalactites',
       secondsStart: 72,
       withAction: true,
@@ -719,6 +731,20 @@ function main(): void {
     const game = new AbyssGame(canvas, breakdown);
     game.completionCallback((b) => createGameOverScreen(b, 'win'));
     game.gameOverCallback(createGameOverScreen);
+
+    const hint = document.createElement('div');
+    hint.className = 'abyss-hint';
+    const stalItems = (['small', 'medium', 'large'] as const).map((size, i) => `
+        <span class="abyss-hint-item abyss-stal" data-size="${size}" hidden>
+          <img class="abyss-hint-icon" src="${STALACTITE_SVGS[i]}" alt="${size} stalactites smashed">
+          <span class="abyss-hint-count">0</span>
+        </span>`).join('');
+    hint.innerHTML = `
+        <span class="abyss-hint-item">
+          <img class="abyss-hint-icon" src="${SPRITES.bomb}" alt="Bombs carried">
+          <span class="abyss-hint-count abyss-bombs">0/10</span>
+        </span>${stalItems}`;
+    (mainElement.querySelector('.game-stage') as HTMLElement).appendChild(hint);
 
     const abyssLoop = new Audio(ABYSS_LOOP);
     game.abyssLoop = abyssLoop;
@@ -729,8 +755,14 @@ function main(): void {
     wireMovement(() => game.player, game.runSignal, () => game.paused);
     wireAction(() => game.action(), game.runSignal, () => game.paused);
 
-    canvas.focus();
-    game.startGame();
+    game.paused = true;
+    game.coldOpen(() => {
+      showInfoModal(ABYSS_MODAL, () => {
+        game.paused = false;
+        canvas.focus();
+        game.startGame();
+      });
+    });
   }
 
   const debugScreen = getDebugScreen();

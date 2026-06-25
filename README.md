@@ -17,7 +17,7 @@ The run is a continuous journey across linked worlds, with score banking across 
 | ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🟦 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
 | 🟫 **The Tunnel**  | ✅ Playable  | Trapped underground. Pick up unexploded bombs, find the crack in the wall, light the fuse, and breach your way out across three cycles — before the lowering ceiling crushes you. |
-| ⬛ **The Abyss**    | 🚧 Roadmap  | A horizontal escape through a hazard-lined corridor toward the iconic exit door, capped by the balloon cinematic.                                                                 |
+| ⬛ **The Abyss**    | 🚧 Roadmap  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
 | 🎬 **The End**     | 🗺️ Planned | A dedicated finale screen — the win payoff and emotional close of the full game.                                                                                                  |
 
 
@@ -83,23 +83,24 @@ The build runs one iteration at a time, spec-first. Iterations I–V have shippe
 A horizontal side-scroll escape through an underground corridor toward the exit door.
 Art inspiration refs: `assets/images/backgrounds/refs/background-8.png`, `background-10.png`, `background-11.jpg`.
 
-1. Cold open (door-in/door-out tribute, ratified in V's round-4 review): the Abyss arrival beat shows the lemming finding a closed door and entering the new world through it — doors open the chapter that THE exit door will close.
-2. Horizontal rightward scroll: the lemming advances right through the corridor toward the iconic exit door (referencing the original Lemmings game) as the win condition.
-3. Hazards along the corridor: stalactites as fixed ceiling obstacles the player navigates around; bombs fall from trigger zones as the player passes beneath them — two distinct hazard types, not simultaneous falling objects.
-4. Player must dodge all hazards and reach the door to complete the screen. Ceiling sits close to the floor to maintain tension.
-5. Ground starts visually damaged as a narrative callback to the erosion in Iteration IV.
-6. New abyss-world SVG background designed for the underground setting.
-7. On reaching the door: a brief (3–5s) non-interactive balloon escape cinematic plays — the lemming is lifted by the hot air balloon from the original Lemmings before the Ranking screen fades in.
-8. Audio — new looping background track on screen entry: faster and more driving than the tunnel track to convey chase energy.
-9. Audio — stalactite collision SFX (one-shot crunch on hit); door reached sting (triumphant one-shot on win condition); balloon cinematic track: the most iconic available Lemmings DOS OST cue, used as the emotional peak and payoff of the full game.
+1. Cold open (door-in/door-out tribute, ratified in V's round-4 review): on arrival a closed entrance door shows on the ceiling (a renderer-drawn prop — not baked into the background) and the lemming stays hidden; after a settle hold the door opens (`DOOR.WAV`), the lemming appears through it and drops into the corridor (quick falling whoosh, a landing thud) — all on the Abyss screen, no second transition. Doors open the chapter that THE exit door will close.
+2. Player-paced, Super-Mario-style scroll: the lemming moves left/right at the shared player speed and the camera follows it rightward only (never scrolls back; the left edge is a soft wall), toward the iconic exit door (referencing the original Lemmings game).
+3. Gather-and-throw mechanic: bombs fall from the ceiling to the floor (a bomb that hits the lemming costs a life, `FIRE.WAV`); stand on a fallen bomb and press the action to pick it up (carry cap of 10, `EXPLODE.WAV`), then press the action *near* a stalactite to throw a carried bomb up at it — the throw is a visible projectile and a floor hint marks the spot (`MANTRAP.WAV` + impact flash + shake; `THUD.WAV` on destroy, the stalactite detaching to fall and shatter).
+4. Three stalactite sizes (small/medium/large), told apart by both scale and a molten colour ramp (ember orange → orange-red → deep crimson) plus a pulsing "breakable" glow, with size-scaled break cost (1/2/3 hits) and score; per-size break counts feed the HUD and scoring.
+5. Time-gated level progression mirroring the Surface: L1 small only, +18 s → L2 adds medium, +18 s → L3 adds large, the run ending 36 s into L3; each level ramps bomb speed + spawn frequency. Breaking stalactites scores but does not gate progression.
+6. Player dodges falling bombs and survives to the L3 budget to reach the exit door. Ceiling sits close to the floor to maintain tension; the ground starts visually damaged as a callback to the erosion in Iteration IV.
+7. New abyss-world SVG background for the underground setting; the entrance hatch and demon-mouth exit are renderer-drawn props over it (not baked into the background art).
+8. Exit-door close: when the run ends the exit door appears, the lemming walks into it and vanishes, `LETSGO.WAV` plays, then the run routes to the `win` Game Over tally and onward to the Ranking screen.
+9. Audio — looping background track (`Awesome.ogg`) on screen entry, faster and more driving than the tunnel track; gather/throw, stalactite-hit, bomb-hit (`FIRE.WAV`) and level-up (`YIPPEE`) cues; door cold-open/close stings (`DOOR.WAV`, `LETSGO.WAV`); all mute-gated and tab-hidden-paused like the other worlds.
 
 ### Iteration VII — The End
 
 A dedicated finale screen: the emotional close and win payoff of the full game. Split out from the Abyss (VI) on purpose so the ending — the screen players carry away — gets its own focus instead of being crammed into VI's plate.
 
 1. Dedicated `TheEnd` screen with its own background art and dramaturgy (composition, pacing, copy, and likely a dedicated music cue).
-2. Formalises the win ending: today the win routes through the parameterized `GAME OVER` *win* variant; `THE END` becomes a bespoke screen that replaces (or sits just ahead of) it — the exact placement relative to the Abyss balloon cinematic and the ranking is a scope-time decision. Death keeps the `GAME OVER` screen.
-3. Sequencing & gate: ships after the Abyss (VI) — it is the beat the player reaches once the Abyss escape completes — and is blocked on the dedicated background artwork being provided (not generated).
+2. Balloon escape cinematic (moved here from VI): a brief non-interactive beat where the lemming is lifted by the hot air balloon from the original Lemmings — the emotional peak and payoff, set to the most iconic available Lemmings DOS OST cue.
+3. Formalises the win ending: today the win routes through the parameterized `GAME OVER` *win* variant; `THE END` becomes a bespoke screen that replaces (or sits just ahead of) it — the exact placement relative to the balloon cinematic and the ranking is a scope-time decision. Death keeps the `GAME OVER` screen.
+4. Sequencing & gate: ships after the Abyss (VI) — it is the beat the player reaches once the Abyss escape completes — and is blocked on the dedicated background artwork being provided (not generated).
 
 ## Development
 
@@ -167,7 +168,7 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 | File                             | Used for                                                |
 | -------------------------------- | ------------------------------------------------------- |
 | `intro-falling-sound-effect.mp3` | World-boundary fall cue (Surface→Tunnel · Tunnel→Abyss) |
-| `intro-balloon-sound-effect.mp3` | Balloon-escape cinematic (Iteration VI — not yet wired) |
+| `intro-balloon-sound-effect.mp3` | Balloon-escape cinematic (Iteration VII — not yet wired) |
 
 
 All audio respects the in-game mute toggle and pauses when the tab is hidden.
