@@ -125,7 +125,7 @@ function main(): void {
     storageKey: 'abyss-modal-dismissed',
     bodyHtml: `
         <p class="info-modal-instruction">
-          1. Dodge the falling bombs, stand on them and use <kbd class="key-hint-text">SPACE</kbd> to pick them up (up to 10).<br>
+          1. Dodge the falling bombs, stand on them and use <kbd class="key-hint-text">SPACE</kbd> to pick them up (up to 3).<br>
           2. Use <kbd class="key-hint-text">SPACE</kbd> near a stalactite to throw a bomb up and smash it for points!
         </p>
         <p class="info-modal-instruction">&gt; Dodge, destroy and escape!</p>`,
@@ -771,7 +771,7 @@ function main(): void {
     hint.innerHTML = `
         <span class="abyss-hint-item">
           <img class="abyss-hint-icon" src="${SPRITES.bomb}" alt="Bombs carried">
-          <span class="abyss-hint-count abyss-bombs">0/10</span>
+          <span class="abyss-hint-count abyss-bombs">0/3</span>
         </span>${stalItems}`;
     (mainElement.querySelector('.game-stage') as HTMLElement).appendChild(hint);
 

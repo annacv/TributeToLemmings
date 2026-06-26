@@ -120,10 +120,10 @@ describe('AbyssGame — gather (pickup + cap)', () => {
 
   it('will not pick up past the carry cap', () => {
     const game = makeAbyss(makeCanvas(W, W));
-    game.carried = 10; // cap
+    game.carried = game.carryCap;
     game.floorBombs = [game.playerWorldX];
     game.action();
-    expect(game.carried).toBe(10);
+    expect(game.carried).toBe(game.carryCap);
     expect(game.floorBombs).toHaveLength(1);
   });
 });
