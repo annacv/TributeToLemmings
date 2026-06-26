@@ -281,7 +281,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--gap-md);
+  gap: var(--gap-lg);
   flex-wrap: wrap;
 }
 
@@ -1021,6 +1021,10 @@ button:active {
   color: var(--neutral-100);
 }
 
+.splash-start.ranking-play-again {
+  margin-top: auto;
+}
+
 /* ---- SPLASH SCREEN ---- */
 
 .splash-hero {
@@ -1320,6 +1324,7 @@ button:active {
   align-items: center;
   gap: .5rem;
   padding: 0 1rem;
+  margin-top: auto;
 }
 
 .ranking-loading,
