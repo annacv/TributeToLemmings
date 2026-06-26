@@ -109,8 +109,8 @@ export class SurfaceGame implements SurfaceView {
 
   startGame(): void {
     this.player = new Player(this.canvas);
-    this.initLivesIcons();
-    this.updateLevel();
+    this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
+    this.hud.setLevel(String(this.currentLevel + 1));
     this.showLevelUpEffect();
     this.host.start();
   }
@@ -125,7 +125,7 @@ export class SurfaceGame implements SurfaceView {
 
     if (this.count % 60 === 0) {
       this.score++;
-      this.updateScore();
+      this.hud.setScore(this.score);
     }
 
     this.checkLevelUp();
@@ -163,7 +163,7 @@ export class SurfaceGame implements SurfaceView {
   }
 
   private handleLevelUp(): void {
-    this.updateLevel();
+    this.hud.setLevel(String(this.currentLevel + 1));
     this.showLevelUpEffect();
     this.sfx.play('levelUp');
     if (this.currentLevel === LEVEL_CONFIG.length - 1) {
@@ -275,19 +275,6 @@ export class SurfaceGame implements SurfaceView {
         this.sfx.play('bombHit');
       }
     }
-  }
-
-  updateScore(): void {
-    this.hud.setScore(this.score);
-  }
-
-  updateLevel(): void {
-    this.hud.setLevel(String(this.currentLevel + 1));
-  }
-
-  initLivesIcons(): void {
-    if (!this.player) return;
-    this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
   }
 
   displayLives(): void {
