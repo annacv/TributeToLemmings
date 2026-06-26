@@ -659,6 +659,7 @@ canvas {
   height: var(--touch-control-size);
   display: flex;
   justify-content: center;
+  align-items: center;
   font-family: var(--font-pixel);
   text-align: center;
   border: var(--border-brand-thick);
@@ -675,9 +676,8 @@ canvas {
 .touch-left,
 .touch-right {
   width: var(--touch-control-size);
-  padding: 0;
+  padding: 0rem .35rem .35rem .35rem;
   font-size: var(--touch-controls-font-size);
-  line-height: 1.5;
 }
 
 /* Touch action button: static SPACE label. */
