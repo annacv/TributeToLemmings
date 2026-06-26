@@ -25,7 +25,6 @@ export const ABYSS_LEVELS = [
   { spawnIntervalFrames: 30, bombSpeed: 1.8, stalactiteGapFrac: 0.38, sizes: ['small', 'medium', 'large'] },
 ] as const;
 
-export const ABYSS_L3_RANDOM_COST = false;
 /* World geometry as canvas fractions, so nothing jumps when the canvas resizes. */
 export const ABYSS_FLOOR_FRAC = 0.82;   // walkable line (ground starts damaged)
 export const ABYSS_CEILING_FRAC = 0.30; // ceiling band the stalactites hang from
@@ -383,11 +382,8 @@ export class AbyssGame implements AbyssView {
     }
   }
 
-  /** Fixed S/M/L cycle by default; the L3 1–3 randomization is the off tunable. */
+  /** Fixed S/M/L cycle through the level's available sizes. */
   private nextSize(sizes: readonly StalactiteSize[]): StalactiteSize {
-    if (ABYSS_L3_RANDOM_COST && this.currentLevel === 2) {
-      return sizes[Math.floor(Math.random() * sizes.length)];
-    }
     return sizes[this.stalactiteSeq % sizes.length];
   }
 
