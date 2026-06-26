@@ -345,10 +345,8 @@ export class AbyssGame implements AbyssView {
 
   private updateLevelByTime(): void {
     const secs = this.survivedSeconds();
-    let level = 0;
-    for (let i = ABYSS_LEVEL_THRESHOLDS_S.length - 1; i >= 0; i--) {
-      if (secs >= ABYSS_LEVEL_THRESHOLDS_S[i]) { level = i; break; }
-    }
+    // Thresholds start at 0 and secs >= 0, so the count is always >= 1 (level >= 0).
+    const level = ABYSS_LEVEL_THRESHOLDS_S.filter((threshold) => secs >= threshold).length - 1;
     if (level !== this.currentLevel) {
       this.currentLevel = level;
       this.hud.setLevel(String(level + 1));
