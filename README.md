@@ -8,7 +8,7 @@ A loving tribute to DMA Design's classic 1991 *Lemmings* — built as if its bon
 
 It's a tribute first and a score-chase second. Each world reinterprets the original's mood — the Surface, the Tunnel, the Abyss — and ties back to the iconography fans remember: the explosions, the doors, the balloon.
 
-## The two-world arc
+## The three-world arc
 
 The run is a continuous journey across linked worlds, with score banking across the whole arc.
 
@@ -17,7 +17,7 @@ The run is a continuous journey across linked worlds, with score banking across 
 | ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🟦 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
 | 🟫 **The Tunnel**  | ✅ Playable  | Trapped underground. Pick up unexploded bombs, find the crack in the wall, light the fuse, and breach your way out across three cycles — before the lowering ceiling crushes you. |
-| ⬛ **The Abyss**    | 🚧 Roadmap  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
+| ⬛ **The Abyss**    | ✅ Playable  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
 | 🎬 **The End**     | 🗺️ Planned | A dedicated finale screen — the win payoff and emotional close of the full game.                                                                                                  |
 
 
@@ -47,13 +47,17 @@ assets/
     SurfaceRenderer.ts      # Surface draw layer
     TunnelGame.ts           # The Tunnel world (loop, state, transitions)
     TunnelRenderer.ts       # Tunnel draw layer
-    Player.ts  Bomb.ts      # Core entities
+    AbyssGame.ts            # The Abyss world (loop, state, camera, transitions)
+    AbyssRenderer.ts        # Abyss draw layer
+    Player.ts  Bomb.ts  Stalactite.ts   # Core entities
     assets.ts               # Asset references
     lib/
       GameLoop.ts           # Fixed-timestep loop
-      RunLifecycle.ts       # Shared run/score lifecycle glue
+      RunHost.ts            # Shared run/score lifecycle glue
+      playScreen.ts         # buildPlayScreen scaffold
       score.ts  Hud.ts      # Scoring + HUD
-      audio.ts  SoundEffectBank.ts
+      audio.ts  SoundEffectBank.ts  attachWorldLoop.ts
+      liveRegion.ts         # aria-live results announcer
       firebase.ts  leaderboard.ts
       fx.ts  geometry.ts  images.ts
   css/  fonts/  images/  sounds/
@@ -64,9 +68,9 @@ public/                     # og-image and static assets
 
 ## Roadmap
 
-The build runs one iteration at a time, spec-first. Iterations I–V have shipped; VI–VII are next.
+The build runs one iteration at a time, spec-first. Iterations I–VI have shipped; VII is next.
 
-**Shipped — Iterations I–V**
+**Shipped — Iterations I–VI**
 
 
 | #   | Iteration                           | Delivered                                                                                                                                                                                                                                              |
@@ -76,22 +80,8 @@ The build runs one iteration at a time, spec-first. Iterations I–V have shippe
 | III | Sound & Music                       | Bomb-hit SFX, game-over sting, ranking ambient, all gated by the existing mute preference; assets from the Lemmings DOS OST.                                                                                                                           |
 | IV  | Level Progression & Ground Erosion  | Three-level difficulty ramp, level-transition UI/audio, level-gated ground erosion (cracks → holes → collapse), last-level earthquake warning, cumulative time-based scoring, collapse transition into the Tunnel.                                     |
 | V   | Tunnel Escape Puzzle                | Underground screen with info modal, bomb pickup + crack-finding + fuse-lighting across three cycles, lowering-ceiling crush death + respawn, Tunnel→Abyss collapse transition, full both-worlds scoring breakdown, distinct background loop + SFX set. |
+| VI  | The Abyss: Horizontal Escape        | Camera-following side-scroll corridor with a door cold-open (settle → door opens → fall-in) and exit-door close, gather-and-throw mechanic (pick up fallen bombs, hurl them up to smash three stalactite sizes), time-gated three-level ramp, full three-world scoring, driving `Awesome.ogg` loop + new SFX. Plus a pre-VII hardening pass: win-canvas fix, an `aria-live` results layer, reduced-motion + contrast completeness. |
 
-
-### Iteration VI — The Abyss: Horizontal Escape
-
-A horizontal side-scroll escape through an underground corridor toward the exit door.
-Art inspiration refs: `assets/images/backgrounds/refs/background-8.png`, `background-10.png`, `background-11.jpg`.
-
-1. Cold open (door-in/door-out tribute, ratified in V's round-4 review): on arrival a closed entrance door shows on the ceiling (a renderer-drawn prop — not baked into the background) and the lemming stays hidden; after a settle hold the door opens (`DOOR.WAV`), the lemming appears through it and drops into the corridor (quick falling whoosh, a landing thud) — all on the Abyss screen, no second transition. Doors open the chapter that THE exit door will close.
-2. Player-paced, Super-Mario-style scroll: the lemming moves left/right at the shared player speed and the camera follows it rightward only (never scrolls back; the left edge is a soft wall), toward the iconic exit door (referencing the original Lemmings game).
-3. Gather-and-throw mechanic: bombs fall from the ceiling to the floor (a bomb that hits the lemming costs a life, `FIRE.WAV`); stand on a fallen bomb and press the action to pick it up (carry cap of 3, `EXPLODE.WAV`), then press the action *near* a stalactite to throw a carried bomb up at it — the throw is a visible projectile and a floor hint marks the spot (`MANTRAP.WAV` + impact flash + shake; `THUD.WAV` on destroy, the stalactite detaching to fall and shatter).
-4. Three stalactite sizes (small/medium/large), told apart by both scale and a molten colour ramp (ember orange → orange-red → deep crimson) plus a pulsing "breakable" glow, with size-scaled break cost (1/2/3 hits) and score; per-size break counts feed the HUD and scoring.
-5. Time-gated level progression mirroring the Surface: L1 small only, +18 s → L2 adds medium, +18 s → L3 adds large, the run ending 36 s into L3; each level ramps bomb speed + spawn frequency. Breaking stalactites scores but does not gate progression.
-6. Player dodges falling bombs and survives to the L3 budget to reach the exit door. Ceiling sits close to the floor to maintain tension; the ground starts visually damaged as a callback to the erosion in Iteration IV.
-7. New abyss-world SVG background for the underground setting; the entrance hatch and demon-mouth exit are renderer-drawn props over it (not baked into the background art).
-8. Exit-door close: when the run ends the exit door appears, the lemming walks into it and vanishes, `LETSGO.WAV` plays, then the run routes to the `win` Game Over tally and onward to the Ranking screen.
-9. Audio — looping background track (`Awesome.ogg`) on screen entry, faster and more driving than the tunnel track; gather/throw, stalactite-hit, bomb-hit (`FIRE.WAV`) and level-up (`YIPPEE`) cues; door cold-open/close stings (`DOOR.WAV`, `LETSGO.WAV`); all mute-gated and tab-hidden-paused like the other worlds.
 
 ### Iteration VII — The End
 
@@ -141,6 +131,7 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 | ---------------------------------------------------- | ------------------------------ |
 | `03_-_Lemmings_-_DOS_-_Lemming_2.ogg`                | Surface background music       |
 | `113_-_Lemmings_-_DOS_-_Tim_5.ogg`                   | Tunnel / underground cave loop |
+| `121_-_Lemmings_-_DOS_-_Awesome.ogg`                 | Abyss escape corridor loop      |
 | `14_-_Lemmings_-_DOS_-_Dance_of_the_Reed-Flutes.ogg` | Ranking (Hall of Fame) screen  |
 
 
@@ -155,9 +146,13 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 | `BANG.WAV`     | Bomb breaks earth — Surface ground crack · Tunnel breach         |
 | `TENTON.WAV`   | Earth comes down — Surface collapse sting · Tunnel ceiling crush |
 | `DIE.WAV`      | Death Game Over sting                                            |
-| `EXPLODE.WAV`  | Tunnel bomb pickup                                               |
+| `EXPLODE.WAV`  | Tunnel bomb pickup · Abyss gather/throw                          |
 | `SCRAPE.WAV`   | Tunnel match-strike (fuse-light press)                           |
 | `CHAIN.WAV`    | Tunnel ceiling-lower grinding rumble                             |
+| `MANTRAP.WAV`  | Abyss stalactite hit (impact flash + shake)                      |
+| `THUD.WAV`     | Abyss stalactite destroyed (detach + shatter)                   |
+| `DOOR.WAV`     | Abyss entrance-door cold-open                                    |
+| `LETSGO.WAV`   | Abyss exit-door close (win)                                      |
 | `TING.WAV`     | Game Over score-tally tick                                       |
 | `MOUSEPRE.WAV` | Game Over score-total chime                                      |
 
