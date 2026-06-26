@@ -194,7 +194,7 @@ export class TunnelRenderer {
     }
 
     if (view.breachStep <= BREACH_BOOM_STEPS && ready(this.booomImg)) {
-      const boomW = width * 0.3;
+      const boomW = width * 0.15;
       const boomY = canvas.height * FLOOR_FRAC - drop;
       ctx.drawImage(this.booomImg, holeCx - boomW / 2, boomY - boomW / 2, boomW, boomW);
     }
