@@ -1,8 +1,9 @@
 import { vi } from 'vitest';
 
-export function makeCtx() {
+export function makeCtx(canvas?: HTMLCanvasElement) {
   const fills: string[] = [];
   const ctx = {
+    canvas,
     clearRect: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
@@ -32,6 +33,6 @@ export function makeCanvas(width = 400, height = 400) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  canvas.getContext = vi.fn().mockReturnValue(makeCtx()) as typeof canvas.getContext;
+  canvas.getContext = vi.fn().mockReturnValue(makeCtx(canvas)) as typeof canvas.getContext;
   return canvas;
 }

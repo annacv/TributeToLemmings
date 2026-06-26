@@ -1,4 +1,5 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
+import { drawFootingPad } from './lib/footingPad';
 import { loadImage, loadImages, ready } from './lib/images';
 import {
   TUNNEL_LEVELS, FLOOR_FRAC, CRACK_RANGE_FRAC,
@@ -160,21 +161,9 @@ export class TunnelRenderer {
     if (view.padNudgeSteps > 0) alpha = Math.max(alpha, 0.9); // beckon on a stray press
 
     const lean = view.padNudgeSteps > 0 ? view.padNudgeDir * width * 0.02 : 0;
-
-    const padW = width * 0.16;
-    const tickW = Math.max(3, width * 0.012);
     const tickH = width * 0.05 * (0.6 + 0.4 * prox) * (view.reduceMotion ? 1 : 0.8 + 0.2 * pulse);
 
-    ctx.save();
-    ctx.globalAlpha = Math.min(1, alpha);
-    ctx.fillStyle = RUST_ACCENT;
-    ctx.fillRect(cx - padW / 2 + lean, floorY - 2, padW, 3);  // footing baseline
-
-    for (let i = 0; i < 3; i++) {
-      const tx = cx - padW / 2 + lean + (i + 0.5) * (padW / 3);
-      ctx.fillRect(tx - tickW / 2, floorY - tickH, tickW, tickH);
-    }
-    ctx.restore();
+    drawFootingPad(ctx, cx + lean, floorY, width * 0.16, tickH, RUST_ACCENT, alpha);
   }
 
   /** The floor pit: blasts open (0→3) and scrolls up with the old chamber as the

@@ -1,5 +1,6 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
 import { loadImage, loadImages, ready } from './lib/images';
+import { drawFootingPad } from './lib/footingPad';
 import { Stalactite } from './Stalactite';
 import {
   ABYSS_FLOOR_FRAC, ABYSS_CEILING_FRAC, THROW_RANGE_FRAC, THROW_FLIGHT_STEPS, type AbyssView,
@@ -91,18 +92,10 @@ export class AbyssRenderer {
       const proximity = 1 - dist / range; // 0 at the edge of range → 1 right under it
       const screenX = view.worldToScreenX(stalactite.worldX);
       const alpha = Math.min(1, (0.25 + 0.6 * proximity) * (view.reduceMotion ? 1 : 0.7 + 0.3 * pulse));
-      const padWidth = width * 0.13;
-      const tickWidth = Math.max(3, width * 0.012);
-      const tickHeight = width * 0.045 * (0.6 + 0.4 * proximity);
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = STALACTITE_GLOW_COLOR;
-      ctx.fillRect(screenX - padWidth / 2, floorY - 2, padWidth, 3);
-      for (let i = 0; i < 3; i++) {
-        const tickX = screenX - padWidth / 2 + (i + 0.5) * (padWidth / 3);
-        ctx.fillRect(tickX - tickWidth / 2, floorY - tickHeight, tickWidth, tickHeight);
-      }
-      ctx.restore();
+      drawFootingPad(
+        ctx, screenX, floorY, width * 0.13,
+        width * 0.045 * (0.6 + 0.4 * proximity), STALACTITE_GLOW_COLOR, alpha,
+      );
     }
   }
 
