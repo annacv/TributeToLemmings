@@ -14,6 +14,7 @@ logs/
 
 # local / agent
 .claude/
+.cursor/
 openspec/
 memory/*
 assets/images/backgrounds/refs/

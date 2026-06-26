@@ -4,7 +4,6 @@ export function safePlay(audio: HTMLAudioElement): void {
   audio.play().catch(() => {});
 }
 
-/** One-shot Sound Effects channel: rewinds and plays unless muted. */
 export function playSfx(sfx: HTMLAudioElement, muted: boolean): void {
   if (muted) return;
   sfx.currentTime = 0;
@@ -19,7 +18,6 @@ export function playLoop(loop: HTMLAudioElement, muted: boolean): void {
   safePlay(loop);
 }
 
-/** Stops the loop and resets the current time to 0. */
 export function stopLoop(loop: HTMLAudioElement): void {
   loop.pause();
   loop.currentTime = 0;

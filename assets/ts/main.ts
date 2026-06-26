@@ -1,23 +1,28 @@
 import { SurfaceGame } from './SurfaceGame';
 import { TunnelGame } from './TunnelGame';
+import { AbyssGame } from './AbyssGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
-import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
+import { safePlay } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
+import { buildPlayScreen } from './lib/playScreen';
+import { setupMuteButton } from './lib/muteButton';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
-import { loadImage } from './lib/images';
+import { announce } from './lib/liveRegion';
+import { attachWorldLoop } from './lib/attachWorldLoop';
+import { loadImage, whenImagesSettled } from './lib/images';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
-  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG,
+  TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG, ABYSS_LOOP, SPRITES, STALACTITE_SVGS,
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
 type InfoModalOptions = { screenName: string; title: string; bodyHtml: string; storageKey: string };
 
 const GAME_OVER_TRANSITION_MS = 2000;
-const GAME_OVER_COUNT_HOLD_MS = 4200;
+const GAME_OVER_COUNT_HOLD_MS = 5000;
 const SUBMISSION_TIMEOUT_MS = 2500;
 const TRANSITION_FALL_DURATION_MS = 500;
 const TRANSITION_SCROLL_DURATION_MS = 1700;
@@ -32,21 +37,14 @@ const TRANSITION_MESSAGE_FROM_START = 0.0125;
 const TUNNEL_CEILING_HANG_FRAC = 0.24;
 const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
-
-const ICON_SOUND = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
-  <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
-  <path d="M10.5 6.5a2 2 0 010 3M12 4.5a5 5 0 010 7" stroke="currentColor" stroke-width="1" fill="none" stroke-linecap="round"/>
-</svg>`;
-
-const ICON_MUTED = `<svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16" aria-hidden="true">
-  <path d="M3 5.5H5.5L9 2.5v11L5.5 10.5H3a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5z"/>
-  <path d="M11 6.5l3 3M14 6.5l-3 3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-</svg>`;
+/* easeOutBack overshoot coefficients: the ceiling slams past its rest point then
+   settles. Standard curve constants (C3 = C1 + 1). */
+const EASE_OUT_BACK_C1 = 1.70158;
+const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
 
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let id = '';
-  for (let i = 0; i < 5; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  const id = Array.from({ length: 5 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   return `Lemming #${id}`;
 }
 
@@ -56,6 +54,28 @@ function escapeHtml(str: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/* Runs the splash mascot's idle loop on its canvas; returns a stop handle for teardown. */
+function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
+  canvas.width = 142;
+  canvas.height = 142;
+  const ctx = canvas.getContext('2d')!;
+
+  /* Reduced motion: a single resting frame, no idle loop (the global CSS clamp
+     can't reach a requestAnimationFrame-driven canvas) */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    drawLemmingMascot(ctx, 142, 0);
+    return () => {};
+  }
+
+  let frame = 0;
+  let rafId = requestAnimationFrame(function tick() {
+    drawLemmingMascot(ctx, 142, frame++);
+    rafId = requestAnimationFrame(tick);
+  });
+
+  return () => cancelAnimationFrame(rafId);
 }
 
 function main(): void {
@@ -72,19 +92,6 @@ function main(): void {
   function buildDom(html: string): HTMLElement {
     mainElement.innerHTML = html;
     return mainElement;
-  }
-
-  function setupMuteButton(btn: HTMLButtonElement, onToggle: (muted: boolean) => void): void {
-    const muted = localStorage.getItem('audio-muted') === '1';
-    btn.innerHTML = muted ? ICON_MUTED : ICON_SOUND;
-    btn.setAttribute('aria-label', muted ? 'Unmute sound' : 'Mute sound');
-    btn.addEventListener('click', () => {
-      const nowMuted = localStorage.getItem('audio-muted') !== '1';
-      localStorage.setItem('audio-muted', nowMuted ? '1' : '0');
-      btn.innerHTML = nowMuted ? ICON_MUTED : ICON_SOUND;
-      btn.setAttribute('aria-label', nowMuted ? 'Unmute sound' : 'Mute sound');
-      onToggle(nowMuted);
-    });
   }
 
   /* INFO MODALS */
@@ -110,6 +117,18 @@ function main(): void {
           2. Stand on the bombs, then <kbd class="key-hint-text">SPACE</kbd> <strong class="key-times">&times;3 times</strong> to light the fuse!<br>
         </p>
         <p class="info-modal-instruction">&gt; Escape fast! bonus per breakout.</p>`,
+  };
+
+  const ABYSS_MODAL: InfoModalOptions = {
+    screenName: 'The Abyss',
+    title: 'How to play',
+    storageKey: 'abyss-modal-dismissed',
+    bodyHtml: `
+        <p class="info-modal-instruction">
+          1. Dodge the falling bombs, stand on them and use <kbd class="key-hint-text">SPACE</kbd> to pick them up (up to 3).<br>
+          2. Use <kbd class="key-hint-text">SPACE</kbd> near a stalactite to throw a bomb up and smash it for points!
+        </p>
+        <p class="info-modal-instruction">&gt; Dodge, destroy and escape!</p>`,
   };
 
   function showInfoModal(opts: InfoModalOptions, onClose: () => void): void {
@@ -167,7 +186,7 @@ function main(): void {
   }
 
   /* SCREENS */
-  
+
   function createStartScreen(): void {
     buildDom(`
       <section class="splash-hero">
@@ -193,21 +212,11 @@ function main(): void {
       </section>
     `);
 
-    const mascotCanvas = mainElement.querySelector('.splash-mascot') as HTMLCanvasElement;
-    mascotCanvas.width = 142;
-    mascotCanvas.height = 142;
-    const mascotCtx = mascotCanvas.getContext('2d')!;
-
-    let mascotFrame = 0;
-    let mascotRafId: number;
-    function animateMascot(): void {
-      drawLemmingMascot(mascotCtx, 142, mascotFrame++);
-      mascotRafId = requestAnimationFrame(animateMascot);
-    }
-    animateMascot();
+    const stopMascot = startMascotAnimation(mainElement.querySelector('.splash-mascot') as HTMLCanvasElement);
 
     const nameInput = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
     const startBtn = mainElement.querySelector('.splash-start') as HTMLButtonElement;
+
     if (playerName) {
       nameInput.value = playerName;
       startBtn.focus();
@@ -218,7 +227,7 @@ function main(): void {
     const form = mainElement.querySelector('.splash-form') as HTMLFormElement;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      cancelAnimationFrame(mascotRafId);
+      stopMascot();
       playerName = nameInput.value.trim() || generateGuestHandle();
       consumeDebugScreen();
       createGameScreen();
@@ -226,79 +235,26 @@ function main(): void {
   }
 
   function createGameScreen(): void {
-    
     preloadLeaderboard();
 
-    const gameScreen = buildDom(`
-      <section class="section-container play">
-        <div class="game-stage">
-          <canvas class="game-canvas" role="img" aria-label="Game area — dodge the falling bombs"></canvas>
-          <p class="level-up-banner"></p>
-          <div class="game-hud">
-            <div class="hud-lives">
-              <span class="hud-item lives-item">
-                <span class="hud-label">lives</span>
-                <span class="hud-value lives-value">3</span>
-              </span>
-              <div class="lives-icons"></div>
-            </div>
-            <div class="hud-score">
-              <span class="hud-item">
-                <span class="hud-value seconds-value">0</span>
-                <span class="hud-label">sec</span>
-              </span>
-              <span class="hud-item level-item">
-                <span class="hud-label">level</span>
-                <span class="hud-value level-value">1</span>
-              </span>
-            </div>
-          </div>
-          <button class="mute-btn" aria-label="Mute sound"></button>
-        </div>
-        <div class="touch-controls">
-          <button class="touch-left" aria-label="Move left">&#x2190;</button>
-          <button class="touch-right" aria-label="Move right">&#x2192;</button>
-        </div>
-      </section>
-    `);
-
-    const canvas = gameScreen.querySelector('canvas') as HTMLCanvasElement;
-    /* Measure after buildDom mounts the screen: only then is the splash gone and
-       the header visible, so getCanvasSize reads the real header/footer heights. */
-    const size = getCanvasSize();
-    canvas.width = size;
-    canvas.height = size;
+    const { canvas, wireMovement, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'game-canvas',
+      canvasAriaLabel: 'Game area — dodge the falling bombs',
+      secondsStart: 0,
+      withAction: false,
+    });
 
     const game = new SurfaceGame(canvas);
     game.gameOverCallback(createGameOverScreen);
-    game.tunnelWorldCallback(createTransitionScreen);
+    game.completionCallback(createTransitionScreen);
 
     game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
-    setupMuteButton(
-      gameScreen.querySelector('.mute-btn') as HTMLButtonElement,
-      (muted) => { game.gameSong.muted = muted; },
-    );
+    wireMute((muted) => { game.gameSong.muted = muted; });
+    wireMovement(() => game.player, game.runSignal);
 
-    const arrowRight = gameScreen.querySelector('.touch-right') as HTMLElement;
-    arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
-    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
+    game.startSong();
 
-    const arrowLeft = gameScreen.querySelector('.touch-left') as HTMLElement;
-    arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
-    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
-
-    /* Dies with the run (runSignal aborts at halt), so listeners don't
-       stack up across play-again cycles */
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (event.key === 'ArrowRight') game.player?.setDirection(1);
-      else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-    }, { signal: game.runSignal });
-
-    /* Screen swaps blow away the focused element; re-anchor focus so keyboard
-       and screen-reader users aren't dropped to <body> */
-    canvas.tabIndex = -1;
     canvas.focus();
-
     showInfoModal(SURFACE_MODAL, () => {
       canvas.focus();
       game.startGame();
@@ -333,6 +289,7 @@ function main(): void {
     const canvas = screen.querySelector('.transition-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
+
     /* Focus visible content, never the aria-hidden canvas */
     const overlay = screen.querySelector('.transition-overlay') as HTMLElement;
     overlay.tabIndex = -1;
@@ -418,42 +375,40 @@ function main(): void {
       const elapsed = now - startTime;
       const fallT = Math.min(elapsed / TRANSITION_FALL_DURATION_MS, 1);
       const scrollT = Math.min(Math.max(elapsed - scrollStart, 0) / TRANSITION_SCROLL_DURATION_MS, 1);
-      /* easeInOutQuart: accelerate into the dark, brake into the final frame */
+
       const eased = scrollT < 0.5
         ? 8 * scrollT ** 4
         : 1 - (-2 * scrollT + 2) ** 4 / 2;
+
       const scrollY = eased * SCROLL_DISTANCE;
       /* The lemming drops into the hole, then keeps falling
          descending with the camera and easing onto the chamber floor exactly as
          the reveal settles */
       const descend = 1 - (1 - scrollT) ** 2;
+
       const lemmingY = fallT < 1
         ? -lemmingSize + fallT * (holeY + lemmingSize)
         : holeY + descend * (landY - holeY);
       /* Ceiling: easeOutBack so it slams past the rest point then settles */
       const ceilingT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_CEILING_DURATION_MS, 1);
-      const c = ceilingT - 1;
-      const ceilingDrop = ceilingT <= 0 ? 0 : 1 + 2.70158 * c ** 3 + 1.70158 * c ** 2;
+      const overshoot = ceilingT - 1;
+      const ceilingDrop = ceilingT <= 0 ? 0 : 1 + EASE_OUT_BACK_C3 * overshoot ** 3 + EASE_OUT_BACK_C1 * overshoot ** 2;
       const restT = Math.min(Math.max(elapsed - ceilingStart, 0) / TRANSITION_REST_FADE_MS, 1);
       /* Arrive in pure dark, then let the hint fragments emerge (easeOutQuad) */
       const veilAlpha = scrollT < 1 ? 0 : 0.8 * (1 - restT * (2 - restT));
       /* Wild hair through the airborne descent; calms once grounded */
       const hairLevel = scrollY > 0 && scrollT < 1 ? 4 : 0;
+
       drawScene(lemmingY, scrollY, veilAlpha, hairLevel, ceilingDrop);
       /* The stinger fades in at its reveal point: at rest for surface→tunnel (no
          mid-scroll cliffhanger), early for the Abyss handoff (before the reveal) */
       if (scrollT >= messageScrollT) screen.querySelector('.transition-overlay')?.classList.add('show');
-      if (elapsed < animEnd) {
-        requestAnimationFrame((n) => animate(startTime, n));
-      }
+      if (elapsed < animEnd) requestAnimationFrame((n) => animate(startTime, n));
     }
 
-    /* The handoff timer arms only once the animation starts, so a slow image
-       load can't tear the screen down mid-scroll */
-    let started = false;
-    const start = () => {
-      if (started) return;
-      started = true;
+    /* The handoff arms only once the animation starts, so a slow image load
+       can't tear the screen down mid-scroll (whenImagesSettled fires start once) */
+    const start = (): void => {
       /* Reduced motion: jump straight to the final frame — lemming grounded,
          ceiling closed, veil already lifted */
       const skipMs = reduceMotion ? animEnd : 0;
@@ -462,63 +417,23 @@ function main(): void {
          passes onward unchanged (surface + surface levels bonus already applied) */
       setTimeout(() => onArrive(breakdown), TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS);
     };
-    let pendingImgs = [undergroundImg, ceilingImg].filter((img) => !img.complete);
-    const onImgSettled = (img: HTMLImageElement) => {
-      pendingImgs = pendingImgs.filter((i) => i !== img);
-      if (pendingImgs.length === 0) start();
-    };
-    if (pendingImgs.length === 0) start();
-    else pendingImgs.forEach((img) => {
-      img.addEventListener('load', () => onImgSettled(img), { once: true });
-      img.addEventListener('error', () => onImgSettled(img), { once: true });
-    });
+
+    whenImagesSettled([undergroundImg, ceilingImg], start);
   }
 
   function createTunnelScreen(breakdown: ScoreBreakdown): void {
-    const size = getCanvasSize();
-    const screen = buildDom(`
-      <section class="section-container play">
-        <div class="game-stage">
-          <canvas class="tunnel-game-canvas" role="img" aria-label="Tunnel — find the crack and blast your way out"></canvas>
-          <p class="level-up-banner"></p>
-          <div class="game-hud">
-            <div class="hud-lives">
-              <span class="hud-item lives-item">
-                <span class="hud-label">lives</span>
-                <span class="hud-value lives-value">3</span>
-              </span>
-              <div class="lives-icons"></div>
-            </div>
-            <div class="hud-score">
-              <span class="hud-item">
-                <span class="hud-value seconds-value">60</span>
-                <span class="hud-label">sec</span>
-              </span>
-              <span class="hud-item level-item">
-                <span class="hud-label">level</span>
-                <span class="hud-value level-value">1</span>
-              </span>
-            </div>
-          </div>
-          <button class="mute-btn" aria-label="Mute sound"></button>
-        </div>
-        <div class="touch-controls">
-          <button class="touch-left" aria-label="Move left">&#x2190;</button>
-          <button class="touch-action" aria-label="Action">SPACE</button>
-          <button class="touch-right" aria-label="Move right">&#x2192;</button>
-        </div>
-      </section>
-    `);
-
-    const canvas = screen.querySelector('canvas') as HTMLCanvasElement;
-    canvas.width = size;
-    canvas.height = size;
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'tunnel-game-canvas',
+      canvasAriaLabel: 'Tunnel — find the crack and blast your way out',
+      secondsStart: 60,
+      withAction: true,
+    });
 
     const game = new TunnelGame(canvas, breakdown);
     game.completionCallback((b) => createTransitionScreen(
       b,
       '&gt; the air grows warm...',
-      (bb) => createGameOverScreen(bb, 'win'),
+      createAbyssScreen,
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
       TRANSITION_MESSAGE_FROM_START,
       ABYSS_CEILING_SVG,
@@ -526,45 +441,14 @@ function main(): void {
     ));
     game.gameOverCallback(createGameOverScreen);
 
-    /* Cave loop through the channel helper: respects the mute gate, pauses
-       with the hidden tab, dies with the run */
-    const caveLoop = new Audio(CAVE_LOOP);
-    game.caveLoop = caveLoop;
-    playLoop(caveLoop, game.muted);
-    pauseWhileHidden(caveLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
+    /* Cave loop: respects the mute gate, pauses with the hidden tab, dies with the run */
+    game.caveLoop = attachWorldLoop(game, CAVE_LOOP, wireMute);
+    /* Gate input while the info modal holds the run paused, so Space activates the
+       modal button rather than the (not-yet-started) action verb */
+    wireMovement(() => game.player, game.runSignal, () => game.paused);
+    wireAction(() => game.action(), game.runSignal, () => game.paused);
 
-    setupMuteButton(
-      screen.querySelector('.mute-btn') as HTMLButtonElement,
-      (muted) => { game.muted = muted; game.sfx.applyMute(muted); caveLoop.muted = muted; },
-    );
-
-    /* One verb per state: Space (or the action button) is pick up / place /
-       light; auto-repeat is ignored and a focused control never activates */
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
-      if (game.paused) return;
-      if (event.key === 'ArrowRight') game.player?.setDirection(1);
-      else if (event.key === 'ArrowLeft') game.player?.setDirection(-1);
-      else if (event.key === ' ') {
-        event.preventDefault();
-        if (event.repeat) return;
-        game.action();
-      }
-    }, { signal: game.runSignal });
-
-    const arrowRight = screen.querySelector('.touch-right') as HTMLElement;
-    arrowRight.addEventListener('touchstart', () => game.player?.setDirection(1));
-    arrowRight.addEventListener('click', () => game.player?.setDirection(1));
-    
-    const arrowLeft = screen.querySelector('.touch-left') as HTMLElement;
-    arrowLeft.addEventListener('touchstart', () => game.player?.setDirection(-1));
-    arrowLeft.addEventListener('click', () => game.player?.setDirection(-1));
-
-    const actionBtn = screen.querySelector('.touch-action') as HTMLButtonElement;
-    actionBtn.addEventListener('click', () => game.action());
-
-    canvas.tabIndex = -1;
     game.paused = true;
-
     showInfoModal(TUNNEL_MODAL, () => {
       game.paused = false;
       canvas.focus();
@@ -576,19 +460,23 @@ function main(): void {
     const size = getCanvasSize();
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
+    const hasCount = breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus > 0;
+    const isWin = variant === 'win';
 
-    const hasCount = breakdown.tunnelTime + breakdown.levelsBonus > 0;
+    const canvasHtml = isWin
+      ? '<canvas class="win-canvas" aria-hidden="true"></canvas>'
+      : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
+
+    const headingHtml = isWin
+      ? '<h1 class="go-title">&gt; You made it!<br>For now...</h1>'
+      : '<p class="go-boom">BOOOM!!!</p><h1 class="go-title">GAME OVER</h1>';
 
     const gameOverScreen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="game-stage">
-        ${variant === 'win' ? 
-          '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>' :
-          '<canvas class="game-over-canvas" aria-hidden="true"></canvas>'}
+          ${canvasHtml}
           <div class="game-over-overlay">
-            ${variant === 'win' ? 
-              '<h1 class="go-title">&gt; You made it!<br>For now...</h1>' : 
-              '<p class="go-boom">BOOOM!!!</p>' + '<h1 class="go-title">GAME OVER</h1>'}
+            ${headingHtml}
             ${hasCount ? '<ul class="go-count"></ul>' : ''}
             <p class="go-score">score <span class="go-score-value"></span></p>
           </div>
@@ -596,7 +484,7 @@ function main(): void {
       </section>
     `);
 
-    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-tunnel-canvas') as HTMLCanvasElement | null;
+    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-canvas') as HTMLCanvasElement | null;
     if (canvas) {
       canvas.width = size;
       canvas.height = size;
@@ -616,6 +504,7 @@ function main(): void {
          let the visibility listener resume on return */
       if (!document.hidden) safePlay(rankingMusic);
     };
+
     if (rankingMusic) {
       rankingMusic.pause();
       rankingMusic = null;
@@ -642,13 +531,14 @@ function main(): void {
       if (reduceMotion) {
         lineEls.forEach((li) => li.classList.add('show'));
         scoreEl.textContent = String(breakdown.total);
+        announce(`Score: ${breakdown.total}`);
       } else {
         scoreEl.textContent = '0';
         lineEls.forEach((li, i) => setTimeout(() => {
           li.classList.add('show');
           playOptionalSfx(COUNT_TICK_SFX);
         }, 300 + i * 250));
-        
+
         const rollStartMs = 300 + lineEls.length * 250;
         const ROLL_MS = 500;
 
@@ -658,7 +548,10 @@ function main(): void {
             if (!mainElement.contains(scoreEl)) { clearInterval(rollTimer); return; }
             const next = Math.min(breakdown.total, Number(scoreEl.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
             scoreEl.textContent = String(next);
-            if (next >= breakdown.total) clearInterval(rollTimer);
+            if (next >= breakdown.total) {
+              clearInterval(rollTimer);
+              announce(`Score: ${breakdown.total}`); // settled total, once the roll lands
+            }
           }, 40);
         }, rollStartMs);
 
@@ -666,6 +559,7 @@ function main(): void {
       }
     } else if (scoreEl) {
       scoreEl.textContent = String(breakdown.total);
+      announce(`Score: ${breakdown.total}`);
     }
 
     if (variant === 'death' && !muted) {
@@ -686,7 +580,7 @@ function main(): void {
         .then(({ docId, bestScore }) => ({ error: false, docId, bestScore }))
         .catch(() => ({ error: true, docId: null, bestScore: null }));
 
-    /* The hold extends to let the count land; surface-only deaths keep today's beat */
+    /* Hold the breakdown long enough to read it; surface-only deaths (no count) keep today's short beat. */
     const holdMs = hasCount && !reduceMotion ? GAME_OVER_COUNT_HOLD_MS : GAME_OVER_TRANSITION_MS;
     setTimeout(() => createRankingScreen(breakdown.total, submission), holdMs);
   }
@@ -713,6 +607,14 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
+    /* The 6:1 background strip fills the canvas height, so one tile spans 6× the
+       rendered height. Feed that to the scroll keyframe so the loop is seamless
+       at any canvas size (square on desktop, taller box on mobile). */
+    const tileObserver = new ResizeObserver(() => {
+      canvas.style.setProperty('--ranking-tile-w', `${canvas.clientHeight * 6}px`);
+    });
+    tileObserver.observe(canvas);
+
     setupMuteButton(
       mainElement.querySelector('.mute-btn') as HTMLButtonElement,
       (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
@@ -721,6 +623,7 @@ function main(): void {
     const playAgainBtn = mainElement.querySelector('.ranking-play-again') as HTMLButtonElement;
     playAgainBtn.focus();
     playAgainBtn.addEventListener('click', () => {
+      tileObserver.disconnect();
       if (rankingMusic) {
         rankingMusic.pause();
         rankingMusic.src = '';
@@ -767,7 +670,7 @@ function main(): void {
       ]);
 
       if (!mainElement.querySelector('.ranking-list')) return; // navigated away
-      
+
       const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
 
       if (!mainElement.querySelector('.ranking-list')) return;
@@ -784,15 +687,17 @@ function main(): void {
       const isPlayerRow = (s: { id: string; name: string }): boolean =>
         (submittedDocId !== null && s.id === submittedDocId)
         || (playerName !== '' && s.name === playerName);
-      
-        const playerInTop10 = scores.some(isPlayerRow);
+
+      const playerInTop10 = scores.some(isPlayerRow);
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
+      let playerRank: number | null = null;
 
       scores.forEach((s, i) => {
         if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
         const isCurrent = isPlayerRow(s);
+        if (isCurrent) playerRank = displayRank;
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
           <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
@@ -806,8 +711,9 @@ function main(): void {
         const rank = await getPlayerRank(effectiveScore).catch(() => null);
 
         if (!mainElement.querySelector('.ranking-list')) return;
-        
+
         if (rank !== null) {
+          playerRank = rank;
           html += `
             <hr class="ranking-divider">
             ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
@@ -821,6 +727,9 @@ function main(): void {
       }
 
       listEl.innerHTML = html;
+      /* Announce the settled rank once, after the list renders (both the in-top-10
+         row and the appended below-top-10 row are covered) */
+      if (playerRank !== null) announce(`Rank ${playerRank}`);
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
       const { error: submissionError } = await resolveSubmission();
@@ -831,7 +740,7 @@ function main(): void {
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
       `;
-      
+
       listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
         listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
@@ -840,9 +749,50 @@ function main(): void {
     }
   }
 
+  function createAbyssScreen(breakdown: ScoreBreakdown): void {
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+      canvasClass: 'abyss-game-canvas',
+      canvasAriaLabel: 'The Abyss — gather bombs and bring down the stalactites',
+      secondsStart: 72,
+      withAction: true,
+    });
+
+    const game = new AbyssGame(canvas, breakdown);
+    game.completionCallback((b) => createGameOverScreen(b, 'win'));
+    game.gameOverCallback(createGameOverScreen);
+
+    const hint = document.createElement('div');
+    hint.className = 'abyss-hint';
+    const stalItems = (['small', 'medium', 'large'] as const).map((size, i) => `
+        <span class="abyss-hint-item abyss-stal" data-size="${size}" hidden>
+          <img class="abyss-hint-icon" src="${STALACTITE_SVGS[i]}" alt="${size} stalactites smashed">
+          <span class="abyss-hint-count">0</span>
+        </span>`).join('');
+    hint.innerHTML = `
+        <span class="abyss-hint-item">
+          <img class="abyss-hint-icon" src="${SPRITES.bomb}" alt="Bombs carried">
+          <span class="abyss-hint-count abyss-bombs">0/3</span>
+        </span>${stalItems}`;
+    (mainElement.querySelector('.game-stage') as HTMLElement).appendChild(hint);
+
+    game.abyssLoop = attachWorldLoop(game, ABYSS_LOOP, wireMute);
+    wireMovement(() => game.player, game.runSignal, () => game.paused);
+    wireAction(() => game.action(), game.runSignal, () => game.paused);
+
+    game.paused = true;
+    game.coldOpen(() => {
+      showInfoModal(ABYSS_MODAL, () => {
+        game.paused = false;
+        canvas.focus();
+        game.startGame();
+      });
+    });
+  }
+
   const debugScreen = getDebugScreen();
   if (debugScreen === 'transition') createTransitionScreen(makeBreakdown({ surfaceTime: 42 }));
   else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+  else if (debugScreen === 'abyss') createAbyssScreen(makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }));
   else createStartScreen();
 }
 

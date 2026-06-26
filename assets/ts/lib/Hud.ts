@@ -26,7 +26,7 @@ export class Hud {
     restartAnimation(this.el(selector), 'blink');
   }
 
-  /** Writes the countdown only when it changes, returning whether 
+  /** Writes the countdown only when it changes, returning whether
       the displayed value moved so callers can gate their own per-second updates. */
   setScore(score: number): boolean {
     if (score === this.lastScore) return false;
@@ -35,7 +35,6 @@ export class Hud {
     return true;
   }
 
-  /** Toggles the low-time warning styling on the countdown digits. */
   setTimeWarning(on: boolean): void {
     this.el('.seconds-value')?.classList.toggle('time-warning', on);
   }
@@ -91,7 +90,7 @@ export class Hud {
       icon.classList.add('life-losing');
       icon.addEventListener('animationend', () => icon.remove(), { once: true });
     }
-    
+
     if (excess > 0) this.blinkItem('.lives-item');
   }
 }

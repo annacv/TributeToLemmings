@@ -14,7 +14,7 @@ describe('SurfaceRenderer — erosion canvas drawing', () => {
     const drawImage = renderer['erosionCtx'].drawImage as unknown as Mock;
     const img = { complete: true } as HTMLImageElement;
 
-    renderer['drawStamps']([{ img, x: 100, y: 350, w: 30, h: 90 }]);
+    renderer['drawStamps']([{ img, x: 100, y: 350, width: 30, height: 90 }]);
 
     expect(drawImage).toHaveBeenCalledTimes(1);
     expect(drawImage).toHaveBeenCalledWith(img, 100, 350, 30, 90);
@@ -25,7 +25,7 @@ describe('SurfaceRenderer — erosion canvas drawing', () => {
     const drawImage = renderer['erosionCtx'].drawImage as unknown as Mock;
     const img = { complete: false } as HTMLImageElement;
 
-    renderer['drawStamps']([{ img, x: 50, y: 360, w: 80, h: 48 }]);
+    renderer['drawStamps']([{ img, x: 50, y: 360, width: 80, height: 48 }]);
 
     expect(drawImage).not.toHaveBeenCalled();
   });

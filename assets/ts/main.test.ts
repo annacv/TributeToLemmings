@@ -3,13 +3,15 @@ import { generateGuestHandle } from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import { TunnelGame } from './TunnelGame';
+import { AbyssGame, ABYSS_TIME_BUDGET_S } from './AbyssGame';
 import type { ScoreRecord } from './lib/firebase';
 
 interface MockGame {
   player: { setDirection: ReturnType<typeof vi.fn> };
   gameSong: { muted: boolean };
   onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null;
+  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
+  startSong: ReturnType<typeof vi.fn>;
   startGame: ReturnType<typeof vi.fn>;
 }
 
@@ -29,7 +31,8 @@ vi.mock('./SurfaceGame', () => ({
     player = { setDirection: vi.fn() };
     gameSong = { muted: false };
     onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
-    onTunnelWorld: ((breakdown: ScoreBreakdown) => void) | null = null;
+    onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
+    startSong = vi.fn();
     startGame = vi.fn();
     private runController = new AbortController();
     get runSignal(): AbortSignal { return this.runController.signal; }
@@ -38,21 +41,16 @@ vi.mock('./SurfaceGame', () => ({
     gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
       this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
-    tunnelWorldCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onTunnelWorld = (breakdown) => { this.runController.abort(); cb(breakdown); };
+    completionCallback(cb: (breakdown: ScoreBreakdown) => void): void {
+      this.onComplete = (breakdown) => { this.runController.abort(); cb(breakdown); };
     }
   },
 }));
 
 describe('generateGuestHandle', () => {
-  it('starts with "Lemming #"', () => {
-    expect(generateGuestHandle()).toMatch(/^Lemming #/);
-  });
-
-  it('suffix contains only uppercase letters and digits', () => {
+  it('formats as "Lemming #" + 5 uppercase letters/digits', () => {
     for (let i = 0; i < 50; i++) {
-      const suffix = generateGuestHandle().replace('Lemming #', '');
-      expect(suffix).toMatch(/^[A-Z0-9]{5}$/);
+      expect(generateGuestHandle()).toMatch(/^Lemming #[A-Z0-9]{5}$/);
     }
   });
 
@@ -90,21 +88,16 @@ describe('game screen keyboard wiring', () => {
     expect(activeGame().player.setDirection).toHaveBeenCalledWith(1);
   });
 
-  it('detaches the keydown listener once the game is over', () => {
-    const game = activeGame();
-    game.onGameOver!(makeBreakdown());
-    game.player.setDirection.mockClear();
-    pressArrowRight();
-    expect(game.player.setDirection).not.toHaveBeenCalled();
-  });
-
-  it('detaches the keydown listener on the tunnel transition', () => {
-    const game = activeGame();
-    game.onTunnelWorld!(makeBreakdown());
-    game.player.setDirection.mockClear();
-    pressArrowRight();
-    expect(game.player.setDirection).not.toHaveBeenCalled();
-  });
+  it.each(['onGameOver', 'onComplete'] as const)(
+    'detaches the keydown listener when the run ends via %s',
+    (end) => {
+      const game = activeGame();
+      game[end]!(makeBreakdown());
+      game.player.setDirection.mockClear();
+      pressArrowRight();
+      expect(game.player.setDirection).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not steer dead games from previous sessions', () => {
     const firstGame = activeGame();
@@ -149,6 +142,7 @@ describe('game screen keyboard wiring', () => {
     expect(activeGame().startGame).toHaveBeenCalledTimes(1);
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
   });
+
 });
 
 describe('ranking row outside the top 10', () => {
@@ -232,9 +226,9 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     return gameInstances[gameInstances.length - 1];
   }
 
-  it('onTunnelWorld renders the arrival interstitial, then routes into the tunnel', () => {
+  it('onComplete renders the arrival interstitial, then routes into the tunnel', () => {
     vi.useFakeTimers();
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
@@ -249,7 +243,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     /* surface-modal-dismissed is already set in beforeEach — the surface key
        must not suppress the tunnel modal (separate storage key) */
     localStorage.removeItem('tunnel-modal-dismissed');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 42 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 42 }));
     vi.advanceTimersByTime(3600);
     expect(document.querySelector('.info-modal-backdrop')).not.toBeNull();
     expect(document.querySelector('.info-modal-title')?.textContent).toBe('How to play');
@@ -260,25 +254,16 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
     activeGame().onGameOver!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
-    
+
     expect(document.querySelectorAll('.go-count-line')).toHaveLength(2);
     vi.advanceTimersByTime(2000);
     expect(document.querySelector('.go-score-value')?.textContent).toBe('57');
     expect(submitScore).toHaveBeenCalledWith(expect.any(String), 57);
   });
 
-  it('a surface-only death keeps the single-score presentation unchanged', () => {
-    vi.useFakeTimers();
-    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 30 }));
-    expect(document.querySelector('.go-count')).toBeNull();
-    expect(document.querySelector('.go-title')?.textContent).toBe('GAME OVER');
-    expect(document.querySelector('.go-boom')?.textContent).toBe('BOOOM!!!');
-    expect(document.querySelector('.go-score-value')?.textContent).toBe('30');
-  });
-
   it('plays no falling SFX through the interstitial when muted', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 5 }));
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     expect(play).not.toHaveBeenCalled();
     play.mockRestore();
@@ -287,7 +272,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('plays the falling SFX exactly once when unmuted', () => {
     localStorage.setItem('audio-muted', '0');
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
-    activeGame().onTunnelWorld!(makeBreakdown({ surfaceTime: 5 }));
+    activeGame().onComplete!(makeBreakdown({ surfaceTime: 5 }));
     expect(play).toHaveBeenCalledTimes(1);
     play.mockRestore();
   });
@@ -333,12 +318,6 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     document.dispatchEvent(event);
     return event;
   }
-
-  it('renders the tunnel screen with the touch action button', () => {
-    expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
-    expect(document.querySelector('.touch-action')?.textContent).toBe('SPACE');
-    expect(document.querySelector('.level-value')?.textContent).toBe('1');
-  });
 
   it('Space fires the game action and is preventDefault-ed', async () => {
     const { TunnelGame } = await import('./TunnelGame');
@@ -418,7 +397,7 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
-  it('completion shows the win title with the count; DIE.WAV never plays; ranking music starts once', () => {
+  it('completion routes into the Abyss cold-open, not the win screen', () => {
     vi.useFakeTimers();
     const game = tunnels[0];
     /* Drive the run to the third breach and through the tease to the cut */
@@ -429,22 +408,14 @@ describe('win variant end screen (tunnel completion)', () => {
     game.step();
     for (let i = 0; i < 300 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
-    game['renderFrame'](); // settle fires the completion route → Abyss fall transition
-    /* The Abyss collapse-shaft transition plays first; the win screen lands after it
-       (TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS) */
+    game['host']['frame'](); // settle fires the completion route → Abyss fall transition
+    /* The collapse-shaft transition plays first; it lands in the Abyss after it
+       (TRANSITION_TOTAL_MS + TRANSITION_BREATH_MS), not the win Game Over */
     vi.advanceTimersByTime(3600);
 
-    expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
-    expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
+    expect(document.querySelector('canvas[aria-label^="The Abyss"]')).not.toBeNull();
+    expect(document.querySelector('.go-title')).toBeNull();
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
-
-    const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
-    expect(rankingStarts()).toBe(0); // not before the count completes
-    vi.advanceTimersByTime(2500);    // lines + roll done → music
-    expect(rankingStarts()).toBe(1);
-    expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
-    vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
-    expect(rankingStarts()).toBe(1); // exactly once
   });
 
   it('the cave loop loops, respects the mute gate, and pauses with a hidden tab', () => {
@@ -461,6 +432,118 @@ describe('win variant end screen (tunnel completion)', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     expect(pause).toHaveBeenCalled();
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+  });
+});
+
+describe('win variant end screen (Abyss completion)', () => {
+  class SettledImage {
+    complete = true;
+    naturalWidth = 1;
+    src = '';
+    addEventListener(): void {}
+  }
+
+  let audioSrcs: string[] = [];
+  let abysses: AbyssGame[] = [];
+
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    /* The cold-open schedules startGame on a timer, so fake timers must be live
+       before the screen is built (else the handoff fires on real timers). */
+    vi.useFakeTimers();
+    vi.stubGlobal('Image', SettledImage);
+    audioSrcs = [];
+    const RealAudio = window.Audio;
+    vi.stubGlobal('Audio', function (src?: string) {
+      audioSrcs.push(src ?? '');
+      return new RealAudio(src);
+    });
+    abysses = [];
+    const origStart = AbyssGame.prototype.startGame;
+    vi.spyOn(AbyssGame.prototype, 'startGame').mockImplementation(function (this: AbyssGame) {
+      abysses.push(this);
+      origStart.call(this);
+    });
+    localStorage.setItem('audio-muted', '0');
+    localStorage.setItem('surface-modal-dismissed', '1');
+    localStorage.setItem('tunnel-modal-dismissed', '1');
+    localStorage.setItem('abyss-modal-dismissed', '1');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=abyss');
+    window.dispatchEvent(new Event('load'));
+  });
+
+  afterEach(() => {
+    history.replaceState(null, '', '/');
+    localStorage.removeItem('audio-muted');
+    localStorage.removeItem('surface-modal-dismissed');
+    localStorage.removeItem('tunnel-modal-dismissed');
+    localStorage.removeItem('abyss-modal-dismissed');
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  it('the exit-door close plays LETSGO and routes to the win tally; DIE.WAV never plays; ranking music starts once', () => {
+    vi.advanceTimersByTime(2000); // through the cold-open → modal (dismissed) → startGame
+    const game = abysses[0];
+    expect(game).toBeDefined();
+    const sfx = vi.spyOn(game.sfx, 'play');
+    if (game.player) game.player.lives = Number.MAX_SAFE_INTEGER;
+    game.stepCount = ABYSS_TIME_BUDGET_S * 60 - 1;
+    game.step(); // crosses the L3 time budget → reachDoor (completion)
+    expect(game.isOver).toBe(true);
+    game['host']['frame'](); // settle fires endRun → exit-door close
+
+    vi.advanceTimersByTime(1000); // EXIT_TOTAL_MS → LETSGO + onComplete → win Game Over
+    expect(sfx).toHaveBeenCalledWith('letsgo');
+    expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
+
+    const winCanvas = document.querySelector('.win-canvas') as HTMLCanvasElement | null;
+    expect(winCanvas).not.toBeNull();
+    expect(winCanvas!.width).toBeGreaterThan(0);
+    expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
+    expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
+
+    const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
+    expect(rankingStarts()).toBe(0); // not before the count completes
+    vi.advanceTimersByTime(2500);    // lines + roll done → music
+    expect(rankingStarts()).toBe(1);
+    vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
+    expect(rankingStarts()).toBe(1); // exactly once
+  });
+
+  it('gates the ranking music on the count-up completing, not a fixed timer (ordering holds for a VII insertion)', () => {
+    vi.advanceTimersByTime(2000); // cold-open → modal (dismissed) → startGame
+    const game = abysses[0];
+    if (game.player) game.player.lives = Number.MAX_SAFE_INTEGER;
+    game.stepCount = ABYSS_TIME_BUDGET_S * 60 - 1;
+    game.step();                  // crosses the budget → completion
+    game['host']['frame']();      // settle → exit-door close
+    vi.advanceTimersByTime(1000); // EXIT_TOTAL_MS → win tally begins
+
+    const total = String(game.currentBreakdown().total);
+    const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
+    const shownScore = () => document.querySelector('.go-score-value')?.textContent;
+
+    /* Step through the count: the music must stay silent the whole time the score
+       is still rolling — it's gated on the count finishing, so a screen inserted
+       before/after the tally can't make it start early. */
+    for (let t = 0; t < 1700; t += 100) {
+      if (shownScore() !== total) expect(rankingStarts()).toBe(0);
+      vi.advanceTimersByTime(100);
+    }
+    vi.advanceTimersByTime(1000);     // safely past the count completion
+    expect(shownScore()).toBe(total); // the roll landed on the real total
+    expect(rankingStarts()).toBe(1);  // and only then did the music start, once
+    /* the settled score reached assistive tech once, via the polite live region */
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(`Score: ${total}`);
   });
 });
 

@@ -1,6 +1,7 @@
 import { Player } from './Player';
-import { GameLoop } from './lib/GameLoop';
-import { RunLifecycle } from './lib/RunLifecycle';
+import { RunHost } from './lib/RunHost';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { PICKUP_RANGE_FRAC } from './lib/geometry';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
@@ -15,20 +16,19 @@ import {
 
 export const TUNNEL_TIME_BUDGET_S = 60;
 export const TOTAL_CYCLES = 3;
-const STEPS_PER_SECOND = 60;
 
 /* World geometry is stored as canvas fractions, not pixels, so nothing jumps
    when the canvas resizes (280–580 px). The numbers come from the artwork. */
 export const FLOOR_FRAC = 690 / 800; // walkable line in background-tunnel.svg
 
 /* Kill line and warning band, both as floor-to-ceiling headroom.
-   The rule: the crouch warning must always show before the crush can fire. */
+   The rule: the warning must always show before the crush can fire. */
 export const CRUSH_HEADROOM_FRAC = 0.09;
 export const WARNING_HEADROOM_FRAC = 0.17;
 
 const CRUSH_HITSTOP_STEPS = 15; // ~250 ms freeze so the death beat lands
 
-export const TUNNEL_LEVELS = [
+export const TUNNEL_LEVEL_CONFIG = [
   { startHeadroomFrac: 0.62, driftPerStep: 0.00009, crackMark: 2, bombs: 2 },
   { startHeadroomFrac: 0.48, driftPerStep: 0.00009, crackMark: 0, bombs: 3 },
   { startHeadroomFrac: 0.34, driftPerStep: 0.00013, crackMark: 1, bombs: 4 },
@@ -47,12 +47,11 @@ export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
 export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat: breach ends here
 
 const LIGHT_PRESSES = 3;
-const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
 export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
 /* Inner faces of the cave's side-wall columns, as fractions of the 800-wide
-   artwork. The lemming's sprite box is bounded inside there to stop at the walls 
+   artwork. The lemming's sprite box is bounded inside there to stop at the walls
    instead of clipping the rock bumps. */
 const WALL_LEFT_FRAC = 66 / 800;
 const WALL_RIGHT_FRAC = 734 / 800;
@@ -70,8 +69,7 @@ const PAD_NUDGE_STEPS = 10;
 
 export type TunnelState = 'explore' | 'carry' | 'placed' | 'armed' | 'breach' | 'event';
 
-/** The read-only slice of tunnel state the renderer draws from each frame. Keeps
-    the renderer decoupled from gameplay: it reads this view, never mutates it. */
+/** The read-only slice of tunnel state the renderer draws from each frame. */
 export interface TunnelView {
   readonly state: TunnelState;
   readonly cycle: number;
@@ -89,7 +87,6 @@ export interface TunnelView {
   readonly padNudgeDir: number;
   readonly reduceMotion: boolean;
   playerCenterFrac(): number;
-  inWarningBand(): boolean;
 }
 
 export class TunnelGame implements TunnelView {
@@ -98,13 +95,12 @@ export class TunnelGame implements TunnelView {
   paused: boolean;
   canvas: HTMLCanvasElement;
   state: TunnelState;
-  cycle: number;        // 0-based index into TUNNEL_LEVELS
+  cycle: number;        // 0-based index into TUNNEL_LEVEL_CONFIG
   ceilingFrac: number;  // collision line, canvas fraction from the top
   crackXFrac: number;
   floorBombs: number[];
   bombSpawns: number[]; // this cycle's spawn layout (for crush respawn)
   placedCount: number;
-  carrying: boolean;
   lightPresses: number;
   fuseStepsLeft: number;
   stepCount: number;
@@ -125,9 +121,8 @@ export class TunnelGame implements TunnelView {
   private warningArmed: boolean;
   readonly reduceMotion: boolean;
   private hud: Hud;
-  private gameLoop: GameLoop;
+  private host: RunHost;
   private renderer: TunnelRenderer;
-  private run = new RunLifecycle();
   padArriveSteps = 0;
   padNudgeSteps = 0;
   padNudgeDir = 1;
@@ -151,7 +146,6 @@ export class TunnelGame implements TunnelView {
     this.floorBombs = [];
     this.bombSpawns = [];
     this.placedCount = 0;
-    this.carrying = false;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
     this.stepCount = 0;
@@ -178,14 +172,16 @@ export class TunnelGame implements TunnelView {
 
     this.renderer = new TunnelRenderer(canvas);
 
-    this.gameLoop = new GameLoop({
+    this.host = new RunHost({
       step: () => this.step(),
-      render: () => this.renderFrame(),
+      render: () => this.renderer.render(this),
+      isOver: () => this.isOver,
+      onEnd: () => this.endRun(),
     });
   }
 
   get runSignal(): AbortSignal {
-    return this.run.signal;
+    return this.host.signal;
   }
 
   gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
@@ -208,38 +204,43 @@ export class TunnelGame implements TunnelView {
     this.hud.setScore(this.secondsLeft());
     this.hud.blinkItem('.hud-score');
     this.beginCycle(0);
-    this.gameLoop.start();
+    this.host.start();
   }
 
-  /** Perform the current action verb */
   action(): void {
     if (this.paused || this.isOver || this.crush.hitstop > 0) return;
-    if (this.state === 'explore') {
-      const i = this.nearBombIndex();
-      if (i < 0) return;
-      this.floorBombs.splice(i, 1);
-      this.carrying = true;
-      this.state = 'carry';
-      this.sfx.play('pickup');
-    } else if (this.state === 'carry' && this.atCrack()) {
-      this.carrying = false;
-      this.placedCount++;
-      this.sfx.play('pickup');
-      this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
-      this.lightPresses = 0;
-    } else if (this.state === 'placed' && this.atCrack()) {
-      this.lightPresses++;
-      this.sfx.play('scrape', { volume: 1 });
-      if (this.lightPresses >= LIGHT_PRESSES) {
-        this.state = 'armed';
-        this.fuseStepsLeft = FUSE_STEPS;
-        if (this.player) this.player.direction = 0;
-        this.sfx.loop('fuse');
+    switch (this.state) {
+      case 'explore': {
+        const i = this.nearBombIndex();
+        if (i < 0) return;
+        this.floorBombs.splice(i, 1);
+        this.state = 'carry';
+        this.sfx.play('pickup');
+        break;
       }
-    } else if (this.state === 'placed') {
-      this.padNudgeSteps = PAD_NUDGE_STEPS;
-      this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
-      this.sfx.play('scrape', { volume: 0.3 });
+      case 'carry':
+        if (!this.atCrack()) break;
+        this.placedCount++;
+        this.sfx.play('pickup');
+        this.state = this.placedCount >= TUNNEL_LEVEL_CONFIG[this.cycle].bombs ? 'placed' : 'explore';
+        this.lightPresses = 0;
+        break;
+      case 'placed':
+        if (this.atCrack()) {
+          this.lightPresses++;
+          this.sfx.play('scrape', { volume: 1 });
+          if (this.lightPresses >= LIGHT_PRESSES) {
+            this.state = 'armed';
+            this.fuseStepsLeft = FUSE_STEPS;
+            if (this.player) this.player.direction = 0;
+            this.sfx.loop('fuse');
+          }
+        } else {
+          this.padNudgeSteps = PAD_NUDGE_STEPS;
+          this.padNudgeDir = Math.sign(this.playerCenterFrac() - this.crackXFrac) || 1;
+          this.sfx.play('scrape', { volume: 0.3 });
+        }
+        break;
     }
   }
 
@@ -260,7 +261,7 @@ export class TunnelGame implements TunnelView {
   }
 
   private cycleStartCeilingFrac(cycle: number): number {
-    return FLOOR_FRAC - TUNNEL_LEVELS[cycle].startHeadroomFrac;
+    return FLOOR_FRAC - TUNNEL_LEVEL_CONFIG[cycle].startHeadroomFrac;
   }
 
   playerCenterFrac(): number {
@@ -270,7 +271,7 @@ export class TunnelGame implements TunnelView {
   private nearBombIndex(): number {
     if (!this.player) return -1;
     const center = this.playerCenterFrac();
-    return this.floorBombs.findIndex((x) => Math.abs(center - x) <= ACTION_RANGE_FRAC);
+    return this.floorBombs.findIndex((x) => Math.abs(center - x) <= PICKUP_RANGE_FRAC);
   }
 
   private atCrack(): boolean {
@@ -315,7 +316,6 @@ export class TunnelGame implements TunnelView {
   /** Clear in-progress carry/place/light/fuse and restore the floor bombs from
       this cycle's spawn layout. Shared by cycle setup and crush respawn. */
   private resetCycleProgress(): void {
-    this.carrying = false;
     this.placedCount = 0;
     this.lightPresses = 0;
     this.fuseStepsLeft = 0;
@@ -326,7 +326,7 @@ export class TunnelGame implements TunnelView {
       can stage them before gameplay resumes. */
   private setupCycle(cycle: number): void {
     this.cycle = cycle;
-    this.bombSpawns = this.rollBombs(TUNNEL_LEVELS[cycle].bombs);
+    this.bombSpawns = this.rollBombs(TUNNEL_LEVEL_CONFIG[cycle].bombs);
     this.resetCycleProgress();
     this.rollCrack();
     this.hud.setLevel(String(cycle + 1));
@@ -429,7 +429,7 @@ export class TunnelGame implements TunnelView {
     }
 
     /* Continuous drift: reduced motion never stops it — it's gameplay, not decoration */
-    this.ceilingFrac += TUNNEL_LEVELS[this.cycle].driftPerStep;
+    this.ceilingFrac += TUNNEL_LEVEL_CONFIG[this.cycle].driftPerStep;
 
     if (this.warningArmed && this.inWarningBand()) {
       this.warningArmed = false;
@@ -447,7 +447,7 @@ export class TunnelGame implements TunnelView {
     /* Tick the pad one-shots; snap on first arrival at the charge while placed */
     if (this.padArriveSteps > 0) this.padArriveSteps--;
     if (this.padNudgeSteps > 0) this.padNudgeSteps--;
-    
+
     if (this.state === 'placed') {
       const at = this.atCrack();
       if (at && !this.wasAtCrack) this.padArriveSteps = PAD_ARRIVE_STEPS;
@@ -499,23 +499,14 @@ export class TunnelGame implements TunnelView {
     }
   }
 
-  private renderFrame(): void {
-    this.renderer.render(this);
-    /* Frames can still draw after the halt; the latch fires teardown once */
-    this.run.settle(this.isOver, () => this.endRun());
-  }
-
   private endRun(): void {
     if (this.caveLoop) audio.stopLoop(this.caveLoop);
     this.sfx.stopLoop('fuse');
-    if (this.cyclesCleared >= TOTAL_CYCLES) {
-      this.onComplete?.(this.currentBreakdown());
-    } else {
-      this.onGameOver?.(this.currentBreakdown());
-    }
+    const finish = this.cyclesCleared >= TOTAL_CYCLES ? this.onComplete : this.onGameOver;
+    finish?.(this.currentBreakdown());
   }
 
-  /** Near-crush warning: crouch frame + rumble before the kill line. */
+  /** Near-crush warning: rumble before the kill line. */
   inWarningBand(): boolean {
     return this.headroomFrac() <= WARNING_HEADROOM_FRAC;
   }

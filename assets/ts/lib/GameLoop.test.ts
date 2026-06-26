@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { GameLoop } from './GameLoop';
-
-const STEP_MS = 1000 / 60;
-const MAX_CATCHUP_STEPS = 5;
+import { GameLoop, STEP_MS, MAX_CATCHUP_STEPS } from './GameLoop';
 
 /* Captures rAF callbacks so tests drive the loop with chosen timestamps */
 function makeHarness(stepImpl: () => boolean = () => true) {

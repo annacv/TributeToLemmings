@@ -10,7 +10,7 @@ export class Bomb {
   dHeight: number;
   speed: number;
   isExploding: boolean;
-  explosionFramesLeft: number;
+  explosionStepsLeft: number;
 
   constructor(canvas: HTMLCanvasElement, randomX: number, speed: number = 1.5) {
     this.ctx = canvas.getContext('2d')!;
@@ -22,7 +22,7 @@ export class Bomb {
     this.dHeight = BOMB_HEIGHT;
     this.speed = speed;
     this.isExploding = false;
-    this.explosionFramesLeft = 0;
+    this.explosionStepsLeft = 0;
   }
 
   move(): void {

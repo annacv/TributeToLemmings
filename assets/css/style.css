@@ -31,6 +31,7 @@
 
   /* Accent */
   --accent: #FEBD00;
+  --accent-rgb: 254, 189, 0;
 
   /* Error */
   --error: #ff6b6b;
@@ -137,6 +138,27 @@ p {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* The infinite background scroll is decoration; stop it outright rather than
+     letting the duration clamp run a near-instant cycle that can read as a jump */
+  .ranking-canvas {
+    animation: none !important;
+  }
+}
+
+/* Off-screen but exposed to assistive tech: holds the polite live-region that
+   announces settled run results (final score, rank). See lib/liveRegion.ts */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ---- LAYOUT ---- */
@@ -333,6 +355,12 @@ canvas {
   background-size: cover;
 }
 
+.abyss-game-canvas {
+  background-image: url("../images/backgrounds/background-abyss.svg");
+  background-position: 50% 50%;
+  background-size: cover;
+}
+
 @keyframes shake-light {
   0%, 100% { transform: translate(0, 0); }
   25% { transform: translate(-2px, 1px); }
@@ -350,7 +378,7 @@ canvas {
   background-size: cover;
 }
 
-.win-tunnel-canvas {
+.win-canvas {
   background-image: url("../images/backgrounds/background-tunnel.svg");
   background-position: 50% 50%;
   background-size: cover;
@@ -359,14 +387,14 @@ canvas {
 .ranking-canvas {
   background-image: url("../images/backgrounds/background-ranking.svg");
   background-repeat: repeat-x;
-  background-size: 320px 100%;
+  background-size: auto 100%;
   background-position: 0 0;
-  animation: ranking-scroll 4s linear infinite;
+  animation: ranking-scroll 24s linear infinite;
 }
 
 @keyframes ranking-scroll {
   from { background-position-x: 0; }
-  to   { background-position-x: -320px; }
+  to   { background-position-x: calc(-1 * var(--ranking-tile-w, 3192px)); }
 }
 
 /* ---- GAME STAGE ---- */
@@ -424,10 +452,11 @@ canvas {
 
   .game-canvas,
   .tunnel-game-canvas,
+  .abyss-game-canvas,
   .game-over-canvas,
   .ranking-canvas,
   .transition-canvas,
-  .win-tunnel-canvas {
+  .win-canvas {
     width: 100%;
     height: auto;
   }
@@ -440,7 +469,7 @@ canvas {
   }
 
   .game-over-canvas,
-  .win-tunnel-canvas,
+  .win-canvas,
   .ranking-canvas,
   .transition-canvas {
     height: 100%;
@@ -608,6 +637,41 @@ canvas {
   animation: life-lose 0.6s ease-in forwards;
 }
 
+.abyss-hint {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(var(--black-rgb), 0.82);
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
+  border-radius: 0.35rem;
+  font-family: var(--font-pixel);
+  font-size: var(--text-2xs);
+  color: var(--neutral-0);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.abyss-hint-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.abyss-hint-icon {
+  width: 1rem;
+  height: 1rem;
+  image-rendering: pixelated;
+}
+
+.abyss-hint-count {
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 767px) {
   .game-hud {
     top: 0.25rem;
@@ -737,7 +801,7 @@ canvas {
   gap: var(--gap-lg);
   font-family: var(--font-pixel);
   font-size: var(--text-xs);
-  color: var(--white, #fff);
+  color: var(--neutral-0);
   opacity: 0;
 }
 
@@ -894,12 +958,13 @@ canvas {
 .transition-line {
   font-family: var(--font-pixel);
   font-size: var(--text-sm);
-  color: var(--brand);
+  color: var(--neutral-0);
   line-height: var(--leading-body);
   letter-spacing: .2em;
   margin: 1.5rem 0 0;
-  padding-inline: 1rem;
+  padding: 1rem 2rem;
   text-shadow: 2px 2px 0 var(--neutral-100);
+  text-transform: uppercase;
 }
 
 /* Reduced motion can't read a flash; the ~0.01ms animation would land on the
@@ -1045,8 +1110,8 @@ button:active {
   position: relative;
   background: var(--neutral-90);
   border: var(--border-brand-thick);
-  padding: 2.5rem 2rem 2rem;
-  max-width: 440px;
+  padding: 2rem;
+  max-width: 468px;
   width: 90%;
   display: flex;
   flex-direction: column;
@@ -1262,7 +1327,7 @@ button:active {
 .ranking-error {
   font-family: var(--font-pixel);
   font-size: var(--text-3xs);
-  color: var(--neutral-40);
+  color: var(--neutral-30);
   letter-spacing: var(--tracking-pixel-medium);
 }
 
@@ -1294,7 +1359,7 @@ button:active {
   font-size: var(--text-xs);
   color: var(--neutral-0);
   letter-spacing: var(--tracking-pixel);
-  background: rgba(var(--black-rgb), 0.55);
+  background: rgba(var(--black-rgb), 0.7);
 }
 
 
@@ -1309,7 +1374,7 @@ button:active {
   width: 1.8em;
   text-align: right;
   flex-shrink: 0;
-  color: var(--neutral-40);
+  color: var(--neutral-30);
 }
 
 .ranking-row--current .ranking-rank {

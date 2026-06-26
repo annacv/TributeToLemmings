@@ -20,7 +20,6 @@ export class SoundEffectBank {
     );
   }
 
-  /** Fire-and-forget one-shot: rewinds and plays unless muted. */
   play(name: string, opts: SoundEffectOptions = {}): void {
     const sfx = this.sounds.get(name);
     if (!sfx) return;
@@ -35,7 +34,6 @@ export class SoundEffectBank {
     if (sfx) audio.playLoop(sfx, this.isMuted());
   }
 
-  /** Stops a looping channel and rewinds it. */
   stopLoop(name: string): void {
     const sfx = this.sounds.get(name);
     if (sfx) audio.stopLoop(sfx);

@@ -18,7 +18,14 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-nested-ternary': 'error',
     },
   },
   prettier,
+  {
+    files: ['assets/ts/**/*.ts'],
+    rules: {
+      'no-trailing-spaces': 'error',
+    },
+  },
 ];
