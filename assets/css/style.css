@@ -958,12 +958,13 @@ canvas {
 .transition-line {
   font-family: var(--font-pixel);
   font-size: var(--text-sm);
-  color: var(--brand);
+  color: var(--neutral-0);
   line-height: var(--leading-body);
   letter-spacing: .2em;
   margin: 1.5rem 0 0;
-  padding-inline: 1rem;
+  padding: 1rem 2rem;
   text-shadow: 2px 2px 0 var(--neutral-100);
+  text-transform: uppercase;
 }
 
 /* Reduced motion can't read a flash; the ~0.01ms animation would land on the
