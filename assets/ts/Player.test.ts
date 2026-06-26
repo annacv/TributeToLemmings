@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { Player } from './Player';
+import { Player, BLINK_TOTAL_STEPS } from './Player';
 import { makeCtx, makeCanvas } from './test-helpers';
-
-const BLINK_TOTAL_FRAMES = 30;
 
 describe('Player', () => {
   let canvas: HTMLCanvasElement;
@@ -62,10 +60,10 @@ describe('Player', () => {
     expect(player.direction).toBe(-1);
   });
 
-  it('triggerBlink sets blinkFramesLeft', () => {
+  it('triggerBlink sets blinkStepsLeft', () => {
     const player = new Player(canvas);
     player.triggerBlink();
-    expect(player.blinkFramesLeft).toBe(BLINK_TOTAL_FRAMES);
+    expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS);
   });
 
   it('triggerBlink captures pre-damage color at 3 lives', () => {
@@ -109,9 +107,9 @@ describe('Player', () => {
     player.triggerBlink();
     player.drawImage(0);
     player.drawImage(0);
-    expect(player.blinkFramesLeft).toBe(BLINK_TOTAL_FRAMES);
+    expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS);
     player.tickBlink();
-    expect(player.blinkFramesLeft).toBe(BLINK_TOTAL_FRAMES - 1);
+    expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS - 1);
   });
 
   it('re-triggering a blink makes the next rendered frame visible again', () => {
@@ -129,12 +127,12 @@ describe('Player', () => {
     player.triggerBlink();
     let visibleFrames = 0;
     let hiddenFrames = 0;
-    while (player.blinkFramesLeft > 0) {
+    while (player.blinkStepsLeft > 0) {
       player.tickBlink();
       player.tickBlink();
       mockCtx.fill.mockClear();
       player.drawImage(0);
-      if (player.blinkFramesLeft > 0) {
+      if (player.blinkStepsLeft > 0) {
         if (mockCtx.fill.mock.calls.length > 0) visibleFrames++;
         else hiddenFrames++;
       }

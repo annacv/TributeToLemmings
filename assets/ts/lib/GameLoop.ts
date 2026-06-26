@@ -1,5 +1,7 @@
-const STEP_MS = 1000 / 60;
-const MAX_CATCHUP_STEPS = 5;
+export const STEPS_PER_SECOND = 60;
+
+export const STEP_MS = 1000 / STEPS_PER_SECOND;
+export const MAX_CATCHUP_STEPS = 5;
 /* Frame deltas that are exactly one step long can land a few ulps below STEP_MS
    (float subtraction of near-equal timestamps); without a tolerance the loop
    silently drops steps that are mathematically due */

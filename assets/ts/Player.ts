@@ -1,4 +1,4 @@
-const BLINK_TOTAL_FRAMES = 30;
+export const BLINK_TOTAL_STEPS = 30;
 const HAIR_PERIOD = 48;
 const SVG_SIZE = 142;
 
@@ -120,7 +120,7 @@ export class Player {
   speed: number;
   minX: number;
   maxX: number;
-  blinkFramesLeft: number;
+  blinkStepsLeft: number;
   blinkColor: string;
   blinkVisible: boolean;
 
@@ -136,7 +136,7 @@ export class Player {
     this.speed = 1;
     this.minX = 0;
     this.maxX = canvas.width - this.dWidth - 1;
-    this.blinkFramesLeft = 0;
+    this.blinkStepsLeft = 0;
     this.blinkColor = '#FFFFFF';
     this.blinkVisible = true;
   }
@@ -153,20 +153,20 @@ export class Player {
 
   triggerBlink(livesSnapshot?: number): void {
     this.blinkColor = getBodyColor(livesSnapshot ?? this.lives);
-    this.blinkFramesLeft = BLINK_TOTAL_FRAMES;
+    this.blinkStepsLeft = BLINK_TOTAL_STEPS;
     this.blinkVisible = true; // first rendered frame after a hit IS the hit feedback
   }
 
   /** Advances the blink duration by one simulation step (real-time on any refresh rate). */
   tickBlink(): void {
-    if (this.blinkFramesLeft > 0) this.blinkFramesLeft--;
+    if (this.blinkStepsLeft > 0) this.blinkStepsLeft--;
   }
 
   drawImage(frameCount: number): void {
     /* Duration counts simulation steps (tickBlink), but visibility alternates per
        rendered frame: deriving it from the step count aliases at 30 Hz, where ~2
        steps per render can sample the player as hidden for the entire blink */
-    const blinking = this.blinkFramesLeft > 0;
+    const blinking = this.blinkStepsLeft > 0;
     if (blinking) {
       const visible = this.blinkVisible;
       this.blinkVisible = !this.blinkVisible;

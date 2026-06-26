@@ -5,19 +5,19 @@ import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
 import { SoundEffectBank } from './lib/SoundEffectBank';
-import { bombHitsPlayer } from './lib/geometry';
+import { bombHitsPlayer, PICKUP_RANGE_FRAC } from './lib/geometry';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 import {
-  makeBreakdown, LEVEL_POINTS, type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
+  makeBreakdown, LEVEL_POINTS, LEVEL_THRESHOLDS_S,
+  type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
 } from './lib/score';
 import {
   SPRITES, EXPLODE_SFX, MANTRAP_SFX, THUD_SFX, DOOR_SFX, LETSGO_SFX, FALLING_SFX, FIRE_SFX, YIPPEE_SFX,
 } from './assets';
 
-const STEPS_PER_SECOND = 60;
-export const ABYSS_LEVEL_THRESHOLDS_S = [0, 18, 36] as const;
 export const ABYSS_TIME_BUDGET_S = 72;
 
-export const ABYSS_LEVELS = [
+export const ABYSS_LEVEL_CONFIG = [
   { spawnIntervalFrames: 60, bombSpeed: 1.2, stalactiteGapFrac: 0.55, sizes: ['small'] },
   { spawnIntervalFrames: 42, bombSpeed: 1.5, stalactiteGapFrac: 0.46, sizes: ['small', 'medium'] },
   { spawnIntervalFrames: 30, bombSpeed: 1.8, stalactiteGapFrac: 0.38, sizes: ['small', 'medium', 'large'] },
@@ -36,7 +36,6 @@ const SPAWN_AHEAD_FRAC = 1.2;           // stalactites seeded just past the righ
 const CULL_BEHIND_FRAC = 1.0;           // drop hazards this far behind the camera
 
 const CARRY_CAP = 3;                    // max. number of bombs the lemming can carry
-const PICKUP_RANGE_FRAC = 0.07;         // "standing on a floor bomb"
 export const THROW_RANGE_FRAC = 0.18;   // "near a stalactite" — wide enough to throw without standing dead-centre
 export const THROW_FLIGHT_STEPS = 10;   // frames a thrown bomb takes to fly up to the stalactite
 const BOMB_SPAWN_MAX_FRAC = 0.88;       // right edge of the bomb-spawn band
@@ -260,7 +259,7 @@ export class AbyssGame implements AbyssView {
   }
 
   get availableSizes(): readonly StalactiteSize[] {
-    return ABYSS_LEVELS[this.currentLevel].sizes;
+    return ABYSS_LEVEL_CONFIG[this.currentLevel].sizes;
   }
 
   worldToScreenX(worldX: number): number {
@@ -276,7 +275,7 @@ export class AbyssGame implements AbyssView {
   }
 
   currentBreakdown(): ScoreBreakdown {
-    const abyssLevels = this.outcome === 'complete' ? ABYSS_LEVELS.length : this.currentLevel;
+    const abyssLevels = this.outcome === 'complete' ? ABYSS_LEVEL_CONFIG.length : this.currentLevel;
     return makeBreakdown({
       surfaceTime: this.base.surfaceTime,
       tunnelTime: this.base.tunnelTime,
@@ -344,7 +343,7 @@ export class AbyssGame implements AbyssView {
   private updateLevelByTime(): void {
     const secs = this.survivedSeconds();
     // Thresholds start at 0 and secs >= 0, so the count is always >= 1 (level >= 0).
-    const level = ABYSS_LEVEL_THRESHOLDS_S.filter((threshold) => secs >= threshold).length - 1;
+    const level = LEVEL_THRESHOLDS_S.filter((threshold) => secs >= threshold).length - 1;
     if (level !== this.currentLevel) {
       this.currentLevel = level;
       this.hud.setLevel(String(level + 1));
@@ -354,7 +353,7 @@ export class AbyssGame implements AbyssView {
   }
 
   private maybeSpawnBomb(): void {
-    const level = ABYSS_LEVELS[this.currentLevel];
+    const level = ABYSS_LEVEL_CONFIG[this.currentLevel];
     if (this.stepCount - this.lastBombSpawn < level.spawnIntervalFrames) return;
     const canvasWidth = this.canvas.width;
     // Keep bombs inside the walkable corridor: never on the left framing column, never past the visible floor.
@@ -371,7 +370,7 @@ export class AbyssGame implements AbyssView {
     const canvasWidth = this.canvas.width;
     const limit = this.cameraX + canvasWidth * SPAWN_AHEAD_FRAC;
     while (this.nextStalactiteWorldX < limit) {
-      const level = ABYSS_LEVELS[this.currentLevel];
+      const level = ABYSS_LEVEL_CONFIG[this.currentLevel];
       this.stalactites.push(new Stalactite(this.nextSize(level.sizes), this.nextStalactiteWorldX));
       this.nextStalactiteWorldX += canvasWidth * level.stalactiteGapFrac;
       this.stalactiteSeq++;

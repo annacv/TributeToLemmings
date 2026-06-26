@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RunHost, type RunHostHooks } from './RunHost';
-
-const STEP_MS = 1000 / 60;
+import { STEP_MS } from './GameLoop';
 
 /* Captures rAF callbacks so tests drive the host with chosen timestamps,
    mirroring the GameLoop harness it composes. */

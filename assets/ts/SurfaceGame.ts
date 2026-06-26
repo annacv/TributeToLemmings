@@ -1,10 +1,11 @@
 import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { RunHost } from './lib/RunHost';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { BOMB_WIDTH, bombHitsPlayer } from './lib/geometry';
-import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
+import { makeBreakdown, LEVEL_POINTS, LEVEL_THRESHOLDS_S, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import { SoundEffectBank } from './lib/SoundEffectBank';
 import { SurfaceRenderer } from './SurfaceRenderer';
@@ -14,15 +15,14 @@ import {
 } from './assets';
 
 
-const EXPLOSION_FRAMES = 6; // ~100ms at 60fps — frames to show explosion before removal
+const EXPLOSION_STEPS = 6; // ~100 ms (6 steps at 60/s) — show the explosion before removal
 
-const LEVEL_CONFIG = [
+const SURFACE_LEVEL_CONFIG = [
   { spawnIntervalFrames: 60,  bombSpeed: 1.2 },  // Level 1 — 1.0 s between bombs
   { spawnIntervalFrames: 36,  bombSpeed: 1.5 },  // Level 2 — 0.6 s ≈ original difficulty
   { spawnIntervalFrames: 24,  bombSpeed: 1.8 },  // Level 3 — 0.4 s, ground erosion activates
 ] as const;
 
-const LEVEL_THRESHOLDS = [0, 18, 36];
 const COLLAPSE_COVERAGE = 0.95;
 const COLLAPSE_HOLD_MS = 500;
 const EARLY_CRACK_MISSES = 4;
@@ -121,16 +121,16 @@ export class SurfaceGame implements SurfaceView {
   private step(): boolean {
     this.count++;
 
-    if (this.count % 60 === 0) {
+    if (this.count % STEPS_PER_SECOND === 0) {
       this.score++;
       this.hud.setScore(this.score);
     }
 
     this.checkLevelUp();
 
-    if (this.count - this.lastSpawnFrame >= LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
+    if (this.count - this.lastSpawnFrame >= SURFACE_LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
       const randomX = Math.random() * (this.canvas.width - BOMB_WIDTH);
-      this.bombs.push(new Bomb(this.canvas, randomX, LEVEL_CONFIG[this.currentLevel].bombSpeed));
+      this.bombs.push(new Bomb(this.canvas, randomX, SURFACE_LEVEL_CONFIG[this.currentLevel].bombSpeed));
       this.lastSpawnFrame = this.count;
     }
 
@@ -153,7 +153,7 @@ export class SurfaceGame implements SurfaceView {
 
   private checkLevelUp(): void {
     const nextLevel = this.currentLevel + 1;
-    if (nextLevel < LEVEL_CONFIG.length && this.score >= LEVEL_THRESHOLDS[nextLevel]) {
+    if (nextLevel < SURFACE_LEVEL_CONFIG.length && this.score >= LEVEL_THRESHOLDS_S[nextLevel]) {
       this.currentLevel = nextLevel;
       this.lastSpawnFrame = this.count;
       this.handleLevelUp();
@@ -164,7 +164,7 @@ export class SurfaceGame implements SurfaceView {
     this.hud.setLevel(String(this.currentLevel + 1));
     this.showLevelUpEffect();
     this.sfx.play('levelUp');
-    if (this.currentLevel === LEVEL_CONFIG.length - 1) {
+    if (this.currentLevel === SURFACE_LEVEL_CONFIG.length - 1) {
       this.groundErosionActive = true;
       this.sfx.play('electric');
       this.triggerEarthquake();
@@ -202,8 +202,8 @@ export class SurfaceGame implements SurfaceView {
         continue;
       }
 
-      bomb.explosionFramesLeft--;
-      if (bomb.explosionFramesLeft > 0) continue;
+      bomb.explosionStepsLeft--;
+      if (bomb.explosionStepsLeft > 0) continue;
 
       this.bombs.splice(i, 1);
       if (this.player) {
@@ -258,7 +258,7 @@ export class SurfaceGame implements SurfaceView {
       if (bombHitsPlayer(player.dx, player.dy, player.dWidth, player.dHeight, bomb.dx, bomb.dy)) {
         bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
-        bomb.explosionFramesLeft = EXPLOSION_FRAMES;
+        bomb.explosionStepsLeft = EXPLOSION_STEPS;
         this.sfx.play('bombHit');
       }
     }

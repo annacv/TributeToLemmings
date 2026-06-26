@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import {
-  AbyssGame, ABYSS_LEVELS, ABYSS_LEVEL_THRESHOLDS_S, ABYSS_TIME_BUDGET_S, THROW_FLIGHT_STEPS,
+  AbyssGame, ABYSS_LEVEL_CONFIG, ABYSS_TIME_BUDGET_S, THROW_FLIGHT_STEPS,
 } from './AbyssGame';
 import { Stalactite, STALACTITE_COST } from './Stalactite';
 import { Bomb } from './Bomb';
-import { makeBreakdown, STALACTITE_POINTS } from './lib/score';
+import { makeBreakdown, STALACTITE_POINTS, LEVEL_THRESHOLDS_S } from './lib/score';
 import { makeCanvas } from './test-helpers';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 
-const STEPS_PER_SECOND = 60;
 const W = 400;
 
 function makeAbyss(
@@ -44,23 +44,23 @@ beforeAll(() => {
 
 describe('AbyssGame — per-level tunables (escalation)', () => {
   it('shortens the bomb interval and speeds bombs up each level', () => {
-    expect(ABYSS_LEVELS[1].spawnIntervalFrames).toBeLessThan(ABYSS_LEVELS[0].spawnIntervalFrames);
-    expect(ABYSS_LEVELS[2].spawnIntervalFrames).toBeLessThan(ABYSS_LEVELS[1].spawnIntervalFrames);
-    expect(ABYSS_LEVELS[1].bombSpeed).toBeGreaterThan(ABYSS_LEVELS[0].bombSpeed);
-    expect(ABYSS_LEVELS[2].bombSpeed).toBeGreaterThan(ABYSS_LEVELS[1].bombSpeed);
+    expect(ABYSS_LEVEL_CONFIG[1].spawnIntervalFrames).toBeLessThan(ABYSS_LEVEL_CONFIG[0].spawnIntervalFrames);
+    expect(ABYSS_LEVEL_CONFIG[2].spawnIntervalFrames).toBeLessThan(ABYSS_LEVEL_CONFIG[1].spawnIntervalFrames);
+    expect(ABYSS_LEVEL_CONFIG[1].bombSpeed).toBeGreaterThan(ABYSS_LEVEL_CONFIG[0].bombSpeed);
+    expect(ABYSS_LEVEL_CONFIG[2].bombSpeed).toBeGreaterThan(ABYSS_LEVEL_CONFIG[1].bombSpeed);
   });
 
   it('adds one larger size per level, each needing one more hit', () => {
-    expect(ABYSS_LEVELS[0].sizes).toEqual(['small']);
-    expect(ABYSS_LEVELS[1].sizes).toEqual(['small', 'medium']);
-    expect(ABYSS_LEVELS[2].sizes).toEqual(['small', 'medium', 'large']);
+    expect(ABYSS_LEVEL_CONFIG[0].sizes).toEqual(['small']);
+    expect(ABYSS_LEVEL_CONFIG[1].sizes).toEqual(['small', 'medium']);
+    expect(ABYSS_LEVEL_CONFIG[2].sizes).toEqual(['small', 'medium', 'large']);
     expect(STALACTITE_COST.small).toBe(1);
     expect(STALACTITE_COST.medium).toBe(2);
     expect(STALACTITE_COST.large).toBe(3);
   });
 
   it('the run budget is the sum of the three level windows', () => {
-    expect(ABYSS_LEVEL_THRESHOLDS_S).toEqual([0, 18, 36]);
+    expect(LEVEL_THRESHOLDS_S).toEqual([0, 18, 36]);
     expect(ABYSS_TIME_BUDGET_S).toBe(72);
   });
 });

@@ -9,6 +9,9 @@ export const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; b
 
 /** Lemming draw size as a fraction of the canvas on cinematic screens. */
 export const LEMMING_SIZE_FRAC = 0.14;
+
+/** How close (canvas fraction) the lemming must be to a floor bomb to pick it up */
+export const PICKUP_RANGE_FRAC = 0.08;
 /** Square canvas maximum size shared by all screens. */
 const MAX_CANVAS_SIZE = 532;
 

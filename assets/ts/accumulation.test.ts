@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { TunnelGame, TOTAL_CYCLES } from './TunnelGame';
-import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVELS } from './AbyssGame';
+import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVEL_CONFIG } from './AbyssGame';
 import { makeBreakdown, LEVEL_POINTS, STALACTITE_POINTS } from './lib/score';
 import { makeCanvas } from './test-helpers';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 
 /* End-to-end cumulative scoring: a single breakdown threaded surface → tunnel →
    abyss → win, through the real game classes' currentBreakdown chaining. Each leg
@@ -10,7 +11,6 @@ import { makeCanvas } from './test-helpers';
    that silently drops a prior component (the exact regression a future screen/
    ScreenManager refactor could introduce) fails loudly here. */
 
-const STEPS_PER_SECOND = 60;
 const W = 400;
 
 beforeAll(() => {
@@ -58,7 +58,7 @@ describe('cumulative scoring threads through all three worlds', () => {
     expect(win.stalactites).toEqual({ small: 2, medium: 1, large: 1 });
 
     const stalactiteBonus = 2 * STALACTITE_POINTS.small + STALACTITE_POINTS.medium + STALACTITE_POINTS.large;
-    const levelsBonus = (SURFACE_LEVELS + TOTAL_CYCLES + ABYSS_LEVELS.length) * LEVEL_POINTS;
+    const levelsBonus = (SURFACE_LEVELS + TOTAL_CYCLES + ABYSS_LEVEL_CONFIG.length) * LEVEL_POINTS;
     expect(win.stalactiteBonus).toBe(stalactiteBonus);
     expect(win.levelsBonus).toBe(levelsBonus);
 

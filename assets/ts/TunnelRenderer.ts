@@ -1,8 +1,9 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
 import { drawFootingPad } from './lib/footingPad';
 import { loadImage, loadImages, ready } from './lib/images';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 import {
-  TUNNEL_LEVELS, FLOOR_FRAC, CRACK_RANGE_FRAC,
+  TUNNEL_LEVEL_CONFIG, FLOOR_FRAC, CRACK_RANGE_FRAC,
   BREACH_BOOM_STEPS, BREACH_PAN_STEPS,
   type TunnelView,
 } from './TunnelGame';
@@ -63,7 +64,7 @@ export class TunnelRenderer {
       this.drawBreachPit(view, drop);
     } else {
       /* The level's crack, in place from the event onward (staged as the chamber arrives) */
-      const crackImg = this.crackImgs[TUNNEL_LEVELS[view.cycle].crackMark];
+      const crackImg = this.crackImgs[TUNNEL_LEVEL_CONFIG[view.cycle].crackMark];
 
       if (ready(crackImg)) {
         const markH = width * CRACK_MARK_HEIGHT_FRAC;
@@ -92,7 +93,7 @@ export class TunnelRenderer {
 
     /* Visual fuse countdown: code-drawn digits over the armed stack */
     if (view.state === 'armed') {
-      const fuseSeconds = Math.ceil(view.fuseStepsLeft / 60);
+      const fuseSeconds = Math.ceil(view.fuseStepsLeft / STEPS_PER_SECOND);
       ctx.font = `${Math.round(width * 0.05)}px monospace`;
       ctx.fillStyle = RUST_ACCENT;
       ctx.textAlign = 'center';

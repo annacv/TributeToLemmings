@@ -7,6 +7,7 @@
 */
 
 export const LEVEL_POINTS = 5;
+export const LEVEL_THRESHOLDS_S = [0, 18, 36] as const;
 export const STALACTITE_POINTS = { small: 5, medium: 10, large: 15 } as const;
 export type StalactiteSize = keyof typeof STALACTITE_POINTS;
 export type StalactiteBreaks = Record<StalactiteSize, number>;

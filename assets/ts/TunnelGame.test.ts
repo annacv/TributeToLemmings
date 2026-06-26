@@ -1,16 +1,15 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import {
-  TunnelGame, TUNNEL_LEVELS, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
+  TunnelGame, TUNNEL_LEVEL_CONFIG, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
   FLOOR_FRAC, CRUSH_HEADROOM_FRAC, WARNING_HEADROOM_FRAC,
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
 import { makeBreakdown } from './lib/score';
 import { makeCanvas } from './test-helpers';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 
-const STEPS_PER_SECOND = 60;
-
-function timeToCrushSteps(level: (typeof TUNNEL_LEVELS)[number]): number {
+function timeToCrushSteps(level: (typeof TUNNEL_LEVEL_CONFIG)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;
 }
 
@@ -34,34 +33,34 @@ beforeAll(() => {
 describe('TunnelGame — per-level tunables (solvability invariants)', () => {
   it('levels 1–2 cannot crush within the countdown budget', () => {
     const budgetSteps = TUNNEL_TIME_BUDGET_S * STEPS_PER_SECOND;
-    expect(timeToCrushSteps(TUNNEL_LEVELS[0])).toBeGreaterThan(budgetSteps);
-    expect(timeToCrushSteps(TUNNEL_LEVELS[1])).toBeGreaterThan(budgetSteps);
+    expect(timeToCrushSteps(TUNNEL_LEVEL_CONFIG[0])).toBeGreaterThan(budgetSteps);
+    expect(timeToCrushSteps(TUNNEL_LEVEL_CONFIG[1])).toBeGreaterThan(budgetSteps);
   });
 
   it('level 3 can crush within the budget, but no sooner than ~30 s (sped up per playtest)', () => {
     const budgetSteps = TUNNEL_TIME_BUDGET_S * STEPS_PER_SECOND;
-    const l3 = timeToCrushSteps(TUNNEL_LEVELS[2]);
+    const l3 = timeToCrushSteps(TUNNEL_LEVEL_CONFIG[2]);
     expect(l3).toBeLessThan(budgetSteps);
     expect(l3).toBeGreaterThanOrEqual(30 * STEPS_PER_SECOND);
   });
 
   it('the bomb count escalates per level and level 1 needs more than one', () => {
-    expect(TUNNEL_LEVELS[0].bombs).toBeGreaterThan(1);
-    expect(TUNNEL_LEVELS[1].bombs).toBeGreaterThan(TUNNEL_LEVELS[0].bombs);
-    expect(TUNNEL_LEVELS[2].bombs).toBeGreaterThan(TUNNEL_LEVELS[1].bombs);
+    expect(TUNNEL_LEVEL_CONFIG[0].bombs).toBeGreaterThan(1);
+    expect(TUNNEL_LEVEL_CONFIG[1].bombs).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[0].bombs);
+    expect(TUNNEL_LEVEL_CONFIG[2].bombs).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[1].bombs);
   });
 
   it('escalation follows the ratified curve: lower starts each level, faster drift only at level 3', () => {
-    expect(TUNNEL_LEVELS[1].startHeadroomFrac).toBeLessThan(TUNNEL_LEVELS[0].startHeadroomFrac);
-    expect(TUNNEL_LEVELS[2].startHeadroomFrac).toBeLessThan(TUNNEL_LEVELS[1].startHeadroomFrac);
-    expect(TUNNEL_LEVELS[1].driftPerStep).toBe(TUNNEL_LEVELS[0].driftPerStep);
-    expect(TUNNEL_LEVELS[2].driftPerStep).toBeGreaterThan(TUNNEL_LEVELS[1].driftPerStep);
+    expect(TUNNEL_LEVEL_CONFIG[1].startHeadroomFrac).toBeLessThan(TUNNEL_LEVEL_CONFIG[0].startHeadroomFrac);
+    expect(TUNNEL_LEVEL_CONFIG[2].startHeadroomFrac).toBeLessThan(TUNNEL_LEVEL_CONFIG[1].startHeadroomFrac);
+    expect(TUNNEL_LEVEL_CONFIG[1].driftPerStep).toBe(TUNNEL_LEVEL_CONFIG[0].driftPerStep);
+    expect(TUNNEL_LEVEL_CONFIG[2].driftPerStep).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[1].driftPerStep);
   });
 
   it('each level uses its own single crack mark (L1=mark3, L2=mark1, L3=mark2)', () => {
-    expect(TUNNEL_LEVELS[0].crackMark).toBe(2);
-    expect(TUNNEL_LEVELS[1].crackMark).toBe(0);
-    expect(TUNNEL_LEVELS[2].crackMark).toBe(1);
+    expect(TUNNEL_LEVEL_CONFIG[0].crackMark).toBe(2);
+    expect(TUNNEL_LEVEL_CONFIG[1].crackMark).toBe(0);
+    expect(TUNNEL_LEVEL_CONFIG[2].crackMark).toBe(1);
   });
 
   it('the warning band sits above the kill line', () => {
@@ -80,7 +79,7 @@ describe('TunnelGame — skeleton and countdown', () => {
     expect(game.state).toBe('explore');
     expect(game.player?.lives).toBe(3);
     expect(game.headroomFrac()).toBeCloseTo(
-      TUNNEL_LEVELS[0].startHeadroomFrac - TUNNEL_LEVELS[0].driftPerStep, 6,
+      TUNNEL_LEVEL_CONFIG[0].startHeadroomFrac - TUNNEL_LEVEL_CONFIG[0].driftPerStep, 6,
     );
   });
 
@@ -108,7 +107,7 @@ describe('TunnelGame — skeleton and countdown', () => {
     const game = makeTunnel(canvas);
     const before = game.ceilingFrac;
     for (let i = 0; i < 100; i++) game.step();
-    expect(game.ceilingFrac).toBeCloseTo(before + 100 * TUNNEL_LEVELS[0].driftPerStep, 9);
+    expect(game.ceilingFrac).toBeCloseTo(before + 100 * TUNNEL_LEVEL_CONFIG[0].driftPerStep, 9);
   });
 });
 
@@ -128,7 +127,7 @@ describe('TunnelGame — mechanic state machine', () => {
 
   it('carries every bomb to the floor crack, then three lights arm the fuse', () => {
     const game = makeTunnel(canvas);
-    const required = TUNNEL_LEVELS[0].bombs;
+    const required = TUNNEL_LEVEL_CONFIG[0].bombs;
 
     for (let i = 0; i < required; i++) {
       placePlayerAt(game, game.floorBombs[0]);
@@ -220,8 +219,8 @@ describe('TunnelGame — mechanic state machine', () => {
     for (let i = 0; i < 200 && (game.state as string) !== 'explore'; i++) game.step();
     expect(game.cycle).toBe(1);
     expect(game.state).toBe('explore');
-    expect(game.floorBombs).toHaveLength(TUNNEL_LEVELS[1].bombs);
-    expect(game.ceilingFrac).toBeCloseTo(FLOOR_FRAC - TUNNEL_LEVELS[1].startHeadroomFrac, 9);
+    expect(game.floorBombs).toHaveLength(TUNNEL_LEVEL_CONFIG[1].bombs);
+    expect(game.ceilingFrac).toBeCloseTo(FLOOR_FRAC - TUNNEL_LEVEL_CONFIG[1].startHeadroomFrac, 9);
   });
 
   it('the breach drops the lemming straight down from where he lit, no teleport', () => {
@@ -307,7 +306,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
     expect(game.secondsLeft()).toBe(40);          // countdown survives the death
     expect(game.cycle).toBe(0);                   // same level, same crack appearance
     expect(game.state).toBe('explore');
-    expect(game.ceilingFrac).toBeCloseTo(FLOOR_FRAC - TUNNEL_LEVELS[0].startHeadroomFrac, 9);
+    expect(game.ceilingFrac).toBeCloseTo(FLOOR_FRAC - TUNNEL_LEVEL_CONFIG[0].startHeadroomFrac, 9);
   });
 
   it('no second crush is possible within one step of respawn', () => {
@@ -323,7 +322,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   it('crush mid-fuse cancels the armed state, stops the tick, and restores the bomb layout', () => {
     const game = makeTunnel(canvas);
     const stopTick = vi.spyOn(game.sfx.get('fuse')!, 'pause');
-    game.placedCount = TUNNEL_LEVELS[0].bombs;
+    game.placedCount = TUNNEL_LEVEL_CONFIG[0].bombs;
     game.floorBombs = [];
     game.state = 'armed';
     game.fuseStepsLeft = 500;
@@ -434,7 +433,7 @@ describe('TunnelGame — completion routing', () => {
     game.state = 'armed';
     game.fuseStepsLeft = 1;
     armCrush(game); // ceiling practically at the kill line as the fuse resolves
-    game.ceilingFrac -= TUNNEL_LEVELS[2].driftPerStep * 2; // breach wins the race this step
+    game.ceilingFrac -= TUNNEL_LEVEL_CONFIG[2].driftPerStep * 2; // breach wins the race this step
     game.step();
     expect(game.state).toBe('breach');
     const lives = game.player!.lives;

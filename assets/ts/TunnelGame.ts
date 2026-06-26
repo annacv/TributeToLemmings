@@ -1,5 +1,7 @@
 import { Player } from './Player';
 import { RunHost } from './lib/RunHost';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { PICKUP_RANGE_FRAC } from './lib/geometry';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
@@ -14,7 +16,6 @@ import {
 
 export const TUNNEL_TIME_BUDGET_S = 60;
 export const TOTAL_CYCLES = 3;
-const STEPS_PER_SECOND = 60;
 
 /* World geometry is stored as canvas fractions, not pixels, so nothing jumps
    when the canvas resizes (280–580 px). The numbers come from the artwork. */
@@ -27,7 +28,7 @@ export const WARNING_HEADROOM_FRAC = 0.17;
 
 const CRUSH_HITSTOP_STEPS = 15; // ~250 ms freeze so the death beat lands
 
-export const TUNNEL_LEVELS = [
+export const TUNNEL_LEVEL_CONFIG = [
   { startHeadroomFrac: 0.62, driftPerStep: 0.00009, crackMark: 2, bombs: 2 },
   { startHeadroomFrac: 0.48, driftPerStep: 0.00009, crackMark: 0, bombs: 3 },
   { startHeadroomFrac: 0.34, driftPerStep: 0.00013, crackMark: 1, bombs: 4 },
@@ -46,7 +47,6 @@ export const BREACH_PAN_STEPS = 72;  // ~1.2 s camera drop into the next chamber
 export const BREACH_PAN_END_STEPS = BREACH_BOOM_STEPS + BREACH_PAN_STEPS;  // arrival beat: breach ends here
 
 const LIGHT_PRESSES = 3;
-const ACTION_RANGE_FRAC = 0.08;      // how close "near a bomb" is
 export const CRACK_RANGE_FRAC = 0.1; // how close "at the floor crack" is
 const PLAYER_SPAWN_X_FRAC = 0.08;
 
@@ -95,7 +95,7 @@ export class TunnelGame implements TunnelView {
   paused: boolean;
   canvas: HTMLCanvasElement;
   state: TunnelState;
-  cycle: number;        // 0-based index into TUNNEL_LEVELS
+  cycle: number;        // 0-based index into TUNNEL_LEVEL_CONFIG
   ceilingFrac: number;  // collision line, canvas fraction from the top
   crackXFrac: number;
   floorBombs: number[];
@@ -222,7 +222,7 @@ export class TunnelGame implements TunnelView {
         if (!this.atCrack()) break;
         this.placedCount++;
         this.sfx.play('pickup');
-        this.state = this.placedCount >= TUNNEL_LEVELS[this.cycle].bombs ? 'placed' : 'explore';
+        this.state = this.placedCount >= TUNNEL_LEVEL_CONFIG[this.cycle].bombs ? 'placed' : 'explore';
         this.lightPresses = 0;
         break;
       case 'placed':
@@ -261,7 +261,7 @@ export class TunnelGame implements TunnelView {
   }
 
   private cycleStartCeilingFrac(cycle: number): number {
-    return FLOOR_FRAC - TUNNEL_LEVELS[cycle].startHeadroomFrac;
+    return FLOOR_FRAC - TUNNEL_LEVEL_CONFIG[cycle].startHeadroomFrac;
   }
 
   playerCenterFrac(): number {
@@ -271,7 +271,7 @@ export class TunnelGame implements TunnelView {
   private nearBombIndex(): number {
     if (!this.player) return -1;
     const center = this.playerCenterFrac();
-    return this.floorBombs.findIndex((x) => Math.abs(center - x) <= ACTION_RANGE_FRAC);
+    return this.floorBombs.findIndex((x) => Math.abs(center - x) <= PICKUP_RANGE_FRAC);
   }
 
   private atCrack(): boolean {
@@ -326,7 +326,7 @@ export class TunnelGame implements TunnelView {
       can stage them before gameplay resumes. */
   private setupCycle(cycle: number): void {
     this.cycle = cycle;
-    this.bombSpawns = this.rollBombs(TUNNEL_LEVELS[cycle].bombs);
+    this.bombSpawns = this.rollBombs(TUNNEL_LEVEL_CONFIG[cycle].bombs);
     this.resetCycleProgress();
     this.rollCrack();
     this.hud.setLevel(String(cycle + 1));
@@ -429,7 +429,7 @@ export class TunnelGame implements TunnelView {
     }
 
     /* Continuous drift: reduced motion never stops it — it's gameplay, not decoration */
-    this.ceilingFrac += TUNNEL_LEVELS[this.cycle].driftPerStep;
+    this.ceilingFrac += TUNNEL_LEVEL_CONFIG[this.cycle].driftPerStep;
 
     if (this.warningArmed && this.inWarningBand()) {
       this.warningArmed = false;

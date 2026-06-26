@@ -59,7 +59,7 @@ describe('SurfaceGame', () => {
     const bomb = placeHitBomb(game);
 
     expect(bomb.isExploding).toBe(true);
-    expect(bomb.explosionFramesLeft).toBe(6);
+    expect(bomb.explosionStepsLeft).toBe(6);
     expect(bomb.image.src).toContain(SPRITES.booom);
     expect(game.bombs).toHaveLength(1);
     expect(game.player.lives).toBe(3);
@@ -182,7 +182,7 @@ describe('SurfaceGame', () => {
     runFrames(game);
 
     expect(game.player.blinkColor).toBe('#FFFFFF');
-    expect(game.player.blinkFramesLeft).toBe(30);
+    expect(game.player.blinkStepsLeft).toBe(30);
   });
 
   it('displayLives does not throw when lives drop below zero', () => {
