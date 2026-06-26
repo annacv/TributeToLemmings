@@ -607,6 +607,14 @@ function main(): void {
     canvas.width = size;
     canvas.height = size;
 
+    /* The 6:1 background strip fills the canvas height, so one tile spans 6× the
+       rendered height. Feed that to the scroll keyframe so the loop is seamless
+       at any canvas size (square on desktop, taller box on mobile). */
+    const tileObserver = new ResizeObserver(() => {
+      canvas.style.setProperty('--ranking-tile-w', `${canvas.clientHeight * 6}px`);
+    });
+    tileObserver.observe(canvas);
+
     setupMuteButton(
       mainElement.querySelector('.mute-btn') as HTMLButtonElement,
       (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
@@ -615,6 +623,7 @@ function main(): void {
     const playAgainBtn = mainElement.querySelector('.ranking-play-again') as HTMLButtonElement;
     playAgainBtn.focus();
     playAgainBtn.addEventListener('click', () => {
+      tileObserver.disconnect();
       if (rankingMusic) {
         rankingMusic.pause();
         rankingMusic.src = '';

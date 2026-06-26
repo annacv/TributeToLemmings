@@ -13,6 +13,11 @@ HTMLMediaElement.prototype.pause = function () {};
 HTMLCanvasElement.prototype.getContext = (() =>
   makeCtx()) as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
+// ResizeObserver is not implemented by jsdom; provide a no-op stub.
+(globalThis as unknown as Record<string, unknown>).ResizeObserver ??= class {
+  observe() {} unobserve() {} disconnect() {}
+};
+
 // matchMedia is not implemented by jsdom; queries (reduced motion) report no match.
 window.matchMedia ??= ((query: string) => ({
   matches: false,
