@@ -1,5 +1,4 @@
 import { GameLoop } from './GameLoop';
-import { RunLifecycle } from './RunLifecycle';
 
 export interface RunHostHooks {
   step: () => boolean;
@@ -11,14 +10,18 @@ export interface RunHostHooks {
 }
 
 /* The run skeleton every simulation-bearing world (Surface, Tunnel, Abyss) shares:
-   a fixed-timestep GameLoop wired to a RunLifecycle so teardown fires exactly once
-   after the halt, with a run-scoped signal that aborts in lockstep. Composition,
-   not inheritance — each world supplies its own step/render/isOver/onEnd and keeps
-   its own HUD, renderer, audio, and end-of-run routing. */
+   a fixed-timestep GameLoop plus once-only end-of-run teardown, with a run-scoped
+   signal that aborts in lockstep. Composition, not inheritance — each world supplies
+   its own step/render/isOver/onEnd and keeps its own HUD, renderer, audio, and
+   end-of-run routing.
+
+   One run per host: run-scoped listeners attach with `signal`, and `onEnd` fires
+   exactly once even though extra frames can render after the halt. */
 export class RunHost {
   private readonly hooks: RunHostHooks;
   private readonly loop: GameLoop;
-  private readonly run = new RunLifecycle();
+  private readonly controller = new AbortController();
+  private ended = false;
 
   constructor(hooks: RunHostHooks) {
     this.hooks = hooks;
@@ -32,12 +35,19 @@ export class RunHost {
     this.loop.start();
   }
 
+  /** Aborts when the run ends — attach run-scoped listeners with this signal. */
   get signal(): AbortSignal {
-    return this.run.signal;
+    return this.controller.signal;
   }
 
+  /* Runs right after each render. Once the run is over we pull the plug: the signal
+     aborts and onEnd fires a single time, no matter how many frames sneak in
+     afterward. Cleanup and screen swaps belong in onEnd, not mid-render. */
   private frame(): void {
     this.hooks.render();
-    this.run.settle(this.hooks.isOver(), this.hooks.onEnd);
+    if (this.ended || !this.hooks.isOver()) return;
+    this.ended = true;
+    this.controller.abort();
+    this.hooks.onEnd();
   }
 }
