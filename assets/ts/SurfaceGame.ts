@@ -229,7 +229,7 @@ export class SurfaceGame implements SurfaceView {
     if (this.erosionCounter > LATE_CRACK_MISSES) {
       this.renderer.stampHole(impactX);
     }
-    this.triggerGroundShake();
+    restartAnimation(this.canvas, 'shake-light');
     this.sfx.play('bang');
 
     if (this.renderer.coverage() < COLLAPSE_COVERAGE) return false;
@@ -240,11 +240,6 @@ export class SurfaceGame implements SurfaceView {
     }
     this.triggerTunnelWorld();
     return true;
-  }
-
-  /** Brief, subtle shake on the canvas itself for each individual ground hit. */
-  private triggerGroundShake(): void {
-    restartAnimation(this.canvas, 'shake-light');
   }
 
   checkCollisions(): void {
