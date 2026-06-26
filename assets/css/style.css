@@ -137,6 +137,27 @@ p {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* The infinite background scroll is decoration; stop it outright rather than
+     letting the duration clamp run a near-instant cycle that can read as a jump */
+  .ranking-canvas {
+    animation: none !important;
+  }
+}
+
+/* Off-screen but exposed to assistive tech: holds the polite live-region that
+   announces settled run results (final score, rank). See lib/liveRegion.ts */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ---- LAYOUT ---- */
@@ -356,7 +377,7 @@ canvas {
   background-size: cover;
 }
 
-.win-tunnel-canvas {
+.win-canvas {
   background-image: url("../images/backgrounds/background-tunnel.svg");
   background-position: 50% 50%;
   background-size: cover;
@@ -434,7 +455,7 @@ canvas {
   .game-over-canvas,
   .ranking-canvas,
   .transition-canvas,
-  .win-tunnel-canvas {
+  .win-canvas {
     width: 100%;
     height: auto;
   }
@@ -447,7 +468,7 @@ canvas {
   }
 
   .game-over-canvas,
-  .win-tunnel-canvas,
+  .win-canvas,
   .ranking-canvas,
   .transition-canvas {
     height: 100%;
@@ -1304,7 +1325,7 @@ button:active {
 .ranking-error {
   font-family: var(--font-pixel);
   font-size: var(--text-3xs);
-  color: var(--neutral-40);
+  color: var(--neutral-30);
   letter-spacing: var(--tracking-pixel-medium);
 }
 
@@ -1336,7 +1357,7 @@ button:active {
   font-size: var(--text-xs);
   color: var(--neutral-0);
   letter-spacing: var(--tracking-pixel);
-  background: rgba(var(--black-rgb), 0.55);
+  background: rgba(var(--black-rgb), 0.7);
 }
 
 
@@ -1351,7 +1372,7 @@ button:active {
   width: 1.8em;
   text-align: right;
   flex-shrink: 0;
-  color: var(--neutral-40);
+  color: var(--neutral-30);
 }
 
 .ranking-row--current .ranking-rank {

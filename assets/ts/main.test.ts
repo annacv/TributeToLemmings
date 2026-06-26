@@ -540,6 +540,10 @@ describe('win variant end screen (Abyss completion)', () => {
     vi.advanceTimersByTime(1000); // EXIT_TOTAL_MS → LETSGO + onComplete → win Game Over
     expect(sfx).toHaveBeenCalledWith('letsgo');
     expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
+
+    const winCanvas = document.querySelector('.win-canvas') as HTMLCanvasElement | null;
+    expect(winCanvas).not.toBeNull();
+    expect(winCanvas!.width).toBeGreaterThan(0);
     expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
 
@@ -549,6 +553,33 @@ describe('win variant end screen (Abyss completion)', () => {
     expect(rankingStarts()).toBe(1);
     vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
     expect(rankingStarts()).toBe(1); // exactly once
+  });
+
+  it('gates the ranking music on the count-up completing, not a fixed timer (ordering holds for a VII insertion)', () => {
+    vi.advanceTimersByTime(2000); // cold-open → modal (dismissed) → startGame
+    const game = abysses[0];
+    if (game.player) game.player.lives = Number.MAX_SAFE_INTEGER;
+    game.stepCount = ABYSS_TIME_BUDGET_S * 60 - 1;
+    game.step();                  // crosses the budget → completion
+    game['host']['frame']();      // settle → exit-door close
+    vi.advanceTimersByTime(1000); // EXIT_TOTAL_MS → win tally begins
+
+    const total = String(game.currentBreakdown().total);
+    const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
+    const shownScore = () => document.querySelector('.go-score-value')?.textContent;
+
+    /* Step through the count: the music must stay silent the whole time the score
+       is still rolling — it's gated on the count finishing, so a screen inserted
+       before/after the tally can't make it start early. */
+    for (let t = 0; t < 1700; t += 100) {
+      if (shownScore() !== total) expect(rankingStarts()).toBe(0);
+      vi.advanceTimersByTime(100);
+    }
+    vi.advanceTimersByTime(1000);     // safely past the count completion
+    expect(shownScore()).toBe(total); // the roll landed on the real total
+    expect(rankingStarts()).toBe(1);  // and only then did the music start, once
+    /* the settled score reached assistive tech once, via the polite live region */
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(`Score: ${total}`);
   });
 });
 

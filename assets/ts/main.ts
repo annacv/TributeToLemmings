@@ -3,11 +3,13 @@ import { TunnelGame } from './TunnelGame';
 import { AbyssGame } from './AbyssGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
-import { safePlay, playLoop, pauseWhileHidden } from './lib/audio';
+import { safePlay } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
 import { buildPlayScreen } from './lib/playScreen';
 import { setupMuteButton } from './lib/muteButton';
 import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
+import { announce } from './lib/liveRegion';
+import { attachWorldLoop } from './lib/attachWorldLoop';
 import { loadImage, whenImagesSettled } from './lib/images';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
@@ -59,6 +61,13 @@ function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
   canvas.width = 142;
   canvas.height = 142;
   const ctx = canvas.getContext('2d')!;
+
+  /* Reduced motion: a single resting frame, no idle loop (the global CSS clamp
+     can't reach a requestAnimationFrame-driven canvas) */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    drawLemmingMascot(ctx, 142, 0);
+    return () => {};
+  }
 
   let frame = 0;
   let rafId = requestAnimationFrame(function tick() {
@@ -432,14 +441,8 @@ function main(): void {
     ));
     game.gameOverCallback(createGameOverScreen);
 
-    /* Cave loop through the channel helper: respects the mute gate, pauses
-       with the hidden tab, dies with the run */
-    const caveLoop = new Audio(CAVE_LOOP);
-    game.caveLoop = caveLoop;
-    playLoop(caveLoop, game.muted);
-    pauseWhileHidden(caveLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
-
-    wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); caveLoop.muted = muted; });
+    /* Cave loop: respects the mute gate, pauses with the hidden tab, dies with the run */
+    game.caveLoop = attachWorldLoop(game, CAVE_LOOP, wireMute);
     /* Gate input while the info modal holds the run paused, so Space activates the
        modal button rather than the (not-yet-started) action verb */
     wireMovement(() => game.player, game.runSignal, () => game.paused);
@@ -461,7 +464,7 @@ function main(): void {
     const isWin = variant === 'win';
 
     const canvasHtml = isWin
-      ? '<canvas class="win-tunnel-canvas" aria-hidden="true"></canvas>'
+      ? '<canvas class="win-canvas" aria-hidden="true"></canvas>'
       : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
 
     const headingHtml = isWin
@@ -481,7 +484,7 @@ function main(): void {
       </section>
     `);
 
-    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-tunnel-canvas') as HTMLCanvasElement | null;
+    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-canvas') as HTMLCanvasElement | null;
     if (canvas) {
       canvas.width = size;
       canvas.height = size;
@@ -528,6 +531,7 @@ function main(): void {
       if (reduceMotion) {
         lineEls.forEach((li) => li.classList.add('show'));
         scoreEl.textContent = String(breakdown.total);
+        announce(`Score: ${breakdown.total}`);
       } else {
         scoreEl.textContent = '0';
         lineEls.forEach((li, i) => setTimeout(() => {
@@ -544,7 +548,10 @@ function main(): void {
             if (!mainElement.contains(scoreEl)) { clearInterval(rollTimer); return; }
             const next = Math.min(breakdown.total, Number(scoreEl.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
             scoreEl.textContent = String(next);
-            if (next >= breakdown.total) clearInterval(rollTimer);
+            if (next >= breakdown.total) {
+              clearInterval(rollTimer);
+              announce(`Score: ${breakdown.total}`); // settled total, once the roll lands
+            }
           }, 40);
         }, rollStartMs);
 
@@ -552,6 +559,7 @@ function main(): void {
       }
     } else if (scoreEl) {
       scoreEl.textContent = String(breakdown.total);
+      announce(`Score: ${breakdown.total}`);
     }
 
     if (variant === 'death' && !muted) {
@@ -675,10 +683,12 @@ function main(): void {
 
       let html = '<ol class="ranking-table">';
       let displayRank = 1;
+      let playerRank: number | null = null;
 
       scores.forEach((s, i) => {
         if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
         const isCurrent = isPlayerRow(s);
+        if (isCurrent) playerRank = displayRank;
         html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
           <span class="ranking-rank">${displayRank}.</span>
           <span class="ranking-name">${escapeHtml(s.name)}</span>
@@ -694,6 +704,7 @@ function main(): void {
         if (!mainElement.querySelector('.ranking-list')) return;
 
         if (rank !== null) {
+          playerRank = rank;
           html += `
             <hr class="ranking-divider">
             ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
@@ -707,6 +718,9 @@ function main(): void {
       }
 
       listEl.innerHTML = html;
+      /* Announce the settled rank once, after the list renders (both the in-top-10
+         row and the appended below-top-10 row are covered) */
+      if (playerRank !== null) announce(`Rank ${playerRank}`);
     } catch {
       if (!mainElement.querySelector('.ranking-list')) return;
       const { error: submissionError } = await resolveSubmission();
@@ -752,12 +766,7 @@ function main(): void {
         </span>${stalItems}`;
     (mainElement.querySelector('.game-stage') as HTMLElement).appendChild(hint);
 
-    const abyssLoop = new Audio(ABYSS_LOOP);
-    game.abyssLoop = abyssLoop;
-    playLoop(abyssLoop, game.muted);
-    pauseWhileHidden(abyssLoop, { signal: game.runSignal, shouldResume: () => !game.isOver });
-
-    wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); abyssLoop.muted = muted; });
+    game.abyssLoop = attachWorldLoop(game, ABYSS_LOOP, wireMute);
     wireMovement(() => game.player, game.runSignal, () => game.paused);
     wireAction(() => game.action(), game.runSignal, () => game.paused);
 
