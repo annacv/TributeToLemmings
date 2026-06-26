@@ -3,9 +3,7 @@ import { Bomb } from './Bomb';
 import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { restartAnimation } from './lib/fx';
-import {
-  BOMB_WIDTH, PLAYER_HITBOX_INSET_X, PLAYER_HITBOX_INSET_TOP, BOMB_HITBOX_TRIM_RIGHT,
-} from './lib/geometry';
+import { BOMB_WIDTH, bombHitsPlayer } from './lib/geometry';
 import { makeBreakdown, LEVEL_POINTS, type ScoreBreakdown } from './lib/score';
 import * as audio from './lib/audio';
 import { SoundEffectBank } from './lib/SoundEffectBank';
@@ -251,24 +249,13 @@ export class SurfaceGame implements SurfaceView {
 
   checkCollisions(): void {
     if (!this.player) return;
-
     const player = this.player;
-    const playerLeft = player.dx + PLAYER_HITBOX_INSET_X;
-    const playerRight = player.dx + player.dWidth - PLAYER_HITBOX_INSET_X;
-    const playerTop = player.dy + PLAYER_HITBOX_INSET_TOP;
-    const playerBottom = player.dy + player.dHeight;
 
     for (let i = this.bombs.length - 1; i >= 0; i--) {
       const bomb = this.bombs[i];
       if (bomb.isExploding) continue;
 
-      const bombRight = bomb.dx + bomb.dWidth - BOMB_HITBOX_TRIM_RIGHT;
-      const rightLeft = playerRight >= bomb.dx;
-      const leftRight = playerLeft <= bombRight;
-      const bottomTop = playerBottom >= bomb.dy;
-      const topBottom = playerTop <= bomb.dy + bomb.dHeight;
-
-      if (rightLeft && leftRight && bottomTop && topBottom) {
+      if (bombHitsPlayer(player.dx, player.dy, player.dWidth, player.dHeight, bomb.dx, bomb.dy)) {
         bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionFramesLeft = EXPLOSION_FRAMES;

@@ -5,9 +5,7 @@ import { RunHost } from './lib/RunHost';
 import { Hud } from './lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
 import { SoundEffectBank } from './lib/SoundEffectBank';
-import {
-  BOMB_WIDTH, BOMB_HEIGHT, PLAYER_HITBOX_INSET_X, PLAYER_HITBOX_INSET_TOP, BOMB_HITBOX_TRIM_RIGHT,
-} from './lib/geometry';
+import { bombHitsPlayer } from './lib/geometry';
 import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
 } from './lib/score';
@@ -37,7 +35,7 @@ const CORRIDOR_START_FRAC = 0.34;       // inner face of the left framing column
 const SPAWN_AHEAD_FRAC = 1.2;           // stalactites seeded just past the right edge
 const CULL_BEHIND_FRAC = 1.0;           // drop hazards this far behind the camera
 
-const CARRY_CAP = 10;                   // max. number of bombs the lemming can carry
+const CARRY_CAP = 3;                    // max. number of bombs the lemming can carry
 const PICKUP_RANGE_FRAC = 0.07;         // "standing on a floor bomb"
 export const THROW_RANGE_FRAC = 0.18;   // "near a stalactite" — wide enough to throw without standing dead-centre
 export const THROW_FLIGHT_STEPS = 10;   // frames a thrown bomb takes to fly up to the stalactite
@@ -396,7 +394,10 @@ export class AbyssGame implements AbyssView {
         this.floorBombs.push(bomb.dx);
         continue;
       }
-      if (this.player && this.bombHitsPlayer(bomb)) {
+      if (this.player && bombHitsPlayer(
+        this.playerScreenX(), this.player.dy, this.player.dWidth, this.player.dHeight,
+        this.worldToScreenX(bomb.dx), bomb.dy,
+      )) {
         this.fallingBombs.splice(i, 1);
         this.player.lives--;
         this.sfx.play('bombHit');
@@ -406,19 +407,6 @@ export class AbyssGame implements AbyssView {
     if (this.player && preLives !== undefined && this.player.lives < preLives) {
       this.player.triggerBlink(preLives);
     }
-  }
-
-  private bombHitsPlayer(bomb: Bomb): boolean {
-    if (!this.player) return false;
-    const playerX = this.playerScreenX();
-    const playerLeft = playerX + PLAYER_HITBOX_INSET_X;
-    const playerRight = playerX + this.player.dWidth - PLAYER_HITBOX_INSET_X;
-    const playerTop = this.player.dy + PLAYER_HITBOX_INSET_TOP;
-    const playerBottom = this.player.dy + this.player.dHeight;
-    const bombX = this.worldToScreenX(bomb.dx);
-    const bombRight = bombX + BOMB_WIDTH - BOMB_HITBOX_TRIM_RIGHT;
-    return playerRight >= bombX && playerLeft <= bombRight
-      && playerBottom >= bomb.dy && playerTop <= bomb.dy + BOMB_HEIGHT;
   }
 
   private floorBombUnderPlayer(): number {

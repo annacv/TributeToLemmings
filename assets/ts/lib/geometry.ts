@@ -1,18 +1,16 @@
-/* Shared geometry: every screen sizes its square canvas through getCanvasSize,
-   and constants baked to asset artwork live here so no screen re-derives them
-   by eye. */
-
 /** Bomb sprite draw size (bomb.svg); spawn math and hitboxes share it. */
 export const BOMB_WIDTH = 28;
 export const BOMB_HEIGHT = 32;
 
-/** Bomb-vs-lemming hitbox insets, shared by the surface and abyss collision checks. */
+/** Bomb-vs-lemming hitbox insets */
 export const PLAYER_HITBOX_INSET_X = 8;   // torso/head span x≈15–35 of 50
 export const PLAYER_HITBOX_INSET_TOP = 5; // hair top starts at y≈5 of 50
 export const BOMB_HITBOX_TRIM_RIGHT = 6;  // spark occupies x≈22–28 of 28; bombs never mirror
 
 /** Lemming draw size as a fraction of the canvas on cinematic screens. */
 export const LEMMING_SIZE_FRAC = 0.14;
+/** Square canvas maximum size shared by all screens. */
+const MAX_CANVAS_SIZE = 532;
 
 /* Composition constants baked to background-underground.svg's transition-screen geometry. */
 export const TRANSITION_GEOMETRY = {
@@ -29,13 +27,23 @@ export const TRANSITION_GEOMETRY = {
   EROSION_STACK_TOP_FRAC: 0.02,
 } as const;
 
-/** Square canvas maximum size shared by all screens. */
-const MAX_CANVAS_SIZE = 532;
-
 export function getCanvasSize(): number {
   const headerHeight = document.querySelector('.site-header')?.getBoundingClientRect().height ?? 0;
   const footerHeight = document.querySelector('.site-footer')?.getBoundingClientRect().height ?? 0;
   const maxByHeight = window.innerHeight - headerHeight - footerHeight;
   const maxByWidth = document.documentElement.clientWidth;
   return Math.max(280, Math.min(maxByWidth, maxByHeight, MAX_CANVAS_SIZE));
+}
+
+export function bombHitsPlayer(
+  playerScreenX: number, playerY: number, playerWidth: number, playerHeight: number,
+  bombScreenX: number, bombY: number,
+): boolean {
+  const playerLeft = playerScreenX + PLAYER_HITBOX_INSET_X;
+  const playerRight = playerScreenX + playerWidth - PLAYER_HITBOX_INSET_X;
+  const playerTop = playerY + PLAYER_HITBOX_INSET_TOP;
+  const playerBottom = playerY + playerHeight;
+  const bombRight = bombScreenX + BOMB_WIDTH - BOMB_HITBOX_TRIM_RIGHT;
+  return playerRight >= bombScreenX && playerLeft <= bombRight
+    && playerBottom >= bombY && playerTop <= bombY + BOMB_HEIGHT;
 }
