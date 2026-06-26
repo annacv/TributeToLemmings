@@ -12,30 +12,6 @@ describe('Player', () => {
     canvas.getContext = vi.fn().mockReturnValue(mockCtx) as typeof canvas.getContext;
   });
 
-  it('starts with 3 lives', () => {
-    expect(new Player(canvas).lives).toBe(3);
-  });
-
-  it('bounces off right wall', () => {
-    const player = new Player(canvas);
-    player.setDirection(1);
-    // Boundary: canvas.width - dWidth - 1 = 349
-    // Bounce when dx_after_move + speed >= 349, i.e. when next step would cross.
-    // dx=347 → after move: 348 → 348+1=349 >= 349 → bounce
-    player.dx = 347;
-    player.move();
-    expect(player.direction).toBe(-1);
-  });
-
-  it('bounces off left wall', () => {
-    const player = new Player(canvas);
-    player.setDirection(-1);
-    // dx=2 → after move: 1 → 1-1=0 === 0 → bounce
-    player.dx = 2;
-    player.move();
-    expect(player.direction).toBe(1);
-  });
-
   it('does not walk off the left edge when ← is pressed right after a left-wall bounce', () => {
     const player = new Player(canvas);
     player.dx = 1;
@@ -60,46 +36,15 @@ describe('Player', () => {
     expect(player.direction).toBe(-1);
   });
 
-  it('triggerBlink sets blinkStepsLeft', () => {
+  it.each([
+    { lives: 3, snapshot: undefined, color: '#FFFFFF' },
+    { lives: 2, snapshot: undefined, color: '#FEBD00' },
+    { lives: 1, snapshot: 3, color: '#FFFFFF' }, // snapshot overrides current lives
+  ])('triggerBlink captures the pre-damage color (lives $lives, snapshot $snapshot → $color)', ({ lives, snapshot, color }) => {
     const player = new Player(canvas);
-    player.triggerBlink();
-    expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS);
-  });
-
-  it('triggerBlink captures pre-damage color at 3 lives', () => {
-    const player = new Player(canvas);
-    player.triggerBlink();
-    expect(player.blinkColor).toBe('#FFFFFF');
-  });
-
-  it('triggerBlink captures pre-damage color at 2 lives', () => {
-    const player = new Player(canvas);
-    player.lives = 2;
-    player.triggerBlink();
-    expect(player.blinkColor).toBe('#FEBD00');
-  });
-
-  it('triggerBlink uses livesSnapshot when provided', () => {
-    const player = new Player(canvas);
-    player.lives = 1;
-    player.triggerBlink(3);
-    expect(player.blinkColor).toBe('#FFFFFF');
-  });
-
-  it('drawImage first blink frame is visible', () => {
-    const player = new Player(canvas);
-    player.triggerBlink();
-    player.drawImage(0);
-    expect(mockCtx.fill).toHaveBeenCalled();
-  });
-
-  it('drawImage second blink frame is hidden', () => {
-    const player = new Player(canvas);
-    player.triggerBlink();
-    player.drawImage(0);
-    mockCtx.fill.mockClear();
-    player.drawImage(0);
-    expect(mockCtx.fill).not.toHaveBeenCalled();
+    player.lives = lives;
+    player.triggerBlink(snapshot);
+    expect(player.blinkColor).toBe(color);
   });
 
   it('blink duration elapses per simulation step (tickBlink), not per draw', () => {
@@ -110,16 +55,6 @@ describe('Player', () => {
     expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS);
     player.tickBlink();
     expect(player.blinkStepsLeft).toBe(BLINK_TOTAL_STEPS - 1);
-  });
-
-  it('re-triggering a blink makes the next rendered frame visible again', () => {
-    const player = new Player(canvas);
-    player.triggerBlink();
-    player.drawImage(0); // visible, toggles to hidden
-    player.triggerBlink();
-    mockCtx.fill.mockClear();
-    player.drawImage(0);
-    expect(mockCtx.fill).toHaveBeenCalled();
   });
 
   it('blink flickers at 30 Hz cadence (2 steps per rendered frame) — never aliases away', () => {

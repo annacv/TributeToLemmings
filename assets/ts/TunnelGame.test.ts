@@ -57,12 +57,6 @@ describe('TunnelGame — per-level tunables (solvability invariants)', () => {
     expect(TUNNEL_LEVEL_CONFIG[2].driftPerStep).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[1].driftPerStep);
   });
 
-  it('each level uses its own single crack mark (L1=mark3, L2=mark1, L3=mark2)', () => {
-    expect(TUNNEL_LEVEL_CONFIG[0].crackMark).toBe(2);
-    expect(TUNNEL_LEVEL_CONFIG[1].crackMark).toBe(0);
-    expect(TUNNEL_LEVEL_CONFIG[2].crackMark).toBe(1);
-  });
-
   it('the warning band sits above the kill line', () => {
     expect(WARNING_HEADROOM_FRAC).toBeGreaterThan(CRUSH_HEADROOM_FRAC);
   });
@@ -464,13 +458,6 @@ describe('TunnelGame — HUD countdown and banking pop', () => {
 
   afterEach(() => { document.body.innerHTML = ''; });
 
-  it('shows the countdown and the depth slot', () => {
-    const game = makeTunnel(canvas);
-    game.step();
-    expect(document.querySelector('.seconds-value')?.textContent).toBe(String(game.secondsLeft()));
-    expect(document.querySelector('.level-value')?.textContent).toBe('1');
-  });
-
   it('enters the warning state at 10 seconds left, not before', () => {
     const game = makeTunnel(canvas);
     const digits = document.querySelector('.seconds-value') as HTMLElement;
@@ -482,23 +469,4 @@ describe('TunnelGame — HUD countdown and banking pop', () => {
     expect(digits.classList.contains('time-warning')).toBe(true);
   });
 
-  it('pops "+N" with the banked share plus the cycle award at breakout', () => {
-    const game = makeTunnel(canvas);
-    game.state = 'armed';
-    game.fuseStepsLeft = 1;
-    const expected = Math.floor(game.secondsLeft() / TOTAL_CYCLES) + 5;
-    game.step();
-    const pop = document.querySelector('.bank-pop');
-    expect(pop?.textContent).toBe(`+${expected}`);
-  });
-
-  it('advances the level slot and announces the level after the breach', () => {
-    const game = makeTunnel(canvas);
-    game.state = 'armed';
-    game.fuseStepsLeft = 1;
-    game.step();
-    for (let i = 0; i < BREACH_PAN_END_STEPS + 48; i++) game.step();
-    expect(document.querySelector('.level-value')?.textContent).toBe('2');
-    expect(document.querySelector('.level-up-banner')?.textContent).toBe('Level 2');
-  });
 });

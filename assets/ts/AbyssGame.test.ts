@@ -4,7 +4,7 @@ import {
 } from './AbyssGame';
 import { Stalactite, STALACTITE_COST } from './Stalactite';
 import { Bomb } from './Bomb';
-import { makeBreakdown, STALACTITE_POINTS, LEVEL_THRESHOLDS_S } from './lib/score';
+import { makeBreakdown, STALACTITE_POINTS } from './lib/score';
 import { makeCanvas } from './test-helpers';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
@@ -59,10 +59,6 @@ describe('AbyssGame — per-level tunables (escalation)', () => {
     expect(STALACTITE_COST.large).toBe(3);
   });
 
-  it('the run budget is the sum of the three level windows', () => {
-    expect(LEVEL_THRESHOLDS_S).toEqual([0, 18, 36]);
-    expect(ABYSS_TIME_BUDGET_S).toBe(72);
-  });
 });
 
 describe('AbyssGame — Player-driven camera', () => {

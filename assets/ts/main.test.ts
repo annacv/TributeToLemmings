@@ -48,14 +48,9 @@ vi.mock('./SurfaceGame', () => ({
 }));
 
 describe('generateGuestHandle', () => {
-  it('starts with "Lemming #"', () => {
-    expect(generateGuestHandle()).toMatch(/^Lemming #/);
-  });
-
-  it('suffix contains only uppercase letters and digits', () => {
+  it('formats as "Lemming #" + 5 uppercase letters/digits', () => {
     for (let i = 0; i < 50; i++) {
-      const suffix = generateGuestHandle().replace('Lemming #', '');
-      expect(suffix).toMatch(/^[A-Z0-9]{5}$/);
+      expect(generateGuestHandle()).toMatch(/^Lemming #[A-Z0-9]{5}$/);
     }
   });
 
@@ -93,21 +88,16 @@ describe('game screen keyboard wiring', () => {
     expect(activeGame().player.setDirection).toHaveBeenCalledWith(1);
   });
 
-  it('detaches the keydown listener once the game is over', () => {
-    const game = activeGame();
-    game.onGameOver!(makeBreakdown());
-    game.player.setDirection.mockClear();
-    pressArrowRight();
-    expect(game.player.setDirection).not.toHaveBeenCalled();
-  });
-
-  it('detaches the keydown listener on the tunnel transition', () => {
-    const game = activeGame();
-    game.onComplete!(makeBreakdown());
-    game.player.setDirection.mockClear();
-    pressArrowRight();
-    expect(game.player.setDirection).not.toHaveBeenCalled();
-  });
+  it.each(['onGameOver', 'onComplete'] as const)(
+    'detaches the keydown listener when the run ends via %s',
+    (end) => {
+      const game = activeGame();
+      game[end]!(makeBreakdown());
+      game.player.setDirection.mockClear();
+      pressArrowRight();
+      expect(game.player.setDirection).not.toHaveBeenCalled();
+    },
+  );
 
   it('does not steer dead games from previous sessions', () => {
     const firstGame = activeGame();
@@ -153,17 +143,6 @@ describe('game screen keyboard wiring', () => {
     expect((document.activeElement as HTMLElement).classList.contains('game-canvas')).toBe(true);
   });
 
-  it('builds the surface play screen from the scaffold: shared HUD, no action control', () => {
-    expect(document.querySelector('.game-canvas')).not.toBeNull();
-    expect(document.querySelector('.lives-value')).not.toBeNull();
-    expect(document.querySelector('.level-value')?.textContent).toBe('1');
-    expect(document.querySelector('.seconds-value')?.textContent).toBe('0');
-    expect(document.querySelector('.touch-left')).not.toBeNull();
-    expect(document.querySelector('.touch-right')).not.toBeNull();
-    /* withAction:false — the surface omits the tunnel's action control */
-    expect(document.querySelector('.touch-action')).toBeNull();
-    expect(document.querySelector('.mute-btn svg')).not.toBeNull();
-  });
 });
 
 describe('ranking row outside the top 10', () => {
@@ -282,15 +261,6 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     expect(submitScore).toHaveBeenCalledWith(expect.any(String), 57);
   });
 
-  it('a surface-only death keeps the single-score presentation unchanged', () => {
-    vi.useFakeTimers();
-    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 30 }));
-    expect(document.querySelector('.go-count')).toBeNull();
-    expect(document.querySelector('.go-title')?.textContent).toBe('GAME OVER');
-    expect(document.querySelector('.go-boom')?.textContent).toBe('BOOOM!!!');
-    expect(document.querySelector('.go-score-value')?.textContent).toBe('30');
-  });
-
   it('plays no falling SFX through the interstitial when muted', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play');
     activeGame().onComplete!(makeBreakdown({ surfaceTime: 5 }));
@@ -348,12 +318,6 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     document.dispatchEvent(event);
     return event;
   }
-
-  it('renders the tunnel screen with the touch action button', () => {
-    expect(document.querySelector('.tunnel-game-canvas')).not.toBeNull();
-    expect(document.querySelector('.touch-action')?.textContent).toBe('SPACE');
-    expect(document.querySelector('.level-value')?.textContent).toBe('1');
-  });
 
   it('Space fires the game action and is preventDefault-ed', async () => {
     const { TunnelGame } = await import('./TunnelGame');

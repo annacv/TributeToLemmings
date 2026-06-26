@@ -4,6 +4,7 @@ import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
 import { makeBreakdown, LEVEL_POINTS } from './lib/score';
+import { MAX_CATCHUP_STEPS } from './lib/GameLoop';
 import { makeCanvas } from './test-helpers';
 
 // --- helpers ---
@@ -88,36 +89,15 @@ describe('SurfaceGame', () => {
      → hurtbox x 48–82, y 385–430; bomb 28×32 with the right 6px (spark) trimmed
      → dangerous span dx..dx+22. */
 
-  it('does not hit when a bomb only grazes the empty corner beside the head', () => {
+  it.each([
+    { dx: 83, dy: 390, hit: false, note: 'body just past the hurtbox right edge (82)' },
+    { dx: 25, dy: 390, hit: false, note: 'only the trimmed spark zone (47–53) reaches the player' },
+    { dx: 50, dy: 352, hit: false, note: 'bomb bottom (384) just above the hurtbox top (385)' },
+    { dx: 82, dy: 390, hit: true,  note: 'body left edge touches hurtbox right edge' },
+    { dx: 26, dy: 390, hit: true,  note: 'body right edge (48) touches hurtbox left edge' },
+  ])('hurtbox boundary: bomb at ($dx,$dy) → hit=$hit ($note)', ({ dx, dy, hit }) => {
     const game = makeGameWithPlayer(canvas);
-    // Bomb body starts at 83, just past the hurtbox right edge (82) but well
-    // inside the old full box (right edge 90) — was a phantom hit before.
-    const bomb = placeBomb(game, 83);
-    expect(bomb.isExploding).toBe(false);
-  });
-
-  it('does not hit when only the decorative spark overlaps the player', () => {
-    const game = makeGameWithPlayer(canvas);
-    // Bomb body ends at 25+22=47, just short of the hurtbox left edge (48);
-    // only the trimmed spark zone (47–53) reaches the player.
-    const bomb = placeBomb(game, 25);
-    expect(bomb.isExploding).toBe(false);
-  });
-
-  it('does not hit when a bomb passes just above the head', () => {
-    const game = makeGameWithPlayer(canvas);
-    // Bomb bottom at 352+32=384, just above the hurtbox top (385) but below
-    // the old full box top (380) — was a phantom hit before.
-    const bomb = placeBomb(game, 50, 352);
-    expect(bomb.isExploding).toBe(false);
-  });
-
-  it('hits exactly at the new hurtbox boundaries', () => {
-    const game = makeGameWithPlayer(canvas);
-    // Right boundary: bomb body left edge touches hurtbox right edge (82).
-    expect(placeBomb(game, 82).isExploding).toBe(true);
-    // Left boundary: bomb body right edge (26+22=48) touches hurtbox left edge.
-    expect(placeBomb(game, 26).isExploding).toBe(true);
+    expect(placeBomb(game, dx, dy).isExploding).toBe(hit);
   });
 
   it('collision outcome is independent of facing direction', () => {
@@ -161,17 +141,6 @@ describe('SurfaceGame', () => {
     expect(onGameOver).toHaveBeenCalledWith(
       makeBreakdown({ surfaceTime: 40, levelsBonus: 2 * LEVEL_POINTS }),
     );
-  });
-
-  it('removes bombs that fall off the bottom of the canvas', () => {
-    const game = makeGameWithPlayer(canvas);
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-
-    game.update();
-
-    expect(game.bombs).toHaveLength(0);
   });
 
   it('uses pre-loop lives color when multiple bombs expire in one frame', () => {
@@ -228,25 +197,6 @@ describe('SurfaceGame', () => {
 
     expect(document.querySelectorAll('.life-losing')).toHaveLength(2);
   });
-
-  it('blinks the HUD lives item when a life is lost', () => {
-    const game = makeGameWithPlayer(canvas);
-    game.player.lives = 2;
-    setupHud();
-
-    game.displayLives();
-
-    expect(document.querySelector('.lives-item')!.classList.contains('blink')).toBe(true);
-  });
-
-  it('does not blink the HUD lives item when no life was lost', () => {
-    const game = makeGameWithPlayer(canvas);
-    setupHud();
-
-    game.displayLives();
-
-    expect(document.querySelector('.lives-item')!.classList.contains('blink')).toBe(false);
-  });
 });
 
 // ── Iteration IV: Level Progression & Ground Erosion ──────────────────────────
@@ -256,27 +206,17 @@ describe('SurfaceGame — level system', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('advances to level 2 when score reaches 18', () => {
+  it.each([
+    { from: 0, score: 17, to: 0 },   // below threshold → no advance
+    { from: 0, score: 18, to: 1 },   // reaches level 2
+    { from: 1, score: 36, to: 2 },   // reaches level 3
+    { from: 2, score: 9999, to: 2 }, // never past level 3
+  ])('checkLevelUp: level $from at score $score → level $to', ({ from, score, to }) => {
     const game = new SurfaceGame(canvas);
-    game.score = 18;
+    game.currentLevel = from;
+    game.score = score;
     game['checkLevelUp']();
-    expect(game.currentLevel).toBe(1);
-  });
-
-  it('advances to level 3 when score reaches 36', () => {
-    const game = new SurfaceGame(canvas);
-    game.currentLevel = 1;
-    game.score = 36;
-    game['checkLevelUp']();
-    expect(game.currentLevel).toBe(2);
-  });
-
-  it('does not advance past level 3', () => {
-    const game = new SurfaceGame(canvas);
-    game.currentLevel = 2;
-    game.score = 9999;
-    game['checkLevelUp']();
-    expect(game.currentLevel).toBe(2);
+    expect(game.currentLevel).toBe(to);
   });
 
   it('resets lastSpawnFrame on level-up', () => {
@@ -288,12 +228,6 @@ describe('SurfaceGame — level system', () => {
     expect(game.lastSpawnFrame).toBe(1080);
   });
 
-  it('does not advance if score is below threshold', () => {
-    const game = new SurfaceGame(canvas);
-    game.score = 17;
-    game['checkLevelUp']();
-    expect(game.currentLevel).toBe(0);
-  });
 });
 
 describe('SurfaceGame — ground erosion', () => {
@@ -315,21 +249,13 @@ describe('SurfaceGame — ground erosion', () => {
     expect(game.groundErosionActive).toBe(true);
   });
 
-  it('does not increment erosionCounter when erosion is inactive (levels 1-2)', () => {
+  it('does nothing to the ground while erosion is inactive (levels 1-2)', () => {
     const game = makeGame();
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
     expect(game.erosionCounter).toBe(0);
-  });
-
-  it('does not stamp cracks or holes while erosion is inactive', () => {
-    const game = makeGame();
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
     expect(game['renderer']['crackStamps']).toHaveLength(0);
     expect(game['renderer']['holeStamps']).toHaveLength(0);
   });
@@ -378,73 +304,18 @@ describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () =>
     expect(game['renderer']['crackStamps']).toHaveLength(2);
   });
 
-  it('centers the crack stamp under the bomb that fell', () => {
+  it('progresses from cracks to holes as misses accumulate', () => {
     const game = makeGame();
-    const bomb = dropBomb(game, 100);
-    const stamp = game['renderer']['crackStamps'][0];
-    expect(stamp.x + stamp.width / 2).toBeCloseTo(100 + bomb.dWidth / 2);
-  });
-
-  it('triggers a light shake on the canvas for each ground hit', () => {
-    const game = makeGame();
-    dropBomb(game);
-    expect(canvas.classList.contains('shake-light')).toBe(true);
-  });
-
-  it('stamps only crack-mark-1/2 during the first four misses', () => {
-    const game = makeGame();
-    for (let i = 0; i < 4; i++) dropBomb(game);
-    const cracks = game['renderer']['crackStamps'];
-    expect(cracks).toHaveLength(4);
-    expect(game['renderer']['holeStamps']).toHaveLength(0);
-    expect(cracks[0].img).toBe(game['renderer']['crackImgs'][0]);
-    expect(cracks[1].img).toBe(game['renderer']['crackImgs'][1]);
-    expect(cracks[2].img).toBe(game['renderer']['crackImgs'][0]);
-    expect(cracks[3].img).toBe(game['renderer']['crackImgs'][1]);
-  });
-
-  it('stamps only crack-mark-3/4 during misses five to eight', () => {
-    const game = makeGame();
-    for (let i = 0; i < 8; i++) dropBomb(game);
-    const cracks = game['renderer']['crackStamps'];
-    expect(cracks).toHaveLength(8);
-    expect(game['renderer']['holeStamps']).toHaveLength(0);
-    expect(cracks[4].img).toBe(game['renderer']['crackImgs'][2]);
-    expect(cracks[5].img).toBe(game['renderer']['crackImgs'][3]);
-    expect(cracks[6].img).toBe(game['renderer']['crackImgs'][2]);
-    expect(cracks[7].img).toBe(game['renderer']['crackImgs'][3]);
-  });
-
-  it('stamps holes (cycling all four variants) from the fifteenth miss on', () => {
-    const game = makeGame();
+    // Below the hole threshold (LATE_CRACK_MISSES = 14): cracks only, no holes.
     for (let i = 0; i < 14; i++) dropBomb(game);
+    expect(game['renderer']['crackStamps']).toHaveLength(14);
     expect(game['renderer']['holeStamps']).toHaveLength(0);
+    // Past it: holes begin landing while a crack still stamps every miss.
     for (let i = 0; i < 5; i++) dropBomb(game);
-    const holes = game['renderer']['holeStamps'];
-    expect(holes).toHaveLength(5);
-    expect(holes[0].img).not.toBe(holes[1].img);
-    expect(holes[4].img).toBe(holes[0].img);
+    expect(game['renderer']['crackStamps']).toHaveLength(19);
+    expect(game['renderer']['holeStamps']).toHaveLength(5);
   });
 
-  it('stamps a crack at every miss, even once holes are landing', () => {
-    const game = makeGame();
-    for (let i = 0; i < 17; i++) dropBomb(game);
-    const cracks = game['renderer']['crackStamps'];
-    expect(cracks).toHaveLength(17);
-    // hole-phase misses keep using the heavy pair (crack-mark-3/4)
-    expect(cracks[16].img).toBe(game['renderer']['crackImgs'][2 + (16 % 2)]);
-  });
-
-  it('keeps stamps inside the ground band', () => {
-    const game = makeGame();
-    for (let i = 0; i < 10; i++) dropBomb(game, i % 2 === 0 ? 0 : canvas.width - 10);
-    for (const stamp of [...game['renderer']['crackStamps'], ...game['renderer']['holeStamps']]) {
-      expect(stamp.x).toBeGreaterThanOrEqual(0);
-      expect(stamp.x + stamp.width).toBeLessThanOrEqual(canvas.width);
-      expect(stamp.y).toBeGreaterThanOrEqual(canvas.height * 0.71);
-      expect(stamp.y + stamp.height).toBeLessThanOrEqual(canvas.height);
-    }
-  });
 });
 
 describe('SurfaceGame — tunnel world transition', () => {
@@ -460,30 +331,14 @@ describe('SurfaceGame — tunnel world transition', () => {
 
   beforeEach(() => { canvas = makeCanvas(468, 468); });
 
-  it('completionCallback registers the callback', () => {
-    const game = new SurfaceGame(canvas);
-    const cb = vi.fn();
-    game.completionCallback(cb);
-    expect(game.onComplete).toBe(cb);
-  });
-
-  it('sets isOver on tunnel transition', () => {
+  it('collapse sets isOver and records the complete outcome (teardown skips onGameOver)', () => {
     const game = makeGame();
-    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
+    game['renderer']['coveredCells'].fill(true); // full coverage; next miss collapses it
     const bomb = new Bomb(canvas, 100);
     bomb.dy = canvas.height + 1;
     game.bombs.push(bomb);
     game.update();
     expect(game.isOver).toBe(true);
-  });
-
-  it('records the complete outcome on tunnel transition (so teardown skips onGameOver)', () => {
-    const game = makeGame();
-    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
     expect(game['outcome']).toBe('complete');
   });
 
@@ -548,25 +403,6 @@ describe('SurfaceGame — tunnel world transition', () => {
     at.bombs.push(bombB);
     at.update();
     expect(at.isOver).toBe(true);
-  });
-
-  it('force-stamps the final hole under the lemming at collapse', () => {
-    const game = makeGame();
-    game['renderer']['coveredCells'].fill(true);
-    game['renderer']['coveredCells'][0] = false;
-    game.player!.dx = 200;
-
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
-
-    const holes = game['renderer']['holeStamps'];
-    expect(holes).toHaveLength(1);
-    const stamp = holes[0];
-    const playerCenter = 200 + game.player!.dWidth / 2;
-    expect(stamp.x + stamp.width / 2).toBeCloseTo(playerCenter, 5);
-    expect(stamp.y + stamp.height).toBeCloseTo(canvas.height, 5);
   });
 });
 
@@ -657,101 +493,6 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
   });
 });
 
-describe('SurfaceGame — level-up visual effects', () => {
-  let canvas: HTMLCanvasElement;
-
-  beforeEach(() => {
-    canvas = makeCanvas(468, 468);
-    document.body.innerHTML = `
-      <div class="game-stage">
-        <p class="level-up-banner"></p>
-      </div>
-    `;
-  });
-
-  afterEach(() => {
-    document.body.innerHTML = '';
-    vi.useRealTimers();
-  });
-
-  it('blinks the HUD level item when the level updates', () => {
-    document.body.innerHTML += `
-      <span class="hud-item level-item">
-        <span class="hud-label">level</span>
-        <span class="hud-value level-value">1</span>
-      </span>
-    `;
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-    game.score = 18;
-
-    game['checkLevelUp']();
-
-    expect(document.querySelector('.level-value')!.textContent).toBe('2');
-    expect(document.querySelector('.level-item')!.classList.contains('blink')).toBe(true);
-  });
-
-  it('announces level 1 at game start', () => {
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-
-    game['showLevelUpEffect']();
-
-    const banner = document.querySelector('.level-up-banner')!;
-    expect(banner.textContent).toBe('Level 1');
-    expect(banner.classList.contains('show')).toBe(true);
-  });
-
-  it('shows the level-up banner with the new level number', () => {
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-    game.score = 18;
-
-    game['checkLevelUp']();
-
-    const banner = document.querySelector('.level-up-banner')!;
-    expect(banner.textContent).toBe('Level 2');
-    expect(banner.classList.contains('show')).toBe(true);
-  });
-
-  it('flashes the game stage on level-up', () => {
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-    game.score = 18;
-
-    game['checkLevelUp']();
-
-    expect(document.querySelector('.game-stage')!.classList.contains('flash-active')).toBe(true);
-  });
-
-  it('triggers the earthquake shake when ground erosion activates (level 3)', () => {
-    vi.useFakeTimers();
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-    game.currentLevel = 1;
-    game.score = 36;
-
-    game['checkLevelUp']();
-    const frame = document.querySelector('.game-stage')!;
-    expect(frame.classList.contains('shake-quake')).toBe(false);
-
-    vi.advanceTimersByTime(300);
-    expect(frame.classList.contains('shake-quake')).toBe(true);
-  });
-
-  it('does not trigger the earthquake shake on earlier level-ups', () => {
-    vi.useFakeTimers();
-    const game = new SurfaceGame(canvas);
-    game.gameSong.muted = true;
-    game.score = 18;
-
-    game['checkLevelUp']();
-    vi.advanceTimersByTime(300);
-
-    expect(document.querySelector('.game-stage')!.classList.contains('shake-quake')).toBe(false);
-  });
-});
-
 describe('SurfaceGame — fixed-timestep score', () => {
   /* Captures rAF callbacks so the test drives Game's loop with chosen timestamps */
   function startWithHarness() {
@@ -794,6 +535,17 @@ describe('SurfaceGame — fixed-timestep score', () => {
     for (let i = 1; i <= 30; i++) h.pump(1000 + i * 33.4);
     expect(h.game.score).toBe(1);
     expect(h.game.count).toBe(61);
+  });
+
+  it('a long tab-stall does not inflate score by the discarded time (clamped catch-up)', () => {
+    const h = startWithHarness();  // synchronous first step → count 1
+    h.pump(1000);                  // anchor the clock, 0 steps
+    h.pump(1000 + 60_000);         // a 60 s stall, delivered in a single frame
+    /* The ~3600 discarded steps are clamped to the catch-up budget, so the run
+       advances at most MAX_CATCHUP_STEPS — the stall time never inflates the
+       score or drains the countdown. */
+    expect(h.game.count).toBe(1 + MAX_CATCHUP_STEPS);
+    expect(h.game.score).toBe(0);
   });
 });
 

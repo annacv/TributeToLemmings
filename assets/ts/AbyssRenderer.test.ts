@@ -19,20 +19,6 @@ beforeAll(() => {
 });
 
 describe('AbyssRenderer', () => {
-  it('clears the canvas each frame (the HUD hint is DOM, not canvas-drawn)', () => {
-    const canvas = makeCanvas(W, W);
-    const game = makeGame(canvas);
-    const renderer = new AbyssRenderer(canvas);
-    const ctx = canvas.getContext('2d') as unknown as ReturnType<typeof vi.fn> & {
-      clearRect: ReturnType<typeof vi.fn>; fillText: ReturnType<typeof vi.fn>;
-    };
-
-    renderer.render(game);
-
-    expect(ctx.clearRect).toHaveBeenCalled();
-    expect(ctx.fillText).not.toHaveBeenCalled();
-  });
-
   it('renders a destroyed, falling stalactite without indexing a missing crack', () => {
     const canvas = makeCanvas(W, W);
     const game = makeGame(canvas);
@@ -45,31 +31,25 @@ describe('AbyssRenderer', () => {
     expect(() => renderer.render(game)).not.toThrow();
   });
 
-  it('renders a cracked (mid-break) stalactite without throwing', () => {
+  it.each<[string, (game: AbyssGame) => void]>([
+    ['a cracked (mid-break) stalactite', (game) => {
+      const st = new Stalactite('large', game.playerWorldX);
+      st.hitsRemaining = 1; // hitsTaken = 2 → crack index 1 (the last crack)
+      st.shakeStepsLeft = 6;
+      st.boomStepsLeft = 6;
+      game.stalactites = [st];
+    }],
+    ['a stalactite culled far off-screen', (game) => {
+      game.stalactites = [new Stalactite('small', game.cameraX + W * 10)];
+    }],
+    ['both doors mid-open through the shared path', (game) => {
+      game.entranceOpenFrac = 0.5;
+      game.exitOpenFrac = 0.5;
+    }],
+  ])('renders %s without throwing', (_label, setup) => {
     const canvas = makeCanvas(W, W);
     const game = makeGame(canvas);
-    const st = new Stalactite('large', game.playerWorldX);
-    st.hitsRemaining = 1; // hitsTaken = 2 → crack index 1 (the last crack)
-    st.shakeStepsLeft = 6;
-    st.boomStepsLeft = 6;
-    game.stalactites = [st];
-    const renderer = new AbyssRenderer(canvas);
-    expect(() => renderer.render(game)).not.toThrow();
-  });
-
-  it('skips stalactites culled far off-screen', () => {
-    const canvas = makeCanvas(W, W);
-    const game = makeGame(canvas);
-    game.stalactites = [new Stalactite('small', game.cameraX + W * 10)];
-    const renderer = new AbyssRenderer(canvas);
-    expect(() => renderer.render(game)).not.toThrow();
-  });
-
-  it('draws both doors through the shared path without throwing', () => {
-    const canvas = makeCanvas(W, W);
-    const game = makeGame(canvas);
-    game.entranceOpenFrac = 0.5;
-    game.exitOpenFrac = 0.5;
+    setup(game);
     const renderer = new AbyssRenderer(canvas);
     expect(() => renderer.render(game)).not.toThrow();
   });

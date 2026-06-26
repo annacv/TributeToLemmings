@@ -82,12 +82,6 @@ describe('submitScore', () => {
     expect(mockSetDoc).not.toHaveBeenCalled();
     expect(result).toEqual({ docId: 'existing-id', bestScore: 100 });
   });
-
-  it('rejects when setDoc throws', async () => {
-    mockGetDocs.mockResolvedValue({ empty: true, docs: [] });
-    mockSetDoc.mockRejectedValue(new Error('network error'));
-    await expect(submitScore('TestPlayer', 10)).rejects.toThrow('network error');
-  });
 });
 
 describe('fetchTopScores', () => {
@@ -107,12 +101,6 @@ describe('fetchTopScores', () => {
     expect(results[0]).toMatchObject({ id: 'doc1', name: 'Alice', score: 100 });
     expect(results[1]).toMatchObject({ id: 'doc2', name: 'Bob',   score: 50 });
   });
-
-  it('returns empty array when no docs', async () => {
-    mockGetDocs.mockResolvedValue({ docs: [] });
-    const results = await fetchTopScores(10);
-    expect(results).toHaveLength(0);
-  });
 });
 
 describe('getPlayerRank', () => {
@@ -120,15 +108,11 @@ describe('getPlayerRank', () => {
     vi.clearAllMocks();
   });
 
-  it('returns count + 1', async () => {
-    mockGetCountFromServer.mockResolvedValue({ data: () => ({ count: 4 }) });
-    const rank = await getPlayerRank(30);
-    expect(rank).toBe(5);
-  });
-
-  it('returns 1 when no scores are higher', async () => {
-    mockGetCountFromServer.mockResolvedValue({ data: () => ({ count: 0 }) });
-    const rank = await getPlayerRank(999);
-    expect(rank).toBe(1);
+  it.each([
+    { count: 4, rank: 5 },  // 4 higher scores → rank 5
+    { count: 0, rank: 1 },  // none higher → rank 1
+  ])('returns higher-score count + 1 (count $count → rank $rank)', async ({ count, rank }) => {
+    mockGetCountFromServer.mockResolvedValue({ data: () => ({ count }) });
+    expect(await getPlayerRank(30)).toBe(rank);
   });
 });

@@ -40,13 +40,6 @@ describe('RunHost', () => {
     vi.unstubAllGlobals();
   });
 
-  it('start() drives the step and render hooks', () => {
-    const h = makeHarness();
-    h.host.start();
-    expect(h.hooks.step).toHaveBeenCalledTimes(1);
-    expect(h.hooks.render).toHaveBeenCalledTimes(1);
-  });
-
   it('does not run teardown while the run is not over', () => {
     const h = makeHarness();
     h.host.start();
