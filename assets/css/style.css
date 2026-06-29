@@ -416,6 +416,7 @@ canvas {
   .game-over-canvas,
   .ranking-canvas,
   .transition-canvas,
+  .the-end-canvas,
   .win-canvas {
     width: 100%;
     height: auto;
@@ -423,6 +424,7 @@ canvas {
 
   .section-container.game-over-screen .game-stage,
   .section-container.to-be-continued-screen .game-stage,
+  .section-container.the-end-screen .game-stage,
   .section-container.ranking-screen .game-stage {
     flex: 1;
     background: var(--neutral-100);
@@ -431,6 +433,7 @@ canvas {
   .game-over-canvas,
   .win-canvas,
   .ranking-canvas,
+  .the-end-canvas,
   .transition-canvas {
     height: 100%;
   }
@@ -740,7 +743,7 @@ canvas {
 .go-count {
   list-style: none;
   padding: 0;
-  max-width: 260px;
+  max-width: 320px;
   display: grid;
   grid-template-rows: repeat(3, 1fr);
   column-gap: var(--gap-lg);
@@ -756,6 +759,8 @@ canvas {
   font-size: var(--text-xs);
   color: var(--neutral-0);
   opacity: 0;
+  padding: .3rem .5rem;
+  background-color: rgba(var(--black-rgb), 0.7);;
 }
 
 .go-count-line.show {
@@ -902,7 +907,7 @@ canvas {
   line-height: var(--leading-body);
   letter-spacing: .2em;
   margin: 1.5rem 0 0;
-  padding: 1rem 2rem;
+  padding: 1rem 2.5rem;
   text-shadow: 2px 2px 0 var(--neutral-100);
   text-transform: uppercase;
 }
@@ -913,6 +918,117 @@ canvas {
   .transition-overlay.show {
     opacity: 1 !important;
   }
+}
+
+/* ---- THE END SCREEN ---- */
+
+.the-end-canvas {
+  background-color: var(--brand-light);
+}
+
+/* Bottom-anchored, optional "press to lift off" prompt; fades in only while the
+   lemming waits at the balloon. */
+.the-end-overlay {
+  position: absolute;
+  inset: 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.the-end-prompt {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--neutral-0);
+  text-shadow: 2px 2px 0 var(--neutral-100);
+  letter-spacing: var(--tracking-pixel);
+  text-align: center;
+  margin-bottom: 0.25rem;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.the-end-prompt.show {
+  opacity: 1;
+}
+
+/* Credits crawl over the sky during the ascent; hidden until it rolls. */
+.the-end-credits {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 3;
+}
+
+.the-end-credits--roll,
+.the-end-credits--static {
+  opacity: 1;
+}
+
+.the-end-credits-roll {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-sm);
+  text-align: center;
+  transform: translateY(100%);
+}
+
+.the-end-credits--roll .the-end-credits-roll {
+  animation: the-end-credits-scroll 9s linear forwards;
+}
+
+/* Reduced motion: no crawl — show the credits resting near the top instead. */
+.the-end-credits--static .the-end-credits-roll {
+  position: static;
+  transform: none;
+  margin-top: 2rem;
+}
+
+@keyframes the-end-credits-scroll {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(-110%); }
+}
+
+.the-end-credit {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--neutral-0);
+  text-shadow: 2px 2px 0 var(--neutral-100);
+  letter-spacing: var(--tracking-pixel);
+  line-height: var(--leading-tight);
+}
+
+.the-end-credit--gap {
+  height: var(--gap-md);
+}
+
+.the-end-skip {
+  position: absolute;
+  top: .5rem;
+  right: .5rem;
+  z-index: 4;
+  font-family: var(--font-pixel);
+  font-size: var(--text-3xs);
+  color: var(--neutral-0);
+  background: rgba(var(--black-rgb), 0.5);
+  border: var(--border-brand);
+  padding: .35rem .6rem;
+  letter-spacing: var(--tracking-pixel);
+  cursor: pointer;
+}
+
+.the-end-skip:hover,
+.the-end-skip:active {
+  background: var(--brand);
+  color: var(--neutral-100);
 }
 
 /* ---- BUTTON COMPONENT ---- */

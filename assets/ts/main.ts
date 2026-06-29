@@ -3,7 +3,7 @@ import { TunnelGame } from './TunnelGame';
 import { AbyssGame } from './AbyssGame';
 import { drawLemmingMascot, drawLemmingShape } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
-import { safePlay } from './lib/audio';
+import { safePlay, playLoop, stopLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
 import { buildPlayScreen } from './lib/playScreen';
 import { setupMuteButton } from './lib/muteButton';
@@ -11,11 +11,13 @@ import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { announce } from './lib/liveRegion';
 import { attachWorldLoop } from './lib/attachWorldLoop';
 import { loadImage, whenImagesSettled } from './lib/images';
+import { drawTheEndScene, theEndFrameAt, type TheEndCfg } from './lib/theEndScene';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
   COUNT_TICK_SFX, COUNT_CHIME_SFX, UNDERGROUND_BACKGROUND_SVG, UNDERGROUND_ABYSS_BACKGROUND_SVG,
   TUNNEL_CEILING_SVG, ABYSS_CEILING_SVG, ABYSS_LOOP, SPRITES, STALACTITE_SVGS,
+  THE_END_BACKGROUND_SVG, BALLOON_SVG, THE_END_MUSIC, BALLOON_SFX,
 } from './assets';
 
 type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
@@ -37,10 +39,34 @@ const TRANSITION_MESSAGE_FROM_START = 0.0125;
 const TUNNEL_CEILING_HANG_FRAC = 0.24;
 const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
-/* easeOutBack overshoot coefficients: the ceiling slams past its rest point then
-   settles. Standard curve constants (C3 = C1 + 1). */
 const EASE_OUT_BACK_C1 = 1.70158;
 const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
+const THE_END_WALK_MS = 1400;
+const THE_END_PROMPT_HOLD_MS = 2600;
+const THE_END_BOARD_MS = 700;
+const THE_END_ASCEND_MS = 4200;
+const THE_END_CREDITS_MS = 9000;
+const THE_END_END_HOLD_MS = 4200;
+
+const CREDITS_LINES = [
+  'THE END',
+  '',
+  'A tribute to',
+  "DMA Design's Lemmings (1991)",
+  '',
+  'Music — Lemmings DOS OST',
+  'SFX — Lemmings DOS set',
+  '',
+  'Made with fun by Anna Condal',
+];
+
+function creditsRollHtml(): string {
+  return CREDITS_LINES
+    .map((line) => line
+      ? `<p class="the-end-credit">${escapeHtml(line)}</p>`
+      : '<p class="the-end-credit the-end-credit--gap"></p>')
+    .join('');
+}
 
 export function generateGuestHandle(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -468,7 +494,7 @@ function main(): void {
       : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
 
     const headingHtml = isWin
-      ? '<h1 class="go-title">&gt; You made it!<br>For now...</h1>'
+      ? '<p class="go-boom">CONGRATS!!!</p><h1 class="go-title">&gt; You made it!</h1>'
       : '<p class="go-boom">BOOOM!!!</p><h1 class="go-title">GAME OVER</h1>';
 
     const gameOverScreen = buildDom(`
@@ -517,7 +543,6 @@ function main(): void {
 
     const scoreEl = gameOverScreen.querySelector('.go-score-value');
     const countList = gameOverScreen.querySelector('.go-count');
-    let countDoneMs = 0;
 
     if (hasCount && countList && scoreEl) {
       const lineEls = countLines.map(({ label, rule, value }) => {
@@ -554,8 +579,6 @@ function main(): void {
             }
           }, 40);
         }, rollStartMs);
-
-        countDoneMs = rollStartMs + ROLL_MS;
       }
     } else if (scoreEl) {
       scoreEl.textContent = String(breakdown.total);
@@ -568,9 +591,6 @@ function main(): void {
       safePlay(dieSfx);
     } else if (variant === 'death') {
       startRankingMusic();
-    } else {
-      /* Win: no death knell — ranking music starts from the count completion */
-      setTimeout(startRankingMusic, countDoneMs);
     }
 
     /* Only the total reaches the leaderboard; the breakdown stays client-side */
@@ -582,7 +602,136 @@ function main(): void {
 
     /* Hold the breakdown long enough to read it; surface-only deaths (no count) keep today's short beat. */
     const holdMs = hasCount && !reduceMotion ? GAME_OVER_COUNT_HOLD_MS : GAME_OVER_TRANSITION_MS;
-    setTimeout(() => createRankingScreen(breakdown.total, submission), holdMs);
+    setTimeout(() => {
+      if (isWin) createTheEndScreen(breakdown, submission);
+      else createRankingScreen(breakdown.total, submission);
+    }, holdMs);
+  }
+
+  function createTheEndScreen(breakdown: ScoreBreakdown, submission: Promise<SubmissionResult>): void {
+    const size = getCanvasSize();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const muted = localStorage.getItem('audio-muted') === '1';
+
+    const screen = buildDom(`
+      <section class="section-container the-end-screen">
+        <div class="game-stage">
+          <canvas class="the-end-canvas" aria-hidden="true"></canvas>
+          <div class="the-end-credits" aria-hidden="true"><div class="the-end-credits-roll">${creditsRollHtml()}</div></div>
+          <div class="the-end-overlay">
+            <p class="the-end-prompt">Press <kbd class="key-hint-text">SPACE</kbd> to lift off</p>
+          </div>
+          <button class="the-end-skip" aria-label="Skip to ranking">Skip &gt;&gt;</button>
+          <button class="mute-btn" aria-label="Mute sound"></button>
+        </div>
+      </section>
+    `);
+
+    const canvas = screen.querySelector('.the-end-canvas') as HTMLCanvasElement;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d')!;
+    const overlay = screen.querySelector('.the-end-overlay') as HTMLElement;
+    const promptEl = screen.querySelector('.the-end-prompt') as HTMLElement;
+    const creditsEl = screen.querySelector('.the-end-credits') as HTMLElement;
+    overlay.tabIndex = -1;
+    overlay.focus();
+
+    const sceneImg = loadImage(THE_END_BACKGROUND_SVG);
+    const balloonImg = loadImage(BALLOON_SVG);
+
+    const balloonW = size * 0.34;
+    const cfg: TheEndCfg = {
+      size,
+      groundY: size * 0.86,
+      balloonX: size * 0.62,
+      balloonW,
+      lemmingSize: size * LEMMING_SIZE_FRAC,
+      walkStartX: size * 0.18,
+      walkEndX: size * 0.62 - balloonW * 0.16,
+    };
+    const dur = { walkMs: THE_END_WALK_MS, boardMs: THE_END_BOARD_MS, ascendMs: THE_END_ASCEND_MS };
+
+    const ac = new AbortController();
+    const loop = new Audio(THE_END_MUSIC);
+    let t0 = 0;
+    let liftOffElapsed: number | null = null;
+    let ascended = false;
+    let routed = false;
+
+    /* Timers drive the state machine (auto lift-off, ascend SFX, route) so it's
+       deterministic and testable; rAF only redraws. */
+    function doLiftOff(): void {
+      if (liftOffElapsed !== null || routed) return;
+      liftOffElapsed = performance.now() - t0;
+      promptEl.classList.remove('show');
+      /* Board, then ascend (SFX + credits), then route — all relative to lift-off,
+         so a press only *accelerates* an inevitable boarding (never a soft-lock). */
+      setTimeout(onAscendStart, THE_END_BOARD_MS);
+      setTimeout(route, THE_END_BOARD_MS + Math.max(THE_END_ASCEND_MS, THE_END_CREDITS_MS));
+    }
+
+    function onAscendStart(): void {
+      if (ascended || routed) return;
+      ascended = true;
+      if (!muted) safePlay(new Audio(BALLOON_SFX)); // at ascent start — after boarding
+      creditsEl.classList.add('the-end-credits--roll');
+    }
+
+    function route(): void {
+      if (routed) return;
+      routed = true;
+      ac.abort();
+      stopLoop(loop);
+      createRankingScreen(breakdown.total, submission);
+    }
+
+    function draw(): void {
+      if (routed) return;
+      const f = theEndFrameAt(performance.now() - t0, liftOffElapsed, dur, cfg);
+      promptEl.classList.toggle('show', f.phase === 'prompt');
+      drawTheEndScene(ctx, size, f, sceneImg, balloonImg);
+      requestAnimationFrame(draw);
+    }
+
+    const start = (): void => {
+      t0 = performance.now();
+      /* The action means "lift off" until boarded, then "skip to ranking". Focus
+         stays on the overlay (not the skip button) so Space hits this handler. */
+      document.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          if (liftOffElapsed === null) doLiftOff(); else route();
+        }
+      }, { signal: ac.signal });
+      /* Tap the scene to lift off (touch); the Skip button always routes onward. */
+      canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: ac.signal });
+      (screen.querySelector('.the-end-skip') as HTMLButtonElement)
+        .addEventListener('click', route, { signal: ac.signal });
+
+      playLoop(loop, muted);
+      pauseWhileHidden(loop, { signal: ac.signal, shouldResume: () => !routed });
+      setupMuteButton(
+        screen.querySelector('.mute-btn') as HTMLButtonElement,
+        (m) => { loop.muted = m; },
+      );
+
+      if (reduceMotion) {
+        /* Jump to the end state — balloon risen, credits static — then route. */
+        liftOffElapsed = 0;
+        const f = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, dur, cfg);
+        drawTheEndScene(ctx, size, f, sceneImg, balloonImg);
+        creditsEl.classList.add('the-end-credits--static');
+        if (!muted) safePlay(new Audio(BALLOON_SFX));
+        setTimeout(route, THE_END_END_HOLD_MS);
+        return;
+      }
+      /* Auto lift-off if the player never presses (no soft-lock). */
+      setTimeout(doLiftOff, THE_END_WALK_MS + THE_END_PROMPT_HOLD_MS);
+      requestAnimationFrame(draw);
+    };
+
+    whenImagesSettled([sceneImg, balloonImg], start);
   }
 
   function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
@@ -614,6 +763,16 @@ function main(): void {
       canvas.style.setProperty('--ranking-tile-w', `${canvas.clientHeight * 6}px`);
     });
     tileObserver.observe(canvas);
+
+    /* The win path arrives here from The End with no music started yet (the death
+       path pre-starts it during the Game Over knell); start it now if absent so the
+       ranking always has its loop, exactly once. */
+    if (!rankingMusic) {
+      rankingMusic = new Audio(RANKING_MUSIC);
+      rankingMusic.loop = true;
+      rankingMusic.muted = localStorage.getItem('audio-muted') === '1';
+      if (!document.hidden) safePlay(rankingMusic);
+    }
 
     setupMuteButton(
       mainElement.querySelector('.mute-btn') as HTMLButtonElement,
@@ -793,6 +952,10 @@ function main(): void {
   if (debugScreen === 'transition') createTransitionScreen(makeBreakdown({ surfaceTime: 42 }));
   else if (debugScreen === 'tunnel') createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
   else if (debugScreen === 'abyss') createAbyssScreen(makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }));
+  else if (debugScreen === 'theend') {
+    createTheEndScreen(makeBreakdown({ surfaceTime: 42, tunnelTime: 30, abyssTime: 24, levelsBonus: 45 }),
+      Promise.resolve({ error: false, docId: null, bestScore: null }));
+  }
   else createStartScreen();
 }
 
