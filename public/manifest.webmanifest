@@ -2,14 +2,14 @@
   "name": "Tribute to Lemmings",
   "short_name": "Lemmings",
   "description": "Skip the bombs. Stay alive.",
-  "start_url": "/TributeToLemmings/",
-  "scope": "/TributeToLemmings/",
+  "start_url": "/tribute-to-lemmings/",
+  "scope": "/tribute-to-lemmings/",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
   "icons": [
     {
-      "src": "/TributeToLemmings/favicon.svg",
+      "src": "/tribute-to-lemmings/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

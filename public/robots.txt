@@ -35,4 +35,4 @@ Allow: /
 User-agent: Amazonbot
 Allow: /
 
-Sitemap: https://annacv.github.io/TributeToLemmings/sitemap.xml
+Sitemap: https://annacv.github.io/tribute-to-lemmings/sitemap.xml
