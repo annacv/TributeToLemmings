@@ -1,3 +1,10 @@
+export const THE_END_WALK_MS = 1400;
+export const THE_END_PROMPT_HOLD_MS = 2600;
+export const THE_END_BOARD_MS = 700;
+export const THE_END_ASCEND_MS = 4200;
+export const THE_END_CREDITS_MS = 9000;
+export const THE_END_END_HOLD_MS = 4200;
+
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
 
 const BASKET_OFFSET_FRAC = 0.74;             // basket sits this far down the balloon height
