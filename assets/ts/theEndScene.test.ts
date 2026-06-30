@@ -5,7 +5,7 @@ import {
   ASCEND_BALLOON_TOP_FRAC,
   type TheEndConfig,
   type TheEndDurations,
-} from './theEndScene';
+} from './TheEndScene';
 
 const config: TheEndConfig = {
   size: 800,

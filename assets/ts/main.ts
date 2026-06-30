@@ -11,7 +11,8 @@ import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { announce } from './lib/liveRegion';
 import { attachWorldLoop } from './lib/attachWorldLoop';
 import { loadImage, whenImagesSettled } from './lib/images';
-import { drawTheEndScene, theEndFrameAt, type TheEndConfig } from './theEndScene';
+import { theEndFrameAt, type TheEndConfig } from './TheEndScene';
+import { drawTheEndScene } from './TheEndRenderer';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
