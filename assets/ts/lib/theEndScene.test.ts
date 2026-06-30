@@ -36,6 +36,15 @@ describe('theEndFrameAt', () => {
     expect(f.lemmingSize).toBeLessThan(cfg.lemmingSize);
   });
 
+  it('boards from the lemming\'s current walk position on an early lift-off (no jump)', () => {
+    const liftOff = dur.walkMs / 2; // pressed mid-walk
+    const walkPos = theEndFrameAt(liftOff, null, dur, cfg).lemmingX;
+    const f = theEndFrameAt(liftOff, liftOff, dur, cfg); // first board frame (bt = 0)
+    expect(f.phase).toBe('board');
+    expect(f.lemmingX).toBeCloseTo(walkPos);
+    expect(walkPos).toBeLessThan(cfg.walkEndX);
+  });
+
   it('ascends after boarding: camera rises and hair goes wild', () => {
     const mid = dur.boardMs + dur.ascendMs / 2;
     const f = theEndFrameAt(mid, 0, dur, cfg);

@@ -63,6 +63,8 @@ export function theEndFrameAt(
   }
 
   const local = elapsed - liftOffElapsed;
+  const walkProgressAtLiftOff = Math.min(liftOffElapsed / dur.walkMs, 1);
+  const boardStartX = cfg.walkStartX + (cfg.walkEndX - cfg.walkStartX) * walkProgressAtLiftOff;
 
   if (local < dur.boardMs) {
     const bt = Math.max(local, 0) / dur.boardMs;
@@ -73,7 +75,7 @@ export function theEndFrameAt(
       phase: 'board',
       groundScrollY: 0,
       balloonY: restBalloonY,
-      lemmingX: cfg.walkEndX + (targetX - cfg.walkEndX) * bt,
+      lemmingX: boardStartX + (targetX - boardStartX) * bt,
       lemmingY: restLemmingY + (basketY(restBalloonY) - restLemmingY) * bt,
       lemmingSize,
       hairLevel: 0,
