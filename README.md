@@ -1,5 +1,18 @@
 # Tribute to Lemmings
 
+**[▶ Play the game](https://annacv.github.io/tribute-to-lemmings/)** · [LinkedIn](https://www.linkedin.com/in/anna-condal-vela/)
+
+![Tribute to Lemmings](public/og-image.png)
+
+<p>
+  <img src="https://cdn.simpleicons.org/typescript" height="20" alt="" /> TypeScript ·
+  <img src="https://cdn.simpleicons.org/html5" height="20" alt="" /> Canvas 2D ·
+  <img src="https://cdn.simpleicons.org/vite" height="20" alt="" /> Vite ·
+  <img src="https://cdn.simpleicons.org/vitest" height="20" alt="" /> Vitest ·
+  <img src="https://cdn.simpleicons.org/firebase" height="20" alt="" /> Firebase ·
+  <img src="https://cdn.simpleicons.org/markdown" height="20" alt="" /> OpenSpec
+</p>
+
 > A retro pixel-art browser game where you skip and escape, stay alive, and climb the leaderboard.
 
 ## Description
@@ -8,6 +21,15 @@ A loving tribute to DMA Design's classic 1991 *Lemmings* — built as if its bon
 
 It's a tribute first and a score-chase second. Each world reinterprets the original's mood — the Surface, the Tunnel, the Abyss — and ties back to the iconography fans remember: the explosions, the doors, the balloon.
 
+## Highlights
+
+- **Fixed-timestep game loop** — 60 Hz simulation decoupled from display refresh (`GameLoop.ts`)
+- **Canvas 2D rendering** — characters, hazards, and worlds drawn directly; per-world renderers, no game engine
+- **Modular screen routing** — splash → three playable worlds → finale → ranking, with shared run/score lifecycle
+- **Accessibility** — `aria-live` score announcements and reduced-motion paths for cinematics and HUD
+- **Test coverage** — Vitest on game logic, screen flows, and render helpers
+- **CI** — GitHub Actions on PRs (test + lint)
+
 ## The three-world arc
 
 The run is a continuous journey across linked worlds, with score banking across the whole arc.
@@ -15,9 +37,9 @@ The run is a continuous journey across linked worlds, with score banking across 
 
 | World              | Status      | What you do                                                                                                                                                                       |
 | ------------------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🟦 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
+| 🟩 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
 | 🟫 **The Tunnel**  | ✅ Playable  | Trapped underground. Pick up unexploded bombs, find the crack in the wall, light the fuse, and breach your way out across three cycles — before the lowering ceiling crushes you. |
-| ⬛ **The Abyss**    | ✅ Playable  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
+| 🟥 **The Abyss**    | ✅ Playable  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
 | 🎬 **The End**     | ✅ Playable  | A dedicated finale screen — the balloon-escape cinematic, a credits crawl, and the win payoff before the leaderboard.                                                              |
 
 
@@ -29,12 +51,12 @@ Death routes to **Game Over** with your banked score; a successful escape carrie
 | Area        | Choice                                                             |
 | ----------- | ------------------------------------------------------------------ |
 | Language    | TypeScript (strict)                                                |
-| Rendering   | HTML5 Canvas — characters, hazards, and backgrounds drawn directly |
+| Rendering   | Canvas 2D                                                          |
 | Build       | Vite                                                               |
 | Tests       | Vitest (+ jsdom)                                                   |
 | Leaderboard | Firebase (Firestore free tier)                                     |
 | Lint        | `tsc --noEmit` + ESLint + Prettier                                 |
-| Workflow    | Spec-driven via [OpenSpec](openspec/), one iteration per change    |
+| Workflow    | Iterative delivery (OpenSpec)                                        |
 
 
 ## Project structure
@@ -42,33 +64,41 @@ Death routes to **Game Over** with your banked score; a successful escape carrie
 ```
 assets/
   ts/
-    main.ts                 # Bootstraps the app, screen routing, splash + info modals
-    SurfaceGame.ts          # The Surface world (loop, state, transitions)
-    SurfaceRenderer.ts      # Surface draw layer
-    TunnelGame.ts           # The Tunnel world (loop, state, transitions)
-    TunnelRenderer.ts       # Tunnel draw layer
-    AbyssGame.ts            # The Abyss world (loop, state, camera, transitions)
-    AbyssRenderer.ts        # Abyss draw layer
-    Player.ts  Bomb.ts  Stalactite.ts   # Core entities
-    assets.ts               # Asset references
+    main.ts                      # Boot + screen routing (ScreenRoutes)
+    assets.ts                    # Audio/image path exports
+    entities/
+      Player.ts  Bomb.ts  Stalactite.ts
+    screens/
+      startScreen.ts             # Splash + name input
+      surfaceScreen.ts           # Surface play screen
+      transitionScreen.ts        # Fall transitions between worlds
+      tunnelScreen.ts  abyssScreen.ts
+      gameOverScreen.ts  theEndScreen.ts  rankingScreen.ts
+    worlds/
+      surface/  SurfaceGame.ts  SurfaceRenderer.ts
+      tunnel/   TunnelGame.ts   TunnelRenderer.ts
+      abyss/    AbyssGame.ts    AbyssRenderer.ts
+      theEnd/   TheEndScene.ts  TheEndRenderer.ts
     lib/
-      GameLoop.ts           # Fixed-timestep loop
-      RunHost.ts            # Shared run/score lifecycle glue
-      playScreen.ts         # buildPlayScreen scaffold
-      score.ts  Hud.ts      # Scoring + HUD
+      appContext.ts              # App shell + shared screen context
+      GameLoop.ts                # Fixed-timestep loop
+      RunHost.ts                 # Shared run/score lifecycle
+      playScreen.ts              # buildPlayScreen scaffold
+      score.ts  Hud.ts           # Scoring + HUD
       audio.ts  SoundEffectBank.ts  attachWorldLoop.ts
-      liveRegion.ts         # aria-live results announcer
+      liveRegion.ts              # aria-live results announcer
       firebase.ts  leaderboard.ts
+      infoModal.ts  muteButton.ts  debugScreen.ts
       fx.ts  geometry.ts  images.ts
   css/  fonts/  images/  sounds/
-index.html                  # Shell: header, <main> mount, footer
-openspec/                   # Specs + iteration changes (active & archived)
-public/                     # og-image and static assets
+.github/workflows/               # CI + GitHub Pages deploy
+index.html                       # Shell: header, <main> mount, footer
+public/                          # og-image, manifest, sitemap, robots.txt
 ```
 
 ## Roadmap
 
-The build runs one iteration at a time, spec-first. Iterations I–VII have shipped — the full arc is playable end to end.
+Built in seven iterations and some code enhancements; the full arc is playable end to end.
 
 **Shipped — Iterations I–VII**
 
@@ -161,8 +191,7 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 
 All audio respects the in-game mute toggle and pauses when the tab is hidden.
 
-## Links
+## Author
 
-- **Repo** — [https://github.com/annacv/TributeToLemmings](https://github.com/annacv/TributeToLemmings)
-- **Play** — [https://annacv.github.io/TributeToLemmings/](https://annacv.github.io/TributeToLemmings/)
+Anna Condal — [LinkedIn](https://www.linkedin.com/in/anna-condal-vela/) · [Play the game](https://annacv.github.io/tribute-to-lemmings/)
 
