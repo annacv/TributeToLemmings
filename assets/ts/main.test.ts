@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { generateGuestHandle } from './main';
+import {
+  generateGuestHandle,
+  THE_END_WALK_MS,
+  THE_END_PROMPT_HOLD_MS,
+  THE_END_BOARD_MS,
+  THE_END_END_HOLD_MS,
+} from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import { TunnelGame } from './TunnelGame';
@@ -490,7 +496,7 @@ describe('win variant end screen (Abyss completion)', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
   });
 
-  it('the exit-door close plays LETSGO and routes to the win tally; DIE.WAV never plays; ranking music starts once', () => {
+  it('exit-door close → win score → The End → ranking; DIE never plays; ranking music starts once, at the ranking', () => {
     vi.advanceTimersByTime(2000); // through the cold-open → modal (dismissed) → startGame
     const game = abysses[0];
     expect(game).toBeDefined();
@@ -503,7 +509,6 @@ describe('win variant end screen (Abyss completion)', () => {
 
     vi.advanceTimersByTime(1000); // EXIT_TOTAL_MS → LETSGO + onComplete → win Game Over
     expect(sfx).toHaveBeenCalledWith('letsgo');
-    expect(document.querySelector('.go-title')?.textContent).toBe('> You made it!For now...');
 
     const winCanvas = document.querySelector('.win-canvas') as HTMLCanvasElement | null;
     expect(winCanvas).not.toBeNull();
@@ -512,14 +517,21 @@ describe('win variant end screen (Abyss completion)', () => {
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
 
     const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
-    expect(rankingStarts()).toBe(0); // not before the count completes
-    vi.advanceTimersByTime(2500);    // lines + roll done → music
-    expect(rankingStarts()).toBe(1);
-    vi.advanceTimersByTime(2000);    // through the extended hold → ranking screen
-    expect(rankingStarts()).toBe(1); // exactly once
+
+    vi.advanceTimersByTime(2500); // count + roll done...
+    expect(rankingStarts()).toBe(0); // ...the win tally does NOT start the ranking music
+    vi.advanceTimersByTime(2600); // through the extended win hold → The End mounts
+    expect(document.querySelector('.the-end-screen')).not.toBeNull();
+    expect(document.querySelector('.ranking-screen')).toBeNull();
+    expect(audioSrcs.some((src) => /tim_2/i.test(src))).toBe(true); // the finale loop, not the ranking's
+    expect(rankingStarts()).toBe(0);
+
+    vi.advanceTimersByTime(20000); // The End cinematic (auto lift-off → ascend → credits) → ranking
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+    expect(rankingStarts()).toBe(1); // exactly once, at the ranking
   });
 
-  it('gates the ranking music on the count-up completing, not a fixed timer (ordering holds for a VII insertion)', () => {
+  it('keeps the ranking music gated until the ranking — the win tally and The End never start it', () => {
     vi.advanceTimersByTime(2000); // cold-open → modal (dismissed) → startGame
     const game = abysses[0];
     if (game.player) game.player.lives = Number.MAX_SAFE_INTEGER;
@@ -532,18 +544,172 @@ describe('win variant end screen (Abyss completion)', () => {
     const rankingStarts = () => audioSrcs.filter((src) => /reed-flutes/i.test(src)).length;
     const shownScore = () => document.querySelector('.go-score-value')?.textContent;
 
-    /* Step through the count: the music must stay silent the whole time the score
-       is still rolling — it's gated on the count finishing, so a screen inserted
-       before/after the tally can't make it start early. */
+    /* The ranking music stays silent through the whole count roll... */
     for (let t = 0; t < 1700; t += 100) {
       if (shownScore() !== total) expect(rankingStarts()).toBe(0);
       vi.advanceTimersByTime(100);
     }
-    vi.advanceTimersByTime(1000);     // safely past the count completion
+    vi.advanceTimersByTime(1000);
     expect(shownScore()).toBe(total); // the roll landed on the real total
-    expect(rankingStarts()).toBe(1);  // and only then did the music start, once
-    /* the settled score reached assistive tech once, via the polite live region */
+    /* ...and does NOT start at count completion — The End comes next, owning the music. */
+    expect(rankingStarts()).toBe(0);
     expect(document.querySelector('[aria-live="polite"]')?.textContent).toBe(`Score: ${total}`);
+
+    vi.advanceTimersByTime(30000); // win hold → The End → its cinematic → ranking
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+    expect(rankingStarts()).toBe(1); // only now, exactly once
+  });
+});
+
+describe('The End finale screen', () => {
+  class SettledImage {
+    complete = true;
+    naturalWidth = 1;
+    src = '';
+    addEventListener(): void {}
+  }
+
+  let audioSrcs: string[] = [];
+
+  beforeAll(() => {
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('Image', SettledImage);
+    audioSrcs = [];
+    const RealAudio = window.Audio;
+    vi.stubGlobal('Audio', function (src?: string) {
+      audioSrcs.push(src ?? '');
+      return new RealAudio(src);
+    });
+    localStorage.setItem('audio-muted', '0');
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+  });
+
+  afterEach(() => {
+    history.replaceState(null, '', '/');
+    localStorage.removeItem('audio-muted');
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  });
+
+  it('mounts the finale with its own loop, not the ranking music', () => {
+    expect(document.querySelector('.the-end-screen')).not.toBeNull();
+    expect(audioSrcs.some((s) => /tim_2/i.test(s))).toBe(true);       // 109 finale loop
+    expect(audioSrcs.some((s) => /reed-flutes/i.test(s))).toBe(false);
+    expect(document.querySelector('.ranking-screen')).toBeNull();
+  });
+
+  it('plays the balloon SFX after boarding, at ascent start — never before', () => {
+    const balloonPlayed = (): boolean => audioSrcs.some((s) => /balloon/i.test(s));
+    vi.advanceTimersByTime(THE_END_WALK_MS + THE_END_PROMPT_HOLD_MS); // auto lift-off fires → boarding begins
+    expect(balloonPlayed()).toBe(false); // not at boarding
+    vi.advanceTimersByTime(THE_END_BOARD_MS); // board done → ascent start
+    expect(balloonPlayed()).toBe(true);
+  });
+
+  it('a press lifts off immediately, without waiting out the prompt hold', () => {
+    const balloonPlayed = (): boolean => audioSrcs.some((s) => /balloon/i.test(s));
+    vi.advanceTimersByTime(1500); // walk done, prompt up — well before the auto lift-off
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
+    vi.advanceTimersByTime(THE_END_BOARD_MS); // board → ascent SFX
+    expect(balloonPlayed()).toBe(true);
+  });
+
+  it('auto-advances to the ranking even with no input (no soft-lock)', () => {
+    vi.advanceTimersByTime(60000);
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+  });
+
+  it('the Skip button routes straight to the ranking', () => {
+    (document.querySelector('.the-end-skip') as HTMLButtonElement).click();
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+  });
+
+  it('wires Skip and the auto-route timer even while the scene assets are still loading', () => {
+    /* Pending images whose load/error never fire — the real-browser case the
+       SettledImage stub hides. Skip and the no-soft-lock timer must work anyway. */
+    class PendingImage {
+      complete = false;
+      naturalWidth = 0;
+      src = '';
+      addEventListener(): void {}
+    }
+    vi.stubGlobal('Image', PendingImage);
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+
+    expect(document.querySelector('.the-end-screen')).not.toBeNull();
+    (document.querySelector('.the-end-skip') as HTMLButtonElement).click();
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+  });
+
+  it('reduced motion jumps to the end state and routes to the ranking without the cinematic', () => {
+    const realMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: /reduce/.test(query), media: query, onchange: null,
+      addEventListener() {}, removeEventListener() {},
+      addListener() {}, removeListener() {}, dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+
+    expect(document.querySelector('.the-end-credits--static')).not.toBeNull(); // static credits, no crawl
+    vi.advanceTimersByTime(THE_END_END_HOLD_MS); // → ranking
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+    window.matchMedia = realMatchMedia;
+  });
+
+  it('reduced motion redraws the finale once scene assets finish decoding', () => {
+    const realMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: /reduce/.test(query), media: query, onchange: null,
+      addEventListener() {}, removeEventListener() {},
+      addListener() {}, removeListener() {}, dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+
+    class DeferredImage {
+      complete = false;
+      naturalWidth = 0;
+      naturalHeight = 0;
+      src = '';
+      addEventListener(event: string, cb: () => void): void {
+        if (event === 'load') {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 800;
+            this.naturalHeight = 800;
+            cb();
+          }, 0);
+        }
+      }
+    }
+    vi.stubGlobal('Image', DeferredImage);
+    const drawImage = vi.fn();
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this, type, options) {
+      const ctx = origGetContext.call(this, type, options) as CanvasRenderingContext2D | null;
+      if (ctx && type === '2d') ctx.drawImage = drawImage;
+      return ctx;
+    });
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+
+    expect(drawImage).not.toHaveBeenCalled(); // first draw: ready() still false
+    vi.advanceTimersByTime(0); // load settles → redraw with decoded assets
+    expect(drawImage).toHaveBeenCalled();
+
+    window.matchMedia = realMatchMedia;
   });
 });
 

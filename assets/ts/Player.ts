@@ -1,6 +1,6 @@
 export const BLINK_TOTAL_STEPS = 30;
 const HAIR_PERIOD = 48;
-const SVG_SIZE = 142;
+export const LEMMING_GRID = 142; // drawLemmingShape / drawLemmingMascot coordinate space
 
 let _bodyPath: Path2D | null = null;
 let _hairPath: Path2D | null = null;
@@ -97,7 +97,7 @@ export function drawLemmingShape(ctx: CanvasRenderingContext2D, bodyColor: strin
 export function drawLemmingMascot(ctx: CanvasRenderingContext2D, canvasSize: number, frameCount: number): void {
   ctx.clearRect(0, 0, canvasSize, canvasSize);
   ctx.save();
-  ctx.scale(canvasSize / SVG_SIZE, canvasSize / SVG_SIZE);
+  ctx.scale(canvasSize / LEMMING_GRID, canvasSize / LEMMING_GRID);
   drawLemmingShape(ctx, '#FFFFFF', getHairLevel(frameCount));
   ctx.restore();
 }
@@ -174,7 +174,7 @@ export class Player {
     }
 
     const { ctx, dx, dy, dWidth, direction } = this;
-    const scale = dWidth / SVG_SIZE;
+    const scale = dWidth / LEMMING_GRID;
     const bodyColor = blinking ? this.blinkColor : getBodyColor(this.lives);
 
     ctx.save();

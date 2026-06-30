@@ -18,7 +18,7 @@ The run is a continuous journey across linked worlds, with score banking across 
 | 🟦 **The Surface** | ✅ Playable  | Dodge falling bombs with ← → as levels escalate. The ground cracks and erodes until it collapses beneath you.                                                                     |
 | 🟫 **The Tunnel**  | ✅ Playable  | Trapped underground. Pick up unexploded bombs, find the crack in the wall, light the fuse, and breach your way out across three cycles — before the lowering ceiling crushes you. |
 | ⬛ **The Abyss**    | ✅ Playable  | A horizontal escape through a hazard-lined corridor — gather fallen bombs and hurl them up to bring down stalactites — bookended by the door cold-open and the exit-door close.    |
-| 🎬 **The End**     | 🗺️ Planned | A dedicated finale screen — the win payoff and emotional close of the full game.                                                                                                  |
+| 🎬 **The End**     | ✅ Playable  | A dedicated finale screen — the balloon-escape cinematic, a credits crawl, and the win payoff before the leaderboard.                                                              |
 
 
 Death routes to **Game Over** with your banked score; a successful escape carries you onward to the **Ranking** (global top-10 leaderboard).
@@ -68,9 +68,9 @@ public/                     # og-image and static assets
 
 ## Roadmap
 
-The build runs one iteration at a time, spec-first. Iterations I–VI have shipped; VII is next.
+The build runs one iteration at a time, spec-first. Iterations I–VII have shipped — the full arc is playable end to end.
 
-**Shipped — Iterations I–VI**
+**Shipped — Iterations I–VII**
 
 
 | #   | Iteration                           | Delivered                                                                                                                                                                                                                                              |
@@ -81,16 +81,8 @@ The build runs one iteration at a time, spec-first. Iterations I–VI have shipp
 | IV  | Level Progression & Ground Erosion  | Three-level difficulty ramp, level-transition UI/audio, level-gated ground erosion (cracks → holes → collapse), last-level earthquake warning, cumulative time-based scoring, collapse transition into the Tunnel.                                     |
 | V   | Tunnel Escape Puzzle                | Underground screen with info modal, bomb pickup + crack-finding + fuse-lighting across three cycles, lowering-ceiling crush death + respawn, Tunnel→Abyss collapse transition, full both-worlds scoring breakdown, distinct background loop + SFX set. |
 | VI  | The Abyss: Horizontal Escape        | Camera-following side-scroll corridor with a door cold-open (settle → door opens → fall-in) and exit-door close, gather-and-throw mechanic (pick up fallen bombs, hurl them up to smash three stalactite sizes), time-gated three-level ramp, full three-world scoring, driving `Awesome.ogg` loop + new SFX. Plus a pre-VII hardening pass: win-canvas fix, an `aria-live` results layer, reduced-motion + contrast completeness. |
+| VII | The End                             | The win-path finale: after the win score, a balloon-escape cinematic (the lemming boards, then ascends with the camera following up into the sky, to `Tim_2.ogg`) with an optional no-fail "press to lift off" beat, a skippable credits crawl, then onward to the Ranking. Reduced-motion/skip paths and the leaderboard submission unchanged. |
 
-
-### Iteration VII — The End
-
-A dedicated finale screen: the emotional close and win payoff of the full game. Split out from the Abyss (VI) on purpose so the ending — the screen players carry away — gets its own focus instead of being crammed into VI's plate.
-
-1. Dedicated `TheEnd` screen with its own background art and dramaturgy (composition, pacing, copy, and likely a dedicated music cue).
-2. Balloon escape cinematic (moved here from VI): a brief non-interactive beat where the lemming is lifted by the hot air balloon from the original Lemmings — the emotional peak and payoff, set to the most iconic available Lemmings DOS OST cue.
-3. Formalises the win ending: today the win routes through the parameterized `GAME OVER` *win* variant; `THE END` becomes a bespoke screen that replaces (or sits just ahead of) it — the exact placement relative to the balloon cinematic and the ranking is a scope-time decision. Death keeps the `GAME OVER` screen.
-4. Sequencing & gate: ships after the Abyss (VI) — it is the beat the player reaches once the Abyss escape completes — and is blocked on the dedicated background artwork being provided (not generated).
 
 ## Development
 
@@ -132,6 +124,7 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 | `03_-_Lemmings_-_DOS_-_Lemming_2.ogg`                | Surface background music       |
 | `113_-_Lemmings_-_DOS_-_Tim_5.ogg`                   | Tunnel / underground cave loop |
 | `121_-_Lemmings_-_DOS_-_Awesome.ogg`                 | Abyss escape corridor loop      |
+| `109_-_Lemmings_-_DOS_-_Tim_2.ogg`                   | The End finale screen           |
 | `14_-_Lemmings_-_DOS_-_Dance_of_the_Reed-Flutes.ogg` | Ranking (Hall of Fame) screen  |
 
 
@@ -163,7 +156,7 @@ Audio comes from two fan-tribute sources, both chosen for tonal and legal consis
 | File                             | Used for                                                |
 | -------------------------------- | ------------------------------------------------------- |
 | `intro-falling-sound-effect.mp3` | World-boundary fall cue (Surface→Tunnel · Tunnel→Abyss) |
-| `intro-balloon-sound-effect.mp3` | Balloon-escape cinematic (Iteration VII — not yet wired) |
+| `intro-balloon-sound-effect.mp3` | The End balloon-escape cinematic (plays at ascent start) |
 
 
 All audio respects the in-game mute toggle and pauses when the tab is hidden.
