@@ -1,7 +1,7 @@
-import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
-import { drawFootingPad } from './lib/footingPad';
-import { loadImage, loadImages, ready } from './lib/images';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { BOMB_WIDTH, BOMB_HEIGHT } from '../../lib/geometry';
+import { drawFootingPad } from '../../lib/footingPad';
+import { loadImage, loadImages, ready } from '../../lib/images';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 import {
   TUNNEL_LEVEL_CONFIG, FLOOR_FRAC, CRACK_RANGE_FRAC,
   BREACH_BOOM_STEPS, BREACH_PAN_STEPS,
@@ -10,7 +10,7 @@ import {
 import {
   SPRITES, CRACK_MARK_SVGS, GROUND_HOLE_SVGS,
   TUNNEL_BACKGROUND_SVG, TUNNEL_CEILING_SVG,
-} from './assets';
+} from '../../assets';
 
 /* Render-only geometry, baked to the tunnel artwork. */
 const CEILING_ASPECT = 800 / 800;     // tunnel-ceiling.svg strip

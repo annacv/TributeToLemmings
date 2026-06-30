@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { SurfaceRenderer } from './SurfaceRenderer';
-import { makeCanvas, mockPendingImage, mockReadyImage } from './test-helpers';
+import { makeCanvas, mockPendingImage, mockReadyImage } from '../../test-helpers';
 
 /* The offscreen erosion context comes from jsdom's stubbed getContext (test-setup),
    so its drawImage is already a vi.fn() we can assert on directly. */

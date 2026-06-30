@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { drawTheEndScene } from './TheEndRenderer';
 import { theEndFrameAt } from './TheEndScene';
-import { makeCtx, mockPendingImage, mockReadyImage } from './test-helpers';
+import { makeCtx, mockPendingImage, mockReadyImage } from '../../test-helpers';
 import { THE_END_TEST_CONFIG as config, THE_END_TEST_DURATIONS as durations } from './theEndTestFixtures';
 
 describe('drawTheEndScene', () => {

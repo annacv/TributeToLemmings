@@ -1,7 +1,7 @@
-import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
-import { loadImage, loadImages, ready } from './lib/images';
-import { drawFootingPad } from './lib/footingPad';
-import { Stalactite } from './Stalactite';
+import { BOMB_WIDTH, BOMB_HEIGHT } from '../../lib/geometry';
+import { loadImage, loadImages, ready } from '../../lib/images';
+import { drawFootingPad } from '../../lib/footingPad';
+import { Stalactite } from '../../entities/Stalactite';
 import {
   ABYSS_FLOOR_FRAC, ABYSS_CEILING_FRAC, THROW_RANGE_FRAC, THROW_FLIGHT_STEPS, type AbyssView,
 } from './AbyssGame';
@@ -9,7 +9,7 @@ import {
   SPRITES, STALACTITE_SVGS, STALACTITE_CRACK_SVGS,
   ABYSS_BACKGROUND_SVG,
   ABYSS_DOOR_ENTRANCE_SVG, ABYSS_DOOR_ENTRANCE_OPEN_SVG, ABYSS_DOOR_EXIT_SVG,
-} from './assets';
+} from '../../assets';
 
 const SIZE_INDEX = { small: 0, medium: 1, large: 2 } as const;
 const STALACTITE_HEIGHT_FRAC = { small: 0.16, medium: 0.22, large: 0.30 } as const;

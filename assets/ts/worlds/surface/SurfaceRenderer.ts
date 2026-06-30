@@ -1,5 +1,5 @@
-import { loadImages } from './lib/images';
-import { CRACK_MARK_SVGS, GROUND_HOLE_SVGS } from './assets';
+import { loadImages } from '../../lib/images';
+import { CRACK_MARK_SVGS, GROUND_HOLE_SVGS } from '../../assets';
 import type { SurfaceView } from './SurfaceGame';
 
 /* Ground-band geometry, baked to the surface artwork. */

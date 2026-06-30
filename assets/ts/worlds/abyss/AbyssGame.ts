@@ -1,19 +1,19 @@
-import { Player } from './Player';
-import { Bomb } from './Bomb';
-import { Stalactite } from './Stalactite';
-import { RunHost } from './lib/RunHost';
-import { Hud } from './lib/Hud';
+import { Player } from '../../entities/Player';
+import { Bomb } from '../../entities/Bomb';
+import { Stalactite } from '../../entities/Stalactite';
+import { RunHost } from '../../lib/RunHost';
+import { Hud } from '../../lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
-import { SoundEffectBank } from './lib/SoundEffectBank';
-import { bombHitsPlayer, PICKUP_RANGE_FRAC } from './lib/geometry';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { SoundEffectBank } from '../../lib/SoundEffectBank';
+import { bombHitsPlayer, PICKUP_RANGE_FRAC } from '../../lib/geometry';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 import {
   makeBreakdown, LEVEL_POINTS, LEVEL_THRESHOLDS_S,
   type ScoreBreakdown, type StalactiteSize, type StalactiteBreaks,
-} from './lib/score';
+} from '../../lib/score';
 import {
   SPRITES, EXPLODE_SFX, MANTRAP_SFX, THUD_SFX, DOOR_SFX, LETSGO_SFX, FALLING_SFX, FIRE_SFX, YIPPEE_SFX,
-} from './assets';
+} from '../../assets';
 
 export const ABYSS_TIME_BUDGET_S = 72;
 

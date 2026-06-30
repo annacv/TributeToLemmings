@@ -1,7 +1,7 @@
-import { AbyssGame } from './AbyssGame';
-import { SurfaceGame } from './SurfaceGame';
-import { Bomb } from './Bomb';
-import { Player } from './Player';
+import { AbyssGame } from './worlds/abyss/AbyssGame';
+import { SurfaceGame } from './worlds/surface/SurfaceGame';
+import { Bomb } from './entities/Bomb';
+import { Player } from './entities/Player';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 
 /** Surface → tunnel handoff (3 cleared levels at 5 pts each). */

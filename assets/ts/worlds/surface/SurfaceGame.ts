@@ -1,18 +1,18 @@
-import { Player } from './Player';
-import { Bomb } from './Bomb';
-import { RunHost } from './lib/RunHost';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
-import { Hud } from './lib/Hud';
-import { restartAnimation } from './lib/fx';
-import { BOMB_WIDTH, bombHitsPlayer } from './lib/geometry';
-import { makeBreakdown, LEVEL_POINTS, LEVEL_THRESHOLDS_S, type ScoreBreakdown } from './lib/score';
-import * as audio from './lib/audio';
-import { SoundEffectBank } from './lib/SoundEffectBank';
+import { Player } from '../../entities/Player';
+import { Bomb } from '../../entities/Bomb';
+import { RunHost } from '../../lib/RunHost';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
+import { Hud } from '../../lib/Hud';
+import { restartAnimation } from '../../lib/fx';
+import { BOMB_WIDTH, bombHitsPlayer } from '../../lib/geometry';
+import { makeBreakdown, LEVEL_POINTS, LEVEL_THRESHOLDS_S, type ScoreBreakdown } from '../../lib/score';
+import * as audio from '../../lib/audio';
+import { SoundEffectBank } from '../../lib/SoundEffectBank';
 import { SurfaceRenderer } from './SurfaceRenderer';
 import {
   FIRE_SFX, GAME_SONG, SPRITES,
   YIPPEE_SFX, ELECTRIC_SFX, BANG_SFX, TENTON_SFX,
-} from './assets';
+} from '../../assets';
 
 
 const EXPLOSION_STEPS = 6; // ~100 ms (6 steps at 60/s) — show the explosion before removal
