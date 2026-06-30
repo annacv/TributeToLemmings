@@ -12,15 +12,15 @@ export function playSfx(sfx: HTMLAudioElement, muted: boolean): void {
 
 /** Looping channel (music, fuse tick): mute keeps the loop running silently so
     unmuting mid-loop resumes in place, matching the music elements' behavior. */
-export function playLoop(loop: HTMLAudioElement, muted: boolean): void {
-  loop.loop = true;
-  loop.muted = muted;
-  safePlay(loop);
+export function playLoop(music: HTMLAudioElement, muted: boolean): void {
+  music.loop = true;
+  music.muted = muted;
+  safePlay(music);
 }
 
-export function stopLoop(loop: HTMLAudioElement): void {
-  loop.pause();
-  loop.currentTime = 0;
+export function stopLoop(music: HTMLAudioElement): void {
+  music.pause();
+  music.currentTime = 0;
 }
 
 /** A hidden tab freezes the game (requestAnimationFrame stops) but audio keeps playing — pause

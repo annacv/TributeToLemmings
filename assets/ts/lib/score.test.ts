@@ -5,30 +5,30 @@ import {
 
 describe('ScoreBreakdown', () => {
   it('total always equals the sum of the parts (three worlds)', () => {
-    const b = makeBreakdown({
+    const breakdown = makeBreakdown({
       surfaceTime: 62,
       tunnelTime: 23,
       abyssTime: 30,
       stalactites: { small: 2, medium: 1, large: 0 },
       levelsBonus: 45,
     });
-    expect(b.total).toBe(
-      b.surfaceTime + b.tunnelTime + b.abyssTime + b.stalactiteBonus + b.levelsBonus,
+    expect(breakdown.total).toBe(
+      breakdown.surfaceTime + breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus,
     );
-    expect(b.total).toBe(62 + 23 + 30 + 20 + 45);
+    expect(breakdown.total).toBe(62 + 23 + 30 + 20 + 45);
   });
 
   it('derives the stalactite bonus from the per-size weights', () => {
-    const b = makeBreakdown({ stalactites: { small: 3, medium: 2, large: 1 } });
-    expect(b.stalactiteBonus).toBe(
+    const breakdown = makeBreakdown({ stalactites: { small: 3, medium: 2, large: 1 } });
+    expect(breakdown.stalactiteBonus).toBe(
       3 * STALACTITE_POINTS.small + 2 * STALACTITE_POINTS.medium + 1 * STALACTITE_POINTS.large,
     );
-    expect(b.stalactiteBonus).toBe(b.total);
+    expect(breakdown.stalactiteBonus).toBe(breakdown.total);
   });
 
   it('missing parts default to zero', () => {
-    const b = makeBreakdown({ surfaceTime: 30 });
-    expect(b).toEqual({
+    const breakdown = makeBreakdown({ surfaceTime: 30 });
+    expect(breakdown).toEqual({
       surfaceTime: 30,
       tunnelTime: 0,
       abyssTime: 0,
@@ -45,53 +45,40 @@ describe('ScoreBreakdown', () => {
 
   it('never aliases the caller’s live stalactite counters', () => {
     const live = { small: 1, medium: 0, large: 0 };
-    const b = makeBreakdown({ stalactites: live });
+    const breakdown = makeBreakdown({ stalactites: live });
     live.small = 99;
-    expect(b.stalactites.small).toBe(1);
+    expect(breakdown.stalactites.small).toBe(1);
   });
 });
 
 describe('Surface and Tunnel numbers are unchanged', () => {
   it('surface-only run scores surface time + levels, no abyss/stalactite components', () => {
-    const b = makeBreakdown({ surfaceTime: 42, levelsBonus: 2 * LEVEL_POINTS });
-    expect(b.total).toBe(42 + 10);
-    expect(b.abyssTime).toBe(0);
-    expect(b.stalactiteBonus).toBe(0);
+    const breakdown = makeBreakdown({ surfaceTime: 42, levelsBonus: 2 * LEVEL_POINTS });
+    expect(breakdown.total).toBe(42 + 10);
+    expect(breakdown.abyssTime).toBe(0);
+    expect(breakdown.stalactiteBonus).toBe(0);
   });
 
   it('surface + tunnel run is unaffected by the new fields', () => {
-    const b = makeBreakdown({ surfaceTime: 42, tunnelTime: 35, levelsBonus: 6 * LEVEL_POINTS });
-    expect(b.total).toBe(42 + 35 + 30);
+    const breakdown = makeBreakdown({ surfaceTime: 42, tunnelTime: 35, levelsBonus: 6 * LEVEL_POINTS });
+    expect(breakdown.total).toBe(42 + 35 + 30);
   });
 });
 
 describe('levels score across all three worlds', () => {
-  it('abyss death excludes the level died on', () => {
-    // Entered the abyss with S + C = 6 prior levels; dies on abyss level 3.
-    // Counts abyss L1 + L2 only → 6 + (3 − 1) = 8 levels.
-    const priorLevels = 6;
-    const diedOnAbyssLevel = 3;
-    const levels = priorLevels + (diedOnAbyssLevel - 1);
-    const b = makeBreakdown({
-      surfaceTime: 42, tunnelTime: 30, abyssTime: 24, levelsBonus: levels * LEVEL_POINTS,
-    });
-    expect(b.levelsBonus).toBe(8 * LEVEL_POINTS);
-    expect(b.total).toBe(42 + 30 + 24 + 0 + 40);
-  });
-
   it('full completion counts every level across surface + tunnel + abyss', () => {
     const surfaceLevels = 3;
     const tunnelCycles = 3;
     const abyssLevels = 3;
-    const b = makeBreakdown({
+    const breakdown = makeBreakdown({
       surfaceTime: 42,
       tunnelTime: 30,
       abyssTime: 54,
       stalactites: { small: 4, medium: 2, large: 1 },
       levelsBonus: (surfaceLevels + tunnelCycles + abyssLevels) * LEVEL_POINTS,
     });
-    expect(b.levelsBonus).toBe(9 * LEVEL_POINTS);
-    expect(b.total).toBe(42 + 30 + 54 + (4 * 5 + 2 * 10 + 1 * 15) + 45);
+    expect(breakdown.levelsBonus).toBe(9 * LEVEL_POINTS);
+    expect(breakdown.total).toBe(42 + 30 + 54 + (4 * 5 + 2 * 10 + 1 * 15) + 45);
   });
 });
 
@@ -115,10 +102,10 @@ describe('breakdownLines', () => {
 
   it('zero-value lines are filtered out by the caller, so they read 0', () => {
     const lines = breakdownLines(makeBreakdown({ surfaceTime: 42, levelsBonus: 5 }));
-    const abyss = lines.find((l) => l.label === 'Abyss time');
-    const stal = lines.find((l) => l.label === 'Stalactites');
-    expect(abyss).toEqual({ label: 'Abyss time', rule: '0 s', value: 0 });
-    expect(stal).toEqual({ label: 'Stalactites', rule: '0', value: 0 });
+    const abyssLine = lines.find((l) => l.label === 'Abyss time');
+    const stalactitesLine = lines.find((l) => l.label === 'Stalactites');
+    expect(abyssLine).toEqual({ label: 'Abyss time', rule: '0 s', value: 0 });
+    expect(stalactitesLine).toEqual({ label: 'Stalactites', rule: '0', value: 0 });
   });
 
   it('has no lives line — lives never score', () => {

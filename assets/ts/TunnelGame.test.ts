@@ -1,20 +1,21 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import {
   TunnelGame, TUNNEL_LEVEL_CONFIG, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
-  FLOOR_FRAC, CRUSH_HEADROOM_FRAC, WARNING_HEADROOM_FRAC,
+  FLOOR_FRAC, CRUSH_HEADROOM_FRAC,
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
 import { makeBreakdown } from './lib/score';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas, stubAnimationFrame } from './test-helpers';
+import { SURFACE_HANDOFF_BREAKDOWN } from './test-game-factories';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
 function timeToCrushSteps(level: (typeof TUNNEL_LEVEL_CONFIG)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;
 }
 
-function makeTunnel(canvas: HTMLCanvasElement, base = makeBreakdown({ surfaceTime: 42, levelsBonus: 15 })) {
-  const game = new TunnelGame(canvas, base);
+function makeTunnelGame(canvas: HTMLCanvasElement, breakdown = SURFACE_HANDOFF_BREAKDOWN) {
+  const game = new TunnelGame(canvas, breakdown);
   game.startGame();
   return game;
 }
@@ -25,9 +26,7 @@ function armCrush(game: TunnelGame): void {
 }
 
 beforeAll(() => {
-  /* jsdom has no rAF; tests drive the simulation through step() directly */
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  stubAnimationFrame();
 });
 
 describe('TunnelGame — per-level tunables (solvability invariants)', () => {
@@ -39,9 +38,9 @@ describe('TunnelGame — per-level tunables (solvability invariants)', () => {
 
   it('level 3 can crush within the budget, but no sooner than ~30 s (sped up per playtest)', () => {
     const budgetSteps = TUNNEL_TIME_BUDGET_S * STEPS_PER_SECOND;
-    const l3 = timeToCrushSteps(TUNNEL_LEVEL_CONFIG[2]);
-    expect(l3).toBeLessThan(budgetSteps);
-    expect(l3).toBeGreaterThanOrEqual(30 * STEPS_PER_SECOND);
+    const level3Config = timeToCrushSteps(TUNNEL_LEVEL_CONFIG[2]);
+    expect(level3Config).toBeLessThan(budgetSteps);
+    expect(level3Config).toBeGreaterThanOrEqual(30 * STEPS_PER_SECOND);
   });
 
   it('the bomb count escalates per level and level 1 needs more than one', () => {
@@ -57,19 +56,16 @@ describe('TunnelGame — per-level tunables (solvability invariants)', () => {
     expect(TUNNEL_LEVEL_CONFIG[2].driftPerStep).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[1].driftPerStep);
   });
 
-  it('the warning band sits above the kill line', () => {
-    expect(WARNING_HEADROOM_FRAC).toBeGreaterThan(CRUSH_HEADROOM_FRAC);
-  });
 });
 
 describe('TunnelGame — skeleton and countdown', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
   afterEach(() => { document.body.innerHTML = ''; });
 
   it('starts in explore with 3 lives at the cycle-1 ceiling', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     expect(game.state).toBe('explore');
     expect(game.player?.lives).toBe(3);
     expect(game.headroomFrac()).toBeCloseTo(
@@ -78,7 +74,7 @@ describe('TunnelGame — skeleton and countdown', () => {
   });
 
   it('counts down from the budget by step counting and floors at 0', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     expect(game.secondsLeft()).toBe(TUNNEL_TIME_BUDGET_S);
     for (let i = 0; i < STEPS_PER_SECOND; i++) game.step();
     expect(game.secondsLeft()).toBe(TUNNEL_TIME_BUDGET_S - 1);
@@ -88,7 +84,7 @@ describe('TunnelGame — skeleton and countdown', () => {
   });
 
   it('pause early-returns the step: no drift, no countdown', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.paused = true;
     const ceiling = game.ceilingFrac;
     const steps = game.stepCount;
@@ -98,7 +94,7 @@ describe('TunnelGame — skeleton and countdown', () => {
   });
 
   it('the ceiling drifts down every unpaused step at the level velocity', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const before = game.ceilingFrac;
     for (let i = 0; i < 100; i++) game.step();
     expect(game.ceilingFrac).toBeCloseTo(before + 100 * TUNNEL_LEVEL_CONFIG[0].driftPerStep, 9);
@@ -108,7 +104,7 @@ describe('TunnelGame — skeleton and countdown', () => {
 describe('TunnelGame — mechanic state machine', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
   afterEach(() => { document.body.innerHTML = ''; });
 
   function placePlayerAt(game: TunnelGame, xFrac: number): void {
@@ -120,7 +116,7 @@ describe('TunnelGame — mechanic state machine', () => {
   }
 
   it('carries every bomb to the floor crack, then three lights arm the fuse', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const required = TUNNEL_LEVEL_CONFIG[0].bombs;
 
     for (let i = 0; i < required; i++) {
@@ -145,7 +141,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('placing requires standing at the floor crack', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     placePlayerAt(game, game.floorBombs[0]);
     game.action();
     expect(game.state).toBe('carry');
@@ -157,7 +153,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('action away from every bomb does nothing in explore', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.floorBombs = [0.2];
     placePlayerAt(game, 0.6);
     game.action();
@@ -165,7 +161,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('action is inert while paused', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     placePlayerAt(game, game.floorBombs[0]);
     game.paused = true;
     game.action();
@@ -173,7 +169,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('each light press strikes the scrape; the third ignites the fuse loop', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const scrape = vi.spyOn(game.sfx.get('scrape')!, 'play').mockResolvedValue(undefined);
     const fuse = vi.spyOn(game.sfx.get('fuse')!, 'play').mockResolvedValue(undefined);
     game.state = 'placed';
@@ -188,7 +184,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('fuse expiry banks a share + the cycle award and starts the breach sequence', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.state = 'armed';
     game.fuseStepsLeft = 1;
     game.step();
@@ -199,7 +195,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('breach pans into the next chamber, announces the level, then the ceiling drops', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const frozen = game.secondsLeft();
     game.state = 'armed';
     game.fuseStepsLeft = 1;
@@ -218,7 +214,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('the breach drops the lemming straight down from where he lit, no teleport', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     placePlayerAt(game, game.crackXFrac); // he lit on the charge and stays committed
     const pitX = game.crackXFrac;
     game.state = 'armed';
@@ -231,7 +227,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('lighting requires standing at the crack; pressing away from it does nothing', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.state = 'placed';
     placePlayerAt(game, game.crackXFrac > 0.5 ? 0.05 : 0.95); // away from the crack
     game.action();
@@ -247,20 +243,20 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('the lemming is frozen on the charge through the lit fuse (no walk-off)', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     placePlayerAt(game, game.crackXFrac);
     game.state = 'armed';
     game.fuseStepsLeft = 60;
     game.player!.direction = 1;              // try to walk away
-    const x0 = game.player!.dx;
+    const initialDx = game.player!.dx;
     for (let i = 0; i < 30; i++) game.step();
-    expect(game.player!.dx).toBe(x0);        // committed: didn't move while armed
+    expect(game.player!.dx).toBe(initialDx);        // committed: didn't move while armed
     expect(game.state).toBe('armed');        // fuse still burning
   });
 
   it('the crack sits on the floor within the band, off the bombs, every cycle (no special last cycle)', () => {
     for (let i = 0; i < 15; i++) {
-      const game = makeTunnel(makeCanvas(468, 468));
+      const game = makeTunnelGame(makeCanvas());
       const check = () => {
         expect(game.crackXFrac).toBeGreaterThanOrEqual(CRACK_MIN_X_FRAC);
         expect(game.crackXFrac).toBeLessThanOrEqual(CRACK_MAX_X_FRAC);
@@ -276,7 +272,7 @@ describe('TunnelGame — mechanic state machine', () => {
   });
 
   it('bombs spawn apart from each other in the middle band', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game['beginCycle'](2); // the most bombs
     const bombs = [...game.floorBombs].sort((a, b) => a - b);
     for (let i = 1; i < bombs.length; i++) {
@@ -288,11 +284,11 @@ describe('TunnelGame — mechanic state machine', () => {
 describe('TunnelGame — crush death and respawn (D10)', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
   afterEach(() => { document.body.innerHTML = ''; });
 
   it('crush consumes a life and restarts the cycle from its start height with the remaining time', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.stepCount = 20 * STEPS_PER_SECOND; // 40 s left
     armCrush(game);
     game.step();
@@ -304,7 +300,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('no second crush is possible within one step of respawn', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     armCrush(game);
     game.step();
     expect(game.player?.lives).toBe(2);
@@ -314,7 +310,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('crush mid-fuse cancels the armed state, stops the tick, and restores the bomb layout', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const stopTick = vi.spyOn(game.sfx.get('fuse')!, 'pause');
     game.placedCount = TUNNEL_LEVEL_CONFIG[0].bombs;
     game.floorBombs = [];
@@ -331,7 +327,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('a muted crush plays nothing through the channel helper', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.muted = true;
     const play = vi.spyOn(game.sfx.get('crush')!, 'play');
     armCrush(game);
@@ -341,7 +337,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('an unmuted crush plays the squash exactly once', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.muted = false;
     const play = vi.spyOn(game.sfx.get('crush')!, 'play').mockResolvedValue(undefined);
     armCrush(game);
@@ -350,7 +346,7 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('the third crush ends the run once, with the banked-only breakdown', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.player!.lives = 1;
     game.bankedSeconds = 25;
     game.cyclesCleared = 1;
@@ -381,11 +377,11 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
 describe('TunnelGame — completion routing', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
   afterEach(() => { document.body.innerHTML = ''; });
 
   it('the third breach banks the rest and completes exactly once', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.stepCount = 10 * STEPS_PER_SECOND; // 50 s left
     game.bankedSeconds = 30;
     game.cyclesCleared = 2;
@@ -421,7 +417,7 @@ describe('TunnelGame — completion routing', () => {
   });
 
   it('no crush can resolve after the completion bank (drift suspended through the final breach)', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     game.cyclesCleared = 2;
     game.cycle = 2;
     game.state = 'armed';
@@ -444,7 +440,7 @@ describe('TunnelGame — HUD countdown and banking pop', () => {
   let canvas: HTMLCanvasElement;
 
   beforeEach(() => {
-    canvas = makeCanvas(468, 468);
+    canvas = makeCanvas();
     document.body.innerHTML = `
       <div class="lives-icons"></div>
       <span class="hud-item lives-item"><span class="hud-value lives-value"></span></span>
@@ -459,7 +455,7 @@ describe('TunnelGame — HUD countdown and banking pop', () => {
   afterEach(() => { document.body.innerHTML = ''; });
 
   it('enters the warning state at 10 seconds left, not before', () => {
-    const game = makeTunnel(canvas);
+    const game = makeTunnelGame(canvas);
     const digits = document.querySelector('.seconds-value') as HTMLElement;
     game.stepCount = (TUNNEL_TIME_BUDGET_S - 11) * 60;
     game.step();

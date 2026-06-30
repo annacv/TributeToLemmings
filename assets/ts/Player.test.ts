@@ -4,12 +4,12 @@ import { makeCtx, makeCanvas } from './test-helpers';
 
 describe('Player', () => {
   let canvas: HTMLCanvasElement;
-  let mockCtx: ReturnType<typeof makeCtx>;
+  let ctx: ReturnType<typeof makeCtx>;
 
   beforeEach(() => {
-    mockCtx = makeCtx();
-    canvas = makeCanvas();
-    canvas.getContext = vi.fn().mockReturnValue(mockCtx) as typeof canvas.getContext;
+    ctx = makeCtx();
+    canvas = makeCanvas(400, 400);
+    canvas.getContext = vi.fn().mockReturnValue(ctx) as typeof canvas.getContext;
   });
 
   it('does not walk off the left edge when ← is pressed right after a left-wall bounce', () => {
@@ -65,10 +65,10 @@ describe('Player', () => {
     while (player.blinkStepsLeft > 0) {
       player.tickBlink();
       player.tickBlink();
-      mockCtx.fill.mockClear();
+      ctx.fill.mockClear();
       player.drawImage(0);
       if (player.blinkStepsLeft > 0) {
-        if (mockCtx.fill.mock.calls.length > 0) visibleFrames++;
+        if (ctx.fill.mock.calls.length > 0) visibleFrames++;
         else hiddenFrames++;
       }
     }
@@ -80,16 +80,16 @@ describe('Player', () => {
     const player = new Player(canvas);
     player.triggerBlink();
     player.lives = 2;
-    mockCtx._fills.length = 0;
+    ctx._fills.length = 0;
     player.drawImage(0);
-    expect(mockCtx._fills[0]).toBe('#FFFFFF');
+    expect(ctx._fills[0]).toBe('#FFFFFF');
   });
 
   it('drawImage uses post-damage body color after blink ends', () => {
     const player = new Player(canvas);
     player.lives = 2;
-    mockCtx._fills.length = 0;
+    ctx._fills.length = 0;
     player.drawImage(0);
-    expect(mockCtx._fills[0]).toBe('#FEBD00');
+    expect(ctx._fills[0]).toBe('#FEBD00');
   });
 });

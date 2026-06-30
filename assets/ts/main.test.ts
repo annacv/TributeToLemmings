@@ -7,9 +7,20 @@ import {
   THE_END_END_HOLD_MS,
 } from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
-import { makeBreakdown, type ScoreBreakdown } from './lib/score';
-import { TunnelGame } from './TunnelGame';
-import { AbyssGame, ABYSS_TIME_BUDGET_S } from './AbyssGame';
+import { makeBreakdown, LEVEL_POINTS, STALACTITE_POINTS, type ScoreBreakdown } from './lib/score';
+import { TunnelGame, TOTAL_CYCLES } from './TunnelGame';
+import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVEL_CONFIG } from './AbyssGame';
+import { makeCanvas, stubAnimationFrame, stubMatchMedia } from './test-helpers';
+import { SURFACE_HANDOFF_BREAKDOWN } from './test-game-factories';
+import {
+  bootDebugScreen,
+  bootSplashGame,
+  mountSiteMain,
+  PendingImage,
+  SettledImage,
+  stubAudioTracking,
+} from './test-dom';
+import { STEPS_PER_SECOND } from './lib/GameLoop';
 import type { ScoreRecord } from './lib/firebase';
 
 interface MockGame {
@@ -40,15 +51,15 @@ vi.mock('./SurfaceGame', () => ({
     onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
     startSong = vi.fn();
     startGame = vi.fn();
-    private runController = new AbortController();
-    get runSignal(): AbortSignal { return this.runController.signal; }
+    private controller = new AbortController();
+    get runSignal(): AbortSignal { return this.controller.signal; }
     constructor() { gameInstances.push(this); }
     /* The real SurfaceGame aborts runSignal before firing these — keep the mock honest */
     gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
+      this.onGameOver = (breakdown) => { this.controller.abort(); cb(breakdown); };
     }
     completionCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onComplete = (breakdown) => { this.runController.abort(); cb(breakdown); };
+      this.onComplete = (breakdown) => { this.controller.abort(); cb(breakdown); };
     }
   },
 }));
@@ -68,17 +79,13 @@ describe('generateGuestHandle', () => {
 
 describe('game screen keyboard wiring', () => {
   beforeAll(() => {
-    /* jsdom has no rAF; the mascot loop needs it (getContext is stubbed in test-setup) */
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
     gameInstances.length = 0;
     localStorage.setItem('surface-modal-dismissed', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    window.dispatchEvent(new Event('load'));
-    (document.querySelector('.splash-start') as HTMLButtonElement).click();
+    bootSplashGame();
   });
 
   function activeGame(): MockGame {
@@ -153,16 +160,14 @@ describe('game screen keyboard wiring', () => {
 
 describe('ranking row outside the top 10', () => {
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
     gameInstances.length = 0;
     localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    window.dispatchEvent(new Event('load'));
+    mountSiteMain();
   });
 
   afterEach(() => {
@@ -194,19 +199,8 @@ describe('ranking row outside the top 10', () => {
 });
 
 describe('interstitial routing and score passthrough (seam-test gate)', () => {
-  /* jsdom never loads images: createTransitionScreen waits for the underground
-     SVG to settle before arming its game-over timer. A pre-settled Image stub lets
-     the stub/fallback route run start-to-end under fake timers. */
-  class SettledImage {
-    complete = true;
-    naturalWidth = 1;
-    src = '';
-    addEventListener(): void {}
-  }
-
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
@@ -214,18 +208,14 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
     gameInstances.length = 0;
     localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    window.dispatchEvent(new Event('load'));
-    (document.querySelector('.splash-start') as HTMLButtonElement).click();
+    bootSplashGame();
   });
 
   afterEach(() => {
     localStorage.removeItem('audio-muted');
     vi.unstubAllGlobals();
     vi.useRealTimers();
-    /* beforeAll rAF stubs are re-applied for the rest of this suite */
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   function activeGame(): MockGame {
@@ -234,7 +224,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
 
   it('onComplete renders the arrival interstitial, then routes into the tunnel', () => {
     vi.useFakeTimers();
-    activeGame().onComplete!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+    activeGame().onComplete!(SURFACE_HANDOFF_BREAKDOWN);
 
     expect(document.querySelector('.to-be-continued-screen')).not.toBeNull();
     /* The mid-scroll cliffhanger is gone; the arrival stinger carries the beat */
@@ -259,7 +249,7 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   it('submits only the breakdown total and rolls the count up to it', () => {
     vi.useFakeTimers();
     vi.mocked(submitScore).mockClear();
-    activeGame().onGameOver!(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
+    activeGame().onGameOver!(SURFACE_HANDOFF_BREAKDOWN);
 
     expect(document.querySelectorAll('.go-count-line')).toHaveLength(2);
     vi.advanceTimersByTime(2000);
@@ -284,26 +274,66 @@ describe('interstitial routing and score passthrough (seam-test gate)', () => {
   });
 });
 
-describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
-  class SettledImage {
-    complete = true;
-    naturalWidth = 1;
-    src = '';
-    addEventListener(): void {}
-  }
-
-  /* One mount for the whole suite: the run-scoped keydown listener lives on
-     document, so re-mounting per test would stack alive listeners and make
-     prototype-spy call counts nondeterministic */
+describe('cumulative score passthrough (seam-test gate)', () => {
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
+  });
+
+  it('the win breakdown sums surface + tunnel + abyss + stalactites + levels, dropping nothing', () => {
+    const SURFACE_TIME = 42;
+    const SURFACE_LEVELS = 3;
+    const TUNNEL_BANKED = 23;
+
+    /* Surface hands off exactly this shape (SurfaceGame.currentBreakdown). */
+    const surfaceBreakdown = makeBreakdown({
+      surfaceTime: SURFACE_TIME,
+      levelsBonus: SURFACE_LEVELS * LEVEL_POINTS,
+    });
+
+    /* Tunnel carries the surface forward and adds banked seconds + cleared cycles. */
+    const tunnel = new TunnelGame(makeCanvas(), surfaceBreakdown);
+    tunnel.bankedSeconds = TUNNEL_BANKED;
+    tunnel.cyclesCleared = TOTAL_CYCLES;
+    const tunnelBreakdown = tunnel.currentBreakdown();
+    expect(tunnelBreakdown.surfaceTime).toBe(SURFACE_TIME); // surface survived the hop
+    expect(tunnelBreakdown.tunnelTime).toBe(TUNNEL_BANKED);
+    expect(tunnelBreakdown.levelsBonus).toBe((SURFACE_LEVELS + TOTAL_CYCLES) * LEVEL_POINTS);
+
+    /* Abyss carries surface + tunnel forward and adds abyss time + stalactites +
+       abyss levels; drive it to the real completion (crossing the L3 time budget). */
+    const abyss = new AbyssGame(makeCanvas(), tunnelBreakdown);
+    abyss.startGame();
+    if (abyss.player) abyss.player.lives = Number.MAX_SAFE_INTEGER;
+    abyss.breaks = { small: 2, medium: 1, large: 1 };
+    abyss.stepCount = ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND - 1;
+    abyss.step(); // crosses the budget → reachDoor → completion
+    expect(abyss.isOver).toBe(true);
+
+    const breakdown = abyss.currentBreakdown();
+
+    /* Every prior component survived both hops. */
+    expect(breakdown.surfaceTime).toBe(SURFACE_TIME);
+    expect(breakdown.tunnelTime).toBe(TUNNEL_BANKED);
+    expect(breakdown.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
+    expect(breakdown.stalactites).toEqual({ small: 2, medium: 1, large: 1 });
+
+    const stalactiteBonus = 2 * STALACTITE_POINTS.small + STALACTITE_POINTS.medium + STALACTITE_POINTS.large;
+    const levelsBonus = (SURFACE_LEVELS + TOTAL_CYCLES + ABYSS_LEVEL_CONFIG.length) * LEVEL_POINTS;
+    expect(breakdown.stalactiteBonus).toBe(stalactiteBonus);
+    expect(breakdown.levelsBonus).toBe(levelsBonus);
+
+    /* The total equals the sum of all three worlds — nothing dropped at any handoff. */
+    expect(breakdown.total).toBe(SURFACE_TIME + TUNNEL_BANKED + ABYSS_TIME_BUDGET_S + stalactiteBonus + levelsBonus);
+  });
+});
+
+describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
+  beforeAll(() => {
+    stubAnimationFrame();
     vi.stubGlobal('Image', SettledImage);
     localStorage.setItem('audio-muted', '1');
     localStorage.setItem('tunnel-modal-dismissed', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=tunnel');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('tunnel');
   });
 
   afterAll(() => {
@@ -311,8 +341,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
     localStorage.removeItem('audio-muted');
     localStorage.removeItem('tunnel-modal-dismissed');
     vi.unstubAllGlobals();
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   afterEach(() => {
@@ -352,31 +381,16 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
 });
 
 describe('win variant end screen (tunnel completion)', () => {
-  class SettledImage {
-    complete = true;
-    naturalWidth = 1;
-    src = '';
-    addEventListener(): void {}
-  }
-
   let audioSrcs: string[] = [];
   let tunnels: TunnelGame[] = [];
 
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
     vi.stubGlobal('Image', SettledImage);
-    /* Track every created audio element by source: the win path must never
-       construct the death knell */
-    audioSrcs = [];
-    const RealAudio = window.Audio;
-    vi.stubGlobal('Audio', function (src?: string) {
-      audioSrcs.push(src ?? '');
-      return new RealAudio(src);
-    });
+    ({ sources: audioSrcs } = stubAudioTracking());
     tunnels = [];
     const origStart = TunnelGame.prototype.startGame;
     vi.spyOn(TunnelGame.prototype, 'startGame').mockImplementation(function (this: TunnelGame) {
@@ -386,9 +400,7 @@ describe('win variant end screen (tunnel completion)', () => {
     localStorage.setItem('audio-muted', '0');
     localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('tunnel-modal-dismissed', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=tunnel');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('tunnel');
   });
 
   afterEach(() => {
@@ -399,8 +411,7 @@ describe('win variant end screen (tunnel completion)', () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.useRealTimers();
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   it('completion routes into the Abyss cold-open, not the win screen', () => {
@@ -426,9 +437,7 @@ describe('win variant end screen (tunnel completion)', () => {
 
   it('the cave loop loops, respects the mute gate, and pauses with a hidden tab', () => {
     localStorage.setItem('audio-muted', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=tunnel');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('tunnel');
     const game = tunnels[tunnels.length - 1];
     expect(game.caveLoop?.loop).toBe(true);
     expect(game.caveLoop?.muted).toBe(true);
@@ -442,32 +451,17 @@ describe('win variant end screen (tunnel completion)', () => {
 });
 
 describe('win variant end screen (Abyss completion)', () => {
-  class SettledImage {
-    complete = true;
-    naturalWidth = 1;
-    src = '';
-    addEventListener(): void {}
-  }
-
   let audioSrcs: string[] = [];
   let abysses: AbyssGame[] = [];
 
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
-    /* The cold-open schedules startGame on a timer, so fake timers must be live
-       before the screen is built (else the handoff fires on real timers). */
     vi.useFakeTimers();
     vi.stubGlobal('Image', SettledImage);
-    audioSrcs = [];
-    const RealAudio = window.Audio;
-    vi.stubGlobal('Audio', function (src?: string) {
-      audioSrcs.push(src ?? '');
-      return new RealAudio(src);
-    });
+    ({ sources: audioSrcs } = stubAudioTracking());
     abysses = [];
     const origStart = AbyssGame.prototype.startGame;
     vi.spyOn(AbyssGame.prototype, 'startGame').mockImplementation(function (this: AbyssGame) {
@@ -478,9 +472,7 @@ describe('win variant end screen (Abyss completion)', () => {
     localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('tunnel-modal-dismissed', '1');
     localStorage.setItem('abyss-modal-dismissed', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=abyss');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('abyss');
   });
 
   afterEach(() => {
@@ -492,8 +484,7 @@ describe('win variant end screen (Abyss completion)', () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     vi.useRealTimers();
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   it('exit-door close → win score → The End → ranking; DIE never plays; ranking music starts once, at the ranking', () => {
@@ -562,33 +553,18 @@ describe('win variant end screen (Abyss completion)', () => {
 });
 
 describe('The End finale screen', () => {
-  class SettledImage {
-    complete = true;
-    naturalWidth = 1;
-    src = '';
-    addEventListener(): void {}
-  }
-
   let audioSrcs: string[] = [];
 
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('Image', SettledImage);
-    audioSrcs = [];
-    const RealAudio = window.Audio;
-    vi.stubGlobal('Audio', function (src?: string) {
-      audioSrcs.push(src ?? '');
-      return new RealAudio(src);
-    });
+    ({ sources: audioSrcs } = stubAudioTracking());
     localStorage.setItem('audio-muted', '0');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=theend');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('theend');
   });
 
   afterEach(() => {
@@ -596,8 +572,7 @@ describe('The End finale screen', () => {
     localStorage.removeItem('audio-muted');
     vi.unstubAllGlobals();
     vi.useRealTimers();
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   it('mounts the finale with its own loop, not the ranking music', () => {
@@ -634,18 +609,8 @@ describe('The End finale screen', () => {
   });
 
   it('wires Skip and the auto-route timer even while the scene assets are still loading', () => {
-    /* Pending images whose load/error never fire — the real-browser case the
-       SettledImage stub hides. Skip and the no-soft-lock timer must work anyway. */
-    class PendingImage {
-      complete = false;
-      naturalWidth = 0;
-      src = '';
-      addEventListener(): void {}
-    }
     vi.stubGlobal('Image', PendingImage);
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=theend');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('theend');
 
     expect(document.querySelector('.the-end-screen')).not.toBeNull();
     (document.querySelector('.the-end-skip') as HTMLButtonElement).click();
@@ -653,29 +618,17 @@ describe('The End finale screen', () => {
   });
 
   it('reduced motion jumps to the end state and routes to the ranking without the cinematic', () => {
-    const realMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: /reduce/.test(query), media: query, onchange: null,
-      addEventListener() {}, removeEventListener() {},
-      addListener() {}, removeListener() {}, dispatchEvent: () => false,
-    })) as unknown as typeof window.matchMedia;
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=theend');
-    window.dispatchEvent(new Event('load'));
+    const restoreMatchMedia = stubMatchMedia((q) => /reduce/.test(q));
+    bootDebugScreen('theend');
 
     expect(document.querySelector('.the-end-credits--static')).not.toBeNull(); // static credits, no crawl
     vi.advanceTimersByTime(THE_END_END_HOLD_MS); // → ranking
     expect(document.querySelector('.ranking-screen')).not.toBeNull();
-    window.matchMedia = realMatchMedia;
+    restoreMatchMedia();
   });
 
   it('reduced motion redraws the finale once scene assets finish decoding', () => {
-    const realMatchMedia = window.matchMedia;
-    window.matchMedia = ((query: string) => ({
-      matches: /reduce/.test(query), media: query, onchange: null,
-      addEventListener() {}, removeEventListener() {},
-      addListener() {}, removeListener() {}, dispatchEvent: () => false,
-    })) as unknown as typeof window.matchMedia;
+    const restoreMatchMedia = stubMatchMedia((q) => /reduce/.test(q));
 
     class DeferredImage {
       complete = false;
@@ -701,30 +654,26 @@ describe('The End finale screen', () => {
       if (ctx && type === '2d') ctx.drawImage = drawImage;
       return ctx;
     });
-    document.body.innerHTML = '<main id="site-main"></main>';
-    history.replaceState(null, '', '/?screen=theend');
-    window.dispatchEvent(new Event('load'));
+    bootDebugScreen('theend');
 
     expect(drawImage).not.toHaveBeenCalled(); // first draw: ready() still false
     vi.advanceTimersByTime(0); // load settles → redraw with decoded assets
     expect(drawImage).toHaveBeenCalled();
 
-    window.matchMedia = realMatchMedia;
+    restoreMatchMedia();
   });
 });
 
 describe('leaderboard fetch timeout', () => {
   beforeAll(() => {
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame();
   });
 
   beforeEach(() => {
     gameInstances.length = 0;
     localStorage.setItem('surface-modal-dismissed', '1');
     localStorage.setItem('audio-muted', '1');
-    document.body.innerHTML = '<main id="site-main"></main>';
-    window.dispatchEvent(new Event('load'));
+    mountSiteMain();
     (document.querySelector('.splash-form') as HTMLFormElement)
       .dispatchEvent(new Event('submit', { cancelable: true }));
   });

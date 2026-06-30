@@ -15,7 +15,7 @@ export interface RunHostHooks {
    its own step/render/isOver/onEnd and keeps its own HUD, renderer, audio, and
    end-of-run routing.
 
-   One run per host: run-scoped listeners attach with `signal`, and `onEnd` fires
+   One run per host: run-scoped listeners attach with `runSignal`, and `onEnd` fires
    exactly once even though extra frames can render after the halt. */
 export class RunHost {
   private readonly hooks: RunHostHooks;
@@ -36,11 +36,11 @@ export class RunHost {
   }
 
   /** Aborts when the run ends — attach run-scoped listeners with this signal. */
-  get signal(): AbortSignal {
+  get runSignal(): AbortSignal {
     return this.controller.signal;
   }
 
-  /* Runs right after each render. Once the run is over we pull the plug: the signal
+  /* Runs right after each render. Once the run is over we pull the plug: the runSignal
      aborts and onEnd fires a single time, no matter how many frames sneak in
      afterward. Cleanup and screen swaps belong in onEnd, not mid-render. */
   private frame(): void {

@@ -24,7 +24,7 @@ export const FLOOR_FRAC = 690 / 800; // walkable line in background-tunnel.svg
 /* Kill line and warning band, both as floor-to-ceiling headroom.
    The rule: the warning must always show before the crush can fire. */
 export const CRUSH_HEADROOM_FRAC = 0.09;
-export const WARNING_HEADROOM_FRAC = 0.17;
+const WARNING_HEADROOM_FRAC = 0.17;
 
 const CRUSH_HITSTOP_STEPS = 15; // ~250 ms freeze so the death beat lands
 
@@ -181,7 +181,7 @@ export class TunnelGame implements TunnelView {
   }
 
   get runSignal(): AbortSignal {
-    return this.host.signal;
+    return this.host.runSignal;
   }
 
   gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {

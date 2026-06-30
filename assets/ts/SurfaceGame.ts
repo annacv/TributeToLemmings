@@ -100,7 +100,7 @@ export class SurfaceGame implements SurfaceView {
     audio.safePlay(this.gameSong);
 
     audio.pauseWhileHidden(this.gameSong, {
-      signal: this.host.signal,
+      signal: this.host.runSignal,
       shouldResume: () => !this.isOver,
     });
   }
@@ -114,7 +114,7 @@ export class SurfaceGame implements SurfaceView {
   }
 
   get runSignal(): AbortSignal {
-    return this.host.signal;
+    return this.host.runSignal;
   }
 
   /** One fixed 1/60 s simulation step; returns false when the run has ended. */

@@ -1,16 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RunHost, type RunHostHooks } from './RunHost';
 import { STEP_MS } from './GameLoop';
+import { makeRafQueue } from '../test-helpers';
 
-/* Captures rAF callbacks so tests drive the host with chosen timestamps,
-   mirroring the GameLoop harness it composes. */
 function makeHarness(overrides: Partial<RunHostHooks> = {}) {
-  const callbacks: FrameRequestCallback[] = [];
-  vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
-    callbacks.push(cb);
-    return callbacks.length;
-  }));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const queue = makeRafQueue();
 
   let over = false;
   const hooks = {
@@ -26,12 +20,8 @@ function makeHarness(overrides: Partial<RunHostHooks> = {}) {
     host,
     hooks,
     setOver(value: boolean): void { over = value; },
-    pump(timestamp: number): void {
-      const cb = callbacks.shift();
-      if (!cb) throw new Error('no rAF callback pending');
-      cb(timestamp);
-    },
-    get pending(): number { return callbacks.length; },
+    pump: queue.pump,
+    get pending() { return queue.pending; },
   };
 }
 
@@ -61,12 +51,12 @@ describe('RunHost', () => {
 
   it('aborts the run signal in lockstep with teardown', () => {
     const h = makeHarness();
-    expect(h.host.signal.aborted).toBe(false);
+    expect(h.host.runSignal.aborted).toBe(false);
     h.host.start();
-    expect(h.host.signal.aborted).toBe(false);
+    expect(h.host.runSignal.aborted).toBe(false);
     h.setOver(true);
     h.pump(STEP_MS);
-    expect(h.host.signal.aborted).toBe(true);
+    expect(h.host.runSignal.aborted).toBe(true);
     expect(h.hooks.onEnd).toHaveBeenCalledTimes(1);
   });
 });

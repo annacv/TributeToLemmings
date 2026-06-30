@@ -3,20 +3,8 @@ import {
   theEndFrameAt,
   ASCEND_SCROLL_FRAC,
   ASCEND_BALLOON_TOP_FRAC,
-  type TheEndConfig,
-  type TheEndDurations,
 } from './TheEndScene';
-
-const config: TheEndConfig = {
-  size: 800,
-  groundY: 688,
-  balloonX: 496,
-  balloonW: 272,
-  lemmingSize: 112,
-  walkStartX: 144,
-  walkEndX: 430,
-};
-const durations: TheEndDurations = { walkMs: 1400, boardMs: 700, ascendMs: 4200 };
+import { THE_END_TEST_CONFIG as config, THE_END_TEST_DURATIONS as durations } from './theEndTestFixtures';
 
 describe('theEndFrameAt', () => {
   it('walks the lemming toward the balloon, ground still', () => {
