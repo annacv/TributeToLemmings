@@ -1,5 +1,5 @@
-import { drawLemmingShape, LEMMING_GRID } from '../Player';
-import { ready } from './images';
+import { drawLemmingShape, LEMMING_GRID } from './Player';
+import { ready } from './lib/images';
 
 export const THE_END_SKY = '#00C8FF'; // matches background-theend.svg's sky, filled above the scrolled scene
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
