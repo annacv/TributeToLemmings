@@ -15,7 +15,7 @@ logs/
 # local / agent
 .claude/
 .cursor/
-openspec/
+openspec/changes/*
 memory/*
 assets/images/backgrounds/refs/
 CLAUDE.md
