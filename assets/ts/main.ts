@@ -726,11 +726,16 @@ function main(): void {
       if (reduceMotion) {
         /* Jump to the end state — balloon risen, credits static — then route. */
         liftOffElapsed = 0;
-        const frame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
-        drawTheEndScene(ctx, size, frame, sceneImg, balloonImg);
+        const endFrame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
         creditsEl.classList.add('the-end-credits--static');
         if (!muted) safePlay(new Audio(BALLOON_SFX));
         setTimeout(route, THE_END_END_HOLD_MS);
+        const drawEndState = (): void => {
+          if (routed) return;
+          drawTheEndScene(ctx, size, endFrame, sceneImg, balloonImg);
+        };
+        drawEndState();
+        whenImagesSettled([sceneImg, balloonImg], drawEndState); // one redraw once decoded
         return;
       }
       /* Auto lift-off if the player never presses (no soft-lock). */

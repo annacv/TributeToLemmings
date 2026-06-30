@@ -668,6 +668,49 @@ describe('The End finale screen', () => {
     expect(document.querySelector('.ranking-screen')).not.toBeNull();
     window.matchMedia = realMatchMedia;
   });
+
+  it('reduced motion redraws the finale once scene assets finish decoding', () => {
+    const realMatchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: /reduce/.test(query), media: query, onchange: null,
+      addEventListener() {}, removeEventListener() {},
+      addListener() {}, removeListener() {}, dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+
+    class DeferredImage {
+      complete = false;
+      naturalWidth = 0;
+      naturalHeight = 0;
+      src = '';
+      addEventListener(event: string, cb: () => void): void {
+        if (event === 'load') {
+          setTimeout(() => {
+            this.complete = true;
+            this.naturalWidth = 800;
+            this.naturalHeight = 800;
+            cb();
+          }, 0);
+        }
+      }
+    }
+    vi.stubGlobal('Image', DeferredImage);
+    const drawImage = vi.fn();
+    const origGetContext = HTMLCanvasElement.prototype.getContext;
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this, type, options) {
+      const ctx = origGetContext.call(this, type, options) as CanvasRenderingContext2D | null;
+      if (ctx && type === '2d') ctx.drawImage = drawImage;
+      return ctx;
+    });
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+
+    expect(drawImage).not.toHaveBeenCalled(); // first draw: ready() still false
+    vi.advanceTimersByTime(0); // load settles → redraw with decoded assets
+    expect(drawImage).toHaveBeenCalled();
+
+    window.matchMedia = realMatchMedia;
+  });
 });
 
 describe('leaderboard fetch timeout', () => {
