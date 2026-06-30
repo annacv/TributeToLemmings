@@ -1,4 +1,4 @@
-import { drawLemmingShape, LEMMING_GRID } from '../Player';
+import { drawLemmingShape, LEMMING_GRID } from '../entities/Player';
 import { safePlay } from '../lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';

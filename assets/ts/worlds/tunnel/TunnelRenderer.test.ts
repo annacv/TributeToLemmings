@@ -4,7 +4,7 @@ import {
   BREACH_BOOM_STEPS, BREACH_PAN_END_STEPS,
   type TunnelView,
 } from './TunnelGame';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas } from '../../test-helpers';
 
 /** A breach-state TunnelView with neutral defaults; each test overrides only the
     fields its draw math reads, keeping the renderer decoupled from TunnelGame. */

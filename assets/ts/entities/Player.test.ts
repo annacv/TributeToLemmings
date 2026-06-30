@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Player, BLINK_TOTAL_STEPS } from './Player';
-import { makeCtx, makeCanvas } from './test-helpers';
+import { makeCtx, makeCanvas } from '../test-helpers';
 
 describe('Player', () => {
   let canvas: HTMLCanvasElement;

@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
 import {
   AbyssGame, ABYSS_LEVEL_CONFIG, ABYSS_TIME_BUDGET_S, THROW_FLIGHT_STEPS,
 } from './AbyssGame';
-import { Stalactite, STALACTITE_COST } from './Stalactite';
-import { Bomb } from './Bomb';
-import { makeBreakdown } from './lib/score';
-import { makeCanvas, stubAnimationFrame, stepUntil, TEST_CANVAS_SIZE } from './test-helpers';
-import { makeAbyssGame } from './test-game-factories';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { Stalactite, STALACTITE_COST } from '../../entities/Stalactite';
+import { Bomb } from '../../entities/Bomb';
+import { makeBreakdown } from '../../lib/score';
+import { makeCanvas, stubAnimationFrame, stepUntil, TEST_CANVAS_SIZE } from '../../test-helpers';
+import { makeAbyssGame } from '../../test-game-factories';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 
 /** Survive falling bombs so a long run can reach a time/level milestone. */
 function invincible(game: AbyssGame): AbyssGame {

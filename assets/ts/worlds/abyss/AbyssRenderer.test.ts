@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { AbyssGame } from './AbyssGame';
 import { AbyssRenderer } from './AbyssRenderer';
-import { Stalactite } from './Stalactite';
-import { makeCanvas, stubAnimationFrame, TEST_CANVAS_SIZE } from './test-helpers';
-import { makeAbyssGame } from './test-game-factories';
+import { Stalactite } from '../../entities/Stalactite';
+import { makeCanvas, stubAnimationFrame, TEST_CANVAS_SIZE } from '../../test-helpers';
+import { makeAbyssGame } from '../../test-game-factories';
 
 beforeAll(() => {
   stubAnimationFrame();

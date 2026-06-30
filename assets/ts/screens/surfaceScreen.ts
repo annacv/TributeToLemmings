@@ -1,4 +1,4 @@
-import { SurfaceGame } from '../SurfaceGame';
+import { SurfaceGame } from '../worlds/surface/SurfaceGame';
 import { preloadLeaderboard } from '../lib/leaderboard';
 import { buildPlayScreen } from '../lib/playScreen';
 import { SURFACE_MODAL, showInfoModal } from '../lib/infoModal';

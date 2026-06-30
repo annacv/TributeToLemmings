@@ -33,7 +33,7 @@ vi.mock('./lib/leaderboard', () => ({
   getPlayerRank: vi.fn().mockResolvedValue(1),
 }));
 
-vi.mock('./SurfaceGame', () => ({
+vi.mock('./worlds/surface/SurfaceGame', () => ({
   SurfaceGame: class {
     player = { setDirection: vi.fn() };
     gameSong = { muted: false };

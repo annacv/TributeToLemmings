@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SurfaceGame } from './SurfaceGame';
-import { Bomb } from './Bomb';
-import { SPRITES } from './assets';
-import { makeBreakdown, LEVEL_POINTS } from './lib/score';
-import { makeCanvas, makeRafQueue, setDocumentHidden } from './test-helpers';
-import { dropGroundBomb, makeSurfaceGame } from './test-game-factories';
+import { Bomb } from '../../entities/Bomb';
+import { SPRITES } from '../../assets';
+import { makeBreakdown, LEVEL_POINTS } from '../../lib/score';
+import { makeCanvas, makeRafQueue, setDocumentHidden } from '../../test-helpers';
+import { dropGroundBomb, makeSurfaceGame } from '../../test-game-factories';
 
 // --- helpers ---
 

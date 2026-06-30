@@ -32,7 +32,7 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
   }
 
   it('Space fires the game action and is preventDefault-ed', async () => {
-    const { TunnelGame } = await import('../TunnelGame');
+    const { TunnelGame } = await import('../worlds/tunnel/TunnelGame');
     const action = vi.spyOn(TunnelGame.prototype, 'action');
     const event = pressSpace();
     expect(action).toHaveBeenCalledTimes(1);
@@ -40,14 +40,14 @@ describe('tunnel screen input guards (via ?screen=tunnel debug seam)', () => {
   });
 
   it('key auto-repeat fires no game action', async () => {
-    const { TunnelGame } = await import('../TunnelGame');
+    const { TunnelGame } = await import('../worlds/tunnel/TunnelGame');
     const action = vi.spyOn(TunnelGame.prototype, 'action');
     pressSpace({ repeat: true });
     expect(action).not.toHaveBeenCalled();
   });
 
   it('Space with a focused control still acts on the game, not the control', async () => {
-    const { TunnelGame } = await import('../TunnelGame');
+    const { TunnelGame } = await import('../worlds/tunnel/TunnelGame');
     const action = vi.spyOn(TunnelGame.prototype, 'action');
     const muteBtn = document.querySelector('.mute-btn') as HTMLButtonElement;
     muteBtn.focus();

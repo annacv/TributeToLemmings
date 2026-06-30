@@ -1,18 +1,18 @@
-import { Player } from './Player';
-import { RunHost } from './lib/RunHost';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
-import { PICKUP_RANGE_FRAC } from './lib/geometry';
-import { Hud } from './lib/Hud';
-import { restartAnimation } from './lib/fx';
+import { Player } from '../../entities/Player';
+import { RunHost } from '../../lib/RunHost';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
+import { PICKUP_RANGE_FRAC } from '../../lib/geometry';
+import { Hud } from '../../lib/Hud';
+import { restartAnimation } from '../../lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
-import * as audio from './lib/audio';
-import { SoundEffectBank } from './lib/SoundEffectBank';
+import * as audio from '../../lib/audio';
+import { SoundEffectBank } from '../../lib/SoundEffectBank';
 import {
   makeBreakdown, LEVEL_POINTS, type ScoreBreakdown,
-} from './lib/score';
+} from '../../lib/score';
 import {
   SPRITES, FIRE_SFX, BANG_SFX, TENTON_SFX, EXPLODE_SFX, CHAIN_SFX, SCRAPE_SFX, FALLING_SFX,
-} from './assets';
+} from '../../assets';
 
 export const TUNNEL_TIME_BUDGET_S = 60;
 export const TOTAL_CYCLES = 3;

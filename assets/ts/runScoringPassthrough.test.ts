@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { makeBreakdown, LEVEL_POINTS, STALACTITE_POINTS } from './lib/score';
-import { TunnelGame, TOTAL_CYCLES } from './TunnelGame';
-import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVEL_CONFIG } from './AbyssGame';
+import { TunnelGame, TOTAL_CYCLES } from './worlds/tunnel/TunnelGame';
+import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVEL_CONFIG } from './worlds/abyss/AbyssGame';
 import { makeCanvas, stubAnimationFrame } from './test-helpers';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 

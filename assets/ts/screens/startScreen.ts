@@ -1,4 +1,4 @@
-import { drawLemmingMascot, LEMMING_GRID } from '../Player';
+import { drawLemmingMascot, LEMMING_GRID } from '../entities/Player';
 import { consumeDebugScreen } from '../lib/debugScreen';
 import type { AppContext, ScreenRoutes } from '../lib/appContext';
 

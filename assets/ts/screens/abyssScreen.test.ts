@@ -1,7 +1,7 @@
 import '../test-app-mocks';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import '../main';
-import { AbyssGame, ABYSS_TIME_BUDGET_S } from '../AbyssGame';
+import { AbyssGame, ABYSS_TIME_BUDGET_S } from '../worlds/abyss/AbyssGame';
 import { stubAnimationFrame } from '../test-helpers';
 import { bootDebugScreen, SettledImage, stubAudioTracking } from '../test-dom';
 

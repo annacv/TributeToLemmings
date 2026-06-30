@@ -1,4 +1,4 @@
-import { AbyssGame } from '../AbyssGame';
+import { AbyssGame } from '../worlds/abyss/AbyssGame';
 import { buildPlayScreen } from '../lib/playScreen';
 import { attachWorldLoop } from '../lib/attachWorldLoop';
 import { ABYSS_MODAL, showInfoModal } from '../lib/infoModal';

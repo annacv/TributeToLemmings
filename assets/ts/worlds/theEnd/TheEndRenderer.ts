@@ -1,5 +1,5 @@
-import { drawLemmingShape, LEMMING_GRID } from './Player';
-import { ready } from './lib/images';
+import { drawLemmingShape, LEMMING_GRID } from '../../entities/Player';
+import { ready } from '../../lib/images';
 import type { TheEndFrame } from './TheEndScene';
 
 export const THE_END_SKY = '#00C8FF'; // matches background-theend.svg's sky, filled above the scrolled scene

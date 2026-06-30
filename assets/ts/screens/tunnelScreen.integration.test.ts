@@ -1,7 +1,7 @@
 import '../test-app-mocks';
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import '../main';
-import { TunnelGame } from '../TunnelGame';
+import { TunnelGame } from '../worlds/tunnel/TunnelGame';
 import { stubAnimationFrame } from '../test-helpers';
 import { bootDebugScreen, SettledImage, stubAudioTracking } from '../test-dom';
 

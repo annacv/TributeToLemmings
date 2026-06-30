@@ -1,5 +1,5 @@
-import { SPRITES } from './assets';
-import { BOMB_WIDTH, BOMB_HEIGHT } from './lib/geometry';
+import { SPRITES } from '../assets';
+import { BOMB_WIDTH, BOMB_HEIGHT } from '../lib/geometry';
 
 export class Bomb {
   ctx: CanvasRenderingContext2D;

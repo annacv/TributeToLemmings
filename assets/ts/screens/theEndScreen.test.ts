@@ -6,7 +6,7 @@ import {
   THE_END_PROMPT_HOLD_MS,
   THE_END_BOARD_MS,
   THE_END_END_HOLD_MS,
-} from '../TheEndScene';
+} from '../worlds/theEnd/TheEndScene';
 import { stubAnimationFrame, stubMatchMedia } from '../test-helpers';
 import { bootDebugScreen, PendingImage, SettledImage, stubAudioTracking } from '../test-dom';
 

@@ -1,4 +1,4 @@
-import type { StalactiteSize } from './lib/score';
+import type { StalactiteSize } from '../lib/score';
 
 export const STALACTITE_COST: Record<StalactiteSize, number> = { small: 1, medium: 2, large: 3 };
 

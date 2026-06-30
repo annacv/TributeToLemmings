@@ -5,10 +5,10 @@ import {
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
-import { makeBreakdown } from './lib/score';
-import { makeCanvas, stubAnimationFrame } from './test-helpers';
-import { SURFACE_HANDOFF_BREAKDOWN } from './test-game-factories';
-import { STEPS_PER_SECOND } from './lib/GameLoop';
+import { makeBreakdown } from '../../lib/score';
+import { makeCanvas, stubAnimationFrame } from '../../test-helpers';
+import { SURFACE_HANDOFF_BREAKDOWN } from '../../test-game-factories';
+import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 
 function timeToCrushSteps(level: (typeof TUNNEL_LEVEL_CONFIG)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;

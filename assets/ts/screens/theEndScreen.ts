@@ -5,8 +5,8 @@ import { setupMuteButton } from '../lib/muteButton';
 import {
   THE_END_ASCEND_MS, THE_END_BOARD_MS, THE_END_CREDITS_MS, THE_END_END_HOLD_MS,
   THE_END_PROMPT_HOLD_MS, THE_END_WALK_MS, theEndFrameAt, type TheEndConfig,
-} from '../TheEndScene';
-import { drawTheEndScene } from '../TheEndRenderer';
+} from '../worlds/theEnd/TheEndScene';
+import { drawTheEndScene } from '../worlds/theEnd/TheEndRenderer';
 import { BALLOON_SVG, BALLOON_SFX, THE_END_BACKGROUND_SVG, THE_END_MUSIC } from '../assets';
 import type { ScoreBreakdown } from '../lib/score';
 import type { AppContext, ScreenRoutes, SubmissionResult } from '../lib/appContext';

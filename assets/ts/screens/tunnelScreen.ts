@@ -1,4 +1,4 @@
-import { TunnelGame } from '../TunnelGame';
+import { TunnelGame } from '../worlds/tunnel/TunnelGame';
 import { buildPlayScreen } from '../lib/playScreen';
 import { attachWorldLoop } from '../lib/attachWorldLoop';
 import { TUNNEL_MODAL, showInfoModal } from '../lib/infoModal';
