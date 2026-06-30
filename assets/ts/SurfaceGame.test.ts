@@ -1,18 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SurfaceGame } from './SurfaceGame';
-import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
 import { makeBreakdown, LEVEL_POINTS } from './lib/score';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas, makeRafQueue, setDocumentHidden } from './test-helpers';
+import { dropGroundBomb, makeSurfaceGame } from './test-game-factories';
 
 // --- helpers ---
-
-function makeSurfaceGameWithPlayer(canvas: HTMLCanvasElement) {
-  const game = new SurfaceGame(canvas);
-  game.player = new Player(canvas);
-  return game as SurfaceGame & { player: Player };
-}
 
 function placeBomb(game: SurfaceGame, dx: number, dy = 390): Bomb {
   const bomb = new Bomb(game.canvas, dx);
@@ -55,7 +49,7 @@ describe('SurfaceGame', () => {
   });
 
   it('keeps exploding bombs visible until removal', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     const bomb = placeHitBomb(game);
 
     expect(bomb.isExploding).toBe(true);
@@ -74,7 +68,7 @@ describe('SurfaceGame', () => {
   });
 
   it('registers all overlapping bomb hits in the same frame', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     placeHitBomb(game, 50);
     placeHitBomb(game, 60);
 
@@ -85,14 +79,14 @@ describe('SurfaceGame', () => {
   });
 
   it('wires checkCollisions to bombHitsPlayer at the hurtbox edges', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     expect(placeBomb(game, 82, 390).isExploding).toBe(true);
     expect(placeBomb(game, 83, 390).isExploding).toBe(false);
   });
 
   it('collision outcome is independent of facing direction', () => {
     for (const direction of [1, -1]) {
-      const game = makeSurfaceGameWithPlayer(canvas);
+      const game = makeSurfaceGame(canvas);
       game.player.direction = direction;
       expect(placeBomb(game, 82).isExploding).toBe(true);
       expect(placeBomb(game, 83).isExploding).toBe(false);
@@ -100,7 +94,7 @@ describe('SurfaceGame', () => {
   });
 
   it('sets isOver when last life is lost', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     game.player.lives = 1;
     placeHitBomb(game);
 
@@ -111,7 +105,7 @@ describe('SurfaceGame', () => {
   });
 
   it('a surface death scores only completed levels, never the level died on', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     const onGameOver = vi.fn();
     game.gameOverCallback(onGameOver);
     game.score = 40;
@@ -131,7 +125,7 @@ describe('SurfaceGame', () => {
   });
 
   it('uses pre-loop lives color when multiple bombs expire in one frame', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     placeHitBomb(game, 50);
     placeHitBomb(game, 60);
 
@@ -142,7 +136,7 @@ describe('SurfaceGame', () => {
   });
 
   it('displayLives does not throw when lives drop below zero', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     game.player.lives = -1;
     setupHud();
 
@@ -151,7 +145,7 @@ describe('SurfaceGame', () => {
   });
 
   it('does not play bombHit when audio is muted', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     const bombHit = game.sfx.get('bombHit')!;
     const playSpy = vi.fn().mockResolvedValue(undefined);
     bombHit.play = playSpy;
@@ -163,7 +157,7 @@ describe('SurfaceGame', () => {
   });
 
   it('removes all excess life icons when multiple lives are lost at once', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
+    const game = makeSurfaceGame(canvas);
     game.player.lives = 1;
     setupHud();
 
@@ -207,16 +201,10 @@ describe('SurfaceGame — level system', () => {
 describe('SurfaceGame — ground erosion', () => {
   let canvas: HTMLCanvasElement;
 
-function makeSurfaceGame() {
-    const game = new SurfaceGame(canvas);
-    game.player = new Player(canvas);
-    return game;
-  }
-
   beforeEach(() => { canvas = makeCanvas(); });
 
   it('activates ground erosion when level 3 starts', () => {
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas);
     game.currentLevel = 1;
     game.score = 36;
     game['checkLevelUp']();
@@ -224,26 +212,16 @@ function makeSurfaceGame() {
   });
 
   it('does nothing to the ground while erosion is inactive (levels 1-2)', () => {
-    const game = makeSurfaceGame();
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
+    const game = makeSurfaceGame(canvas);
+    dropGroundBomb(game, canvas);
     expect(game.erosionCounter).toBe(0);
     expect(game['renderer']['crackStamps']).toHaveLength(0);
     expect(game['renderer']['holeStamps']).toHaveLength(0);
   });
 
   it('increments erosionCounter each time a bomb exits at level 3', () => {
-    const game = makeSurfaceGame();
-    game.groundErosionActive = true;
-    game.gameSong.muted = true;
-
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
-
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
+    dropGroundBomb(game, canvas);
     expect(game.erosionCounter).toBe(1);
   });
 
@@ -252,40 +230,24 @@ function makeSurfaceGame() {
 describe('SurfaceGame — per-hit ground feedback (cracks, holes, shake)', () => {
   let canvas: HTMLCanvasElement;
 
-function makeSurfaceGame() {
-    const game = new SurfaceGame(canvas);
-    game.player = new Player(canvas);
-    game.gameSong.muted = true;
-    game.groundErosionActive = true;
-    return game;
-  }
-
-  function dropBomb(game: SurfaceGame, dx = 100): Bomb {
-    const bomb = new Bomb(canvas, dx);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
-    return bomb;
-  }
-
   beforeEach(() => { canvas = makeCanvas(); });
 
   it('adds a crack stamp for each bomb that hits the ground', () => {
-    const game = makeSurfaceGame();
-    dropBomb(game);
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
+    dropGroundBomb(game, canvas);
     expect(game['renderer']['crackStamps']).toHaveLength(1);
-    dropBomb(game);
+    dropGroundBomb(game, canvas);
     expect(game['renderer']['crackStamps']).toHaveLength(2);
   });
 
   it('progresses from cracks to holes as misses accumulate', () => {
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     // Below the hole threshold (LATE_CRACK_MISSES = 14): cracks only, no holes.
-    for (let i = 0; i < 14; i++) dropBomb(game);
+    for (let i = 0; i < 14; i++) dropGroundBomb(game, canvas);
     expect(game['renderer']['crackStamps']).toHaveLength(14);
     expect(game['renderer']['holeStamps']).toHaveLength(0);
     // Past it: holes begin landing while a crack still stamps every miss.
-    for (let i = 0; i < 5; i++) dropBomb(game);
+    for (let i = 0; i < 5; i++) dropGroundBomb(game, canvas);
     expect(game['renderer']['crackStamps']).toHaveLength(19);
     expect(game['renderer']['holeStamps']).toHaveLength(5);
   });
@@ -295,40 +257,25 @@ function makeSurfaceGame() {
 describe('SurfaceGame — tunnel world transition', () => {
   let canvas: HTMLCanvasElement;
 
-function makeSurfaceGame() {
-    const game = new SurfaceGame(canvas);
-    game.player = new Player(canvas);
-    game.gameSong.muted = true;
-    game.groundErosionActive = true;
-    return game;
-  }
-
   beforeEach(() => { canvas = makeCanvas(); });
 
   it('collapse sets isOver and records the complete outcome (teardown skips onGameOver)', () => {
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     game['renderer']['coveredCells'].fill(true); // full coverage; next miss collapses it
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
+    dropGroundBomb(game, canvas);
     expect(game.isOver).toBe(true);
     expect(game['outcome']).toBe('complete');
   });
 
   it('fires onComplete callback (not onGameOver) after the muted hold elapses', () => {
     vi.useFakeTimers();
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     const onComplete = vi.fn();
     const onGameOver = vi.fn();
     game.completionCallback(onComplete);
     game.gameOverCallback(onGameOver);
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
-
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
+    dropGroundBomb(game, canvas);
 
     expect(onComplete).not.toHaveBeenCalled();
     vi.advanceTimersByTime(500);
@@ -341,15 +288,11 @@ function makeSurfaceGame() {
 
   it('falls back to onGameOver when onComplete is null (muted)', () => {
     vi.useFakeTimers();
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     const onGameOver = vi.fn();
     game.gameOverCallback(onGameOver);
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
-
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
+    dropGroundBomb(game, canvas);
     vi.advanceTimersByTime(500);
 
     expect(onGameOver).toHaveBeenCalledWith(
@@ -359,23 +302,17 @@ function makeSurfaceGame() {
   });
 
   it('collapses at 23/24 covered cells, not before', () => {
-    const below = makeSurfaceGame();
+    const below = makeSurfaceGame(canvas, { muted: true, erosion: true });
     below['renderer']['coveredCells'].fill(true);
     below['renderer']['coveredCells'][0] = false;
     below['renderer']['coveredCells'][1] = false; // 22/24 ≈ 0.917 < 0.95
-    const bombA = new Bomb(canvas, 100);
-    bombA.dy = canvas.height + 1;
-    below.bombs.push(bombA);
-    below.update();
+    dropGroundBomb(below, canvas);
     expect(below.isOver).toBe(false);
 
-    const game = makeSurfaceGame();
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     game['renderer']['coveredCells'].fill(true);
     game['renderer']['coveredCells'][0] = false; // 23/24 ≈ 0.958 >= 0.95
-    const bombB = new Bomb(canvas, 100);
-    bombB.dy = canvas.height + 1;
-    game.bombs.push(bombB);
-    game.update();
+    dropGroundBomb(game, canvas);
     expect(game.isOver).toBe(true);
   });
 });
@@ -386,17 +323,12 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
   /* Unmuted: triggerTunnelWorld holds on the collapse sting and exits via
      whichever of ended/error/watchdog/play-rejection resolves first */
   function collapseUnmuted() {
-    const game = new SurfaceGame(canvas);
-    game.player = new Player(canvas);
+    const game = makeSurfaceGame(canvas, { erosion: true });
     game.gameSong.muted = false;
-    game.groundErosionActive = true;
     const onComplete = vi.fn();
     game.completionCallback(onComplete);
     game['renderer']['coveredCells'].fill(true);
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
+    dropGroundBomb(game, canvas);
     return { game, onComplete };
   }
 
@@ -429,24 +361,12 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
 });
 
 describe('SurfaceGame — fixed-timestep score', () => {
-  /* Captures rAF callbacks so the test drives Game's loop with chosen timestamps */
   function makeHarness() {
-    const callbacks: FrameRequestCallback[] = [];
-    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
-      callbacks.push(cb);
-      return callbacks.length;
-    }));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
-
+    const queue = makeRafQueue();
     const game = new SurfaceGame(makeCanvas());
     game.gameSong.muted = true;
     game.startGame(); // synchronous first step → count is already 1 here
-    return {
-      game,
-      pump(timestamp: number): void {
-        callbacks.shift()?.(timestamp);
-      },
-    };
+    return { game, pump: queue.pump };
   }
 
   afterEach(() => {
@@ -467,25 +387,15 @@ describe('SurfaceGame — fixed-timestep score', () => {
 
 describe('SurfaceGame — background-tab audio', () => {
   let canvas: HTMLCanvasElement;
-  const callbacks: FrameRequestCallback[] = [];
-
-  function setHidden(hidden: boolean): void {
-    Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
-    document.dispatchEvent(new Event('visibilitychange'));
-  }
+  let queue: ReturnType<typeof makeRafQueue>;
 
   beforeEach(() => {
     canvas = makeCanvas();
-    callbacks.length = 0;
-    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
-      callbacks.push(cb);
-      return callbacks.length;
-    }));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    queue = makeRafQueue();
   });
 
   afterEach(() => {
-    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
+    setDocumentHidden(false);
     vi.unstubAllGlobals();
   });
 
@@ -505,19 +415,19 @@ describe('SurfaceGame — background-tab audio', () => {
 
   it('pauses the game song when the tab hides and resumes on return', () => {
     const { playSpy, pauseSpy } = startGameWithSpies();
-    setHidden(true);
+    setDocumentHidden(true);
     expect(pauseSpy).toHaveBeenCalledTimes(1);
-    setHidden(false);
+    setDocumentHidden(false);
     expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
   it('does not resume the song once the run has ended (dead instance stays silent)', () => {
     const { game, playSpy } = startGameWithSpies();
     game.isOver = true;
-    callbacks.shift()?.(1000); // the halting render runs the teardown
+    queue.pump(1000); // the halting render runs the teardown
     playSpy.mockClear();
-    setHidden(true);
-    setHidden(false);
+    setDocumentHidden(true);
+    setDocumentHidden(false);
     expect(playSpy).not.toHaveBeenCalled();
   });
 });

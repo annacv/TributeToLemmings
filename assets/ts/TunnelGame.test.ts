@@ -6,14 +6,15 @@ import {
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
 import { makeBreakdown } from './lib/score';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas, stubAnimationFrame } from './test-helpers';
+import { SURFACE_HANDOFF_BREAKDOWN } from './test-game-factories';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
 function timeToCrushSteps(level: (typeof TUNNEL_LEVEL_CONFIG)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;
 }
 
-function makeTunnelGame(canvas: HTMLCanvasElement, breakdown = makeBreakdown({ surfaceTime: 42, levelsBonus: 15 })) {
+function makeTunnelGame(canvas: HTMLCanvasElement, breakdown = SURFACE_HANDOFF_BREAKDOWN) {
   const game = new TunnelGame(canvas, breakdown);
   game.startGame();
   return game;
@@ -25,9 +26,7 @@ function armCrush(game: TunnelGame): void {
 }
 
 beforeAll(() => {
-  /* jsdom has no rAF; tests drive the simulation through step() directly */
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  stubAnimationFrame();
 });
 
 describe('TunnelGame — per-level tunables (solvability invariants)', () => {

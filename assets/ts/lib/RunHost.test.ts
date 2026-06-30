@@ -1,16 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { RunHost, type RunHostHooks } from './RunHost';
 import { STEP_MS } from './GameLoop';
+import { makeRafQueue } from '../test-helpers';
 
-/* Captures rAF callbacks so tests drive the host with chosen timestamps,
-   mirroring the GameLoop harness it composes. */
 function makeHarness(overrides: Partial<RunHostHooks> = {}) {
-  const callbacks: FrameRequestCallback[] = [];
-  vi.stubGlobal('requestAnimationFrame', vi.fn((frameCallback: FrameRequestCallback) => {
-    callbacks.push(frameCallback);
-    return callbacks.length;
-  }));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const queue = makeRafQueue();
 
   let over = false;
   const hooks = {
@@ -26,12 +20,8 @@ function makeHarness(overrides: Partial<RunHostHooks> = {}) {
     host,
     hooks,
     setOver(value: boolean): void { over = value; },
-    pump(timestamp: number): void {
-      const frameCallback = callbacks.shift();
-      if (!frameCallback) throw new Error('no rAF callback pending');
-      frameCallback(timestamp);
-    },
-    get pending(): number { return callbacks.length; },
+    pump: queue.pump,
+    get pending() { return queue.pending; },
   };
 }
 

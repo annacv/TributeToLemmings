@@ -5,21 +5,9 @@ import {
 import { Stalactite, STALACTITE_COST } from './Stalactite';
 import { Bomb } from './Bomb';
 import { makeBreakdown } from './lib/score';
-import { makeCanvas, TEST_CANVAS_SIZE } from './test-helpers';
+import { makeCanvas, stubAnimationFrame, stepUntil, TEST_CANVAS_SIZE } from './test-helpers';
+import { makeAbyssGame } from './test-game-factories';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
-
-function makeAbyssGame(
-  canvas: HTMLCanvasElement,
-  breakdown = makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }),
-) {
-  const game = new AbyssGame(canvas, breakdown);
-  game.startGame();
-  return game;
-}
-
-function stepFor(game: AbyssGame, steps: number): void {
-  for (let i = 0; i < steps && !game.isOver; i++) game.step();
-}
 
 /** Survive falling bombs so a long run can reach a time/level milestone. */
 function invincible(game: AbyssGame): AbyssGame {
@@ -36,8 +24,7 @@ function setOverhead(game: AbyssGame, size: 'small' | 'medium' | 'large', carrie
 }
 
 beforeAll(() => {
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  stubAnimationFrame();
 });
 
 describe('AbyssGame — per-level tunables (escalation)', () => {
@@ -66,7 +53,7 @@ describe('AbyssGame — Player-driven camera', () => {
     const cam = game.cameraX;
     const worldX = game.playerWorldX;
     expect(game.playerScreenX()).toBeCloseTo(game.entranceWorldX, 5); // under the door on the ground
-    stepFor(game, 30);
+    stepUntil(game, 30);
     expect(game.cameraX).toBe(cam);                          // no constant scroll
     expect(game.playerWorldX).toBe(worldX);                  // stays put — can stand on a bomb
   });
@@ -74,7 +61,7 @@ describe('AbyssGame — Player-driven camera', () => {
   it('moves the lemming rightward and the camera follows it past the follow line', () => {
     const game = makeAbyssGame(makeCanvas());
     if (game.player) game.player.direction = 1;
-    stepFor(game, 200);
+    stepUntil(game, 200);
     expect(game.cameraX).toBeGreaterThan(0);                 // camera pulled forward by the lemming
     expect(game.playerScreenX()).toBeCloseTo(TEST_CANVAS_SIZE * 0.5, 5);    // pinned at the follow line on screen
   });
@@ -82,11 +69,11 @@ describe('AbyssGame — Player-driven camera', () => {
   it('never walks onto the left framing column and never scrolls back (one-way)', () => {
     const game = makeAbyssGame(makeCanvas());
     if (game.player) game.player.direction = 1;
-    stepFor(game, 200);
+    stepUntil(game, 200);
     const advanced = game.cameraX;
     expect(advanced).toBeGreaterThan(0);
     if (game.player) game.player.direction = -1;
-    stepFor(game, 600);
+    stepUntil(game, 600);
     expect(game.cameraX).toBe(advanced);                                  // no scroll-back
     expect(game.playerWorldX).toBeGreaterThanOrEqual(TEST_CANVAS_SIZE * 0.34 - 1e-9);    // off the start column
   });
@@ -118,7 +105,7 @@ describe('AbyssGame — bomb spawning', () => {
   it('keeps bombs inside the walkable corridor (off the left framing column)', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
     if (game.player) game.player.direction = 0; // idle: camera stays at the corridor start
-    stepFor(game, 300);
+    stepUntil(game, 300);
     const minX = TEST_CANVAS_SIZE * 0.34 - 1e-9; // CORRIDOR_START_FRAC
     for (const bomb of game.fallingBombs) expect(bomb.dx).toBeGreaterThanOrEqual(minX);
     for (const x of game.floorBombs) expect(x).toBeGreaterThanOrEqual(minX);
@@ -156,7 +143,7 @@ describe('AbyssGame — throw (smash stalactites)', () => {
     expect(play).toHaveBeenCalledWith('pickup'); // throw cue at release
     expect(game.thrownBombs).toHaveLength(1);    // a bomb is in flight…
     expect(stalactite.destroyed).toBe(false);            // …and hasn't struck yet
-    stepFor(game, THROW_FLIGHT_STEPS);           // let it land
+    stepUntil(game, THROW_FLIGHT_STEPS);           // let it land
     expect(stalactite.destroyed).toBe(true);
     expect(game.breaks.small).toBe(1);
     expect(play).toHaveBeenCalledWith('mantrap');
@@ -167,12 +154,12 @@ describe('AbyssGame — throw (smash stalactites)', () => {
     const game = makeAbyssGame(makeCanvas());
     const stalactite = setOverhead(game, 'medium', 2);
     game.action();
-    stepFor(game, THROW_FLIGHT_STEPS);
+    stepUntil(game, THROW_FLIGHT_STEPS);
     expect(stalactite.destroyed).toBe(false);
     expect(stalactite.hitsTaken).toBe(1);
     expect(game.breaks.medium).toBe(0);
     game.action();
-    stepFor(game, THROW_FLIGHT_STEPS);
+    stepUntil(game, THROW_FLIGHT_STEPS);
     expect(stalactite.destroyed).toBe(true);
     expect(game.breaks.medium).toBe(1);
     expect(game.carried).toBe(0);
@@ -184,16 +171,16 @@ describe('AbyssGame — time-gated level progression', () => {
   it('advances to L2 at 18 s and L3 at 36 s, by time alone', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
     expect(game.currentLevel).toBe(0);
-    stepFor(game, 18 * STEPS_PER_SECOND);
+    stepUntil(game, 18 * STEPS_PER_SECOND);
     expect(game.currentLevel).toBe(1);
-    stepFor(game, 18 * STEPS_PER_SECOND);
+    stepUntil(game, 18 * STEPS_PER_SECOND);
     expect(game.currentLevel).toBe(2);
   });
 
   it('plays the level-up cue on a time-gated level change', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
     const play = vi.spyOn(game.sfx, 'play');
-    stepFor(game, 18 * STEPS_PER_SECOND);
+    stepUntil(game, 18 * STEPS_PER_SECOND);
     expect(game.currentLevel).toBe(1);
     expect(play).toHaveBeenCalledWith('levelUp');
   });
@@ -202,14 +189,14 @@ describe('AbyssGame — time-gated level progression', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
     const stalactite = setOverhead(game, 'small', 3);
     game.action(); // a break well before 18 s
-    stepFor(game, 5 * STEPS_PER_SECOND);
+    stepUntil(game, 5 * STEPS_PER_SECOND);
     expect(stalactite.destroyed).toBe(true); // the thrown bomb landed
     expect(game.currentLevel).toBe(0); // still L1 — time, not breaks, advances
   });
 
   it('ends the run at the L3 time budget and routes as a completion', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
-    stepFor(game, ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND);
+    stepUntil(game, ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND);
     expect(game.isOver).toBe(true);
     const breakdown = game.currentBreakdown();
     expect(breakdown.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
@@ -221,7 +208,7 @@ describe('AbyssGame — time-gated level progression', () => {
 describe('AbyssGame — scoring (levels exclude the one died on)', () => {
   it('on death, counts only abyss levels fully passed', () => {
     const game = invincible(makeAbyssGame(makeCanvas()));
-    stepFor(game, 18 * STEPS_PER_SECOND); // now in L2 (index 1)
+    stepUntil(game, 18 * STEPS_PER_SECOND); // now in L2 (index 1)
     expect(game.currentLevel).toBe(1);
     // death keeps the default 'death' outcome → L2 (the level died on) excluded
     const breakdown = game.currentBreakdown();
@@ -235,9 +222,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
-    /* the shared rAF stubs are re-applied so the rest of the suite keeps them */
-    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    stubAnimationFrame(); // restore noop rAF after unstubAllGlobals
   });
 
   it('cold-open holds the closed hatch, plays DOOR.WAV, then hands off to play', () => {

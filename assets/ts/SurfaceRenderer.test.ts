@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, type Mock } from 'vitest';
 import { SurfaceRenderer } from './SurfaceRenderer';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas, mockPendingImage, mockReadyImage } from './test-helpers';
 
 /* The offscreen erosion context comes from jsdom's stubbed getContext (test-setup),
    so its drawImage is already a vi.fn() we can assert on directly. */
@@ -12,7 +12,7 @@ describe('SurfaceRenderer — erosion canvas drawing', () => {
   it('draws each loaded stamp onto the erosion canvas', () => {
     const renderer = new SurfaceRenderer(canvas);
     const drawImage = renderer['erosionCtx'].drawImage as unknown as Mock;
-    const img = { complete: true } as HTMLImageElement;
+    const img = mockReadyImage(0, 0);
 
     renderer['drawStamps']([{ img, x: 100, y: 350, width: 30, height: 90 }]);
 
@@ -23,7 +23,7 @@ describe('SurfaceRenderer — erosion canvas drawing', () => {
   it('skips stamps whose image has not loaded yet', () => {
     const renderer = new SurfaceRenderer(canvas);
     const drawImage = renderer['erosionCtx'].drawImage as unknown as Mock;
-    const img = { complete: false } as HTMLImageElement;
+    const img = mockPendingImage();
 
     renderer['drawStamps']([{ img, x: 50, y: 360, width: 80, height: 48 }]);
 

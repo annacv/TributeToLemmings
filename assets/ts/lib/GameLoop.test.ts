@@ -1,17 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GameLoop, STEP_MS, MAX_CATCHUP_STEPS } from './GameLoop';
+import { makeRafQueue } from '../test-helpers';
 
-/* Captures rAF callbacks so tests drive the loop with chosen timestamps */
 function makeHarness(stepImpl: () => boolean = () => true) {
-  const callbacks: FrameRequestCallback[] = [];
-  const raf = vi.fn((frameCallback: FrameRequestCallback) => {
-    callbacks.push(frameCallback);
-    return callbacks.length;
-  });
-  const caf = vi.fn();
-  vi.stubGlobal('requestAnimationFrame', raf);
-  vi.stubGlobal('cancelAnimationFrame', caf);
-
+  const queue = makeRafQueue();
   const step = vi.fn(stepImpl);
   const render = vi.fn();
   const loop = new GameLoop({ step, render });
@@ -20,16 +12,10 @@ function makeHarness(stepImpl: () => boolean = () => true) {
     loop,
     step,
     render,
-    raf,
-    caf,
-    pump(timestamp: number): void {
-      const frameCallback = callbacks.shift();
-      if (!frameCallback) throw new Error('no rAF callback pending');
-      frameCallback(timestamp);
-    },
-    get pending(): number {
-      return callbacks.length;
-    },
+    raf: queue.raf,
+    caf: queue.caf,
+    pump: queue.pump,
+    get pending() { return queue.pending; },
   };
 }
 

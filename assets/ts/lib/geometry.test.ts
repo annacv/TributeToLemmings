@@ -1,14 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { bombHitsPlayer } from './geometry';
-import { TEST_CANVAS_SIZE } from '../test-helpers';
+import { defaultPlayerHitbox } from '../test-helpers';
 
-/* Default lemming placement on the 468×468 test canvas (Player constructor):
-   box (40, 380) 50×50 → hurtbox x 48–82, y 385–430; bomb 28×32 with the
-   right 6px (spark) trimmed → dangerous span dx..dx+22. */
-const PLAYER_X = 40;
-const PLAYER_Y = TEST_CANVAS_SIZE - 50 - 38;
-const PLAYER_W = 50;
-const PLAYER_H = 50;
+const { x: PLAYER_X, y: PLAYER_Y, w: PLAYER_W, h: PLAYER_H } = defaultPlayerHitbox();
 
 describe('bombHitsPlayer', () => {
   it.each([

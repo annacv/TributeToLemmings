@@ -1,19 +1,12 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { AbyssGame } from './AbyssGame';
 import { AbyssRenderer } from './AbyssRenderer';
 import { Stalactite } from './Stalactite';
-import { makeBreakdown } from './lib/score';
-import { makeCanvas, TEST_CANVAS_SIZE } from './test-helpers';
-
-function makeAbyssGame(canvas: HTMLCanvasElement) {
-  const game = new AbyssGame(canvas, makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }));
-  game.startGame();
-  return game;
-}
+import { makeCanvas, stubAnimationFrame, TEST_CANVAS_SIZE } from './test-helpers';
+import { makeAbyssGame } from './test-game-factories';
 
 beforeAll(() => {
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
-  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  stubAnimationFrame();
 });
 
 describe('AbyssRenderer', () => {
