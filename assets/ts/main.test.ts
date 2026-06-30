@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { generateGuestHandle } from './main';
+import {
+  generateGuestHandle,
+  THE_END_WALK_MS,
+  THE_END_PROMPT_HOLD_MS,
+  THE_END_BOARD_MS,
+  THE_END_END_HOLD_MS,
+} from './main';
 import { submitScore, fetchTopScores, getPlayerRank } from './lib/leaderboard';
 import { makeBreakdown, type ScoreBreakdown } from './lib/score';
 import { TunnelGame } from './TunnelGame';
@@ -603,17 +609,17 @@ describe('The End finale screen', () => {
 
   it('plays the balloon SFX after boarding, at ascent start — never before', () => {
     const balloonPlayed = (): boolean => audioSrcs.some((s) => /balloon/i.test(s));
-    vi.advanceTimersByTime(4000); // auto lift-off fires (walk + prompt hold) → boarding begins
+    vi.advanceTimersByTime(THE_END_WALK_MS + THE_END_PROMPT_HOLD_MS); // auto lift-off fires → boarding begins
     expect(balloonPlayed()).toBe(false); // not at boarding
-    vi.advanceTimersByTime(700); // board done → ascent start
+    vi.advanceTimersByTime(THE_END_BOARD_MS); // board done → ascent start
     expect(balloonPlayed()).toBe(true);
   });
 
   it('a press lifts off immediately, without waiting out the prompt hold', () => {
     const balloonPlayed = (): boolean => audioSrcs.some((s) => /balloon/i.test(s));
-    vi.advanceTimersByTime(1500); // walk done, prompt up — well before the 4000ms auto lift-off
+    vi.advanceTimersByTime(1500); // walk done, prompt up — well before the auto lift-off
     document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
-    vi.advanceTimersByTime(700); // board → ascent SFX
+    vi.advanceTimersByTime(THE_END_BOARD_MS); // board → ascent SFX
     expect(balloonPlayed()).toBe(true);
   });
 
@@ -658,7 +664,7 @@ describe('The End finale screen', () => {
     window.dispatchEvent(new Event('load'));
 
     expect(document.querySelector('.the-end-credits--static')).not.toBeNull(); // static credits, no crawl
-    vi.advanceTimersByTime(4200); // THE_END_END_HOLD_MS → ranking
+    vi.advanceTimersByTime(THE_END_END_HOLD_MS); // → ranking
     expect(document.querySelector('.ranking-screen')).not.toBeNull();
     window.matchMedia = realMatchMedia;
   });

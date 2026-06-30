@@ -1,17 +1,16 @@
-import { drawLemmingShape } from '../Player';
+import { drawLemmingShape, LEMMING_GRID } from '../Player';
 import { ready } from './images';
 
 export const THE_END_SKY = '#00C8FF'; // matches background-theend.svg's sky, filled above the scrolled scene
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
-const LEMMING_GRID = 142;             // drawLemmingShape coordinate space
 
-const BASKET_OFFSET_FRAC = 0.74;      // basket sits this far down the balloon height
-const BOARD_SHRINK_FRAC = 0.4;        // lemming shrinks by this fraction while boarding
-const ASCEND_LEMMING_SCALE = 0.6;     // lemming scale during ascent (matches boarded size)
-const ASCEND_BALLOON_TOP_FRAC = 0.18; // balloon top rests at this fraction of canvas height at ascent end
-const ASCEND_SCROLL_FRAC = 1.25;      // camera scroll distance over the ascent, in canvas heights
+const BASKET_OFFSET_FRAC = 0.74;             // basket sits this far down the balloon height
+const BOARD_SHRINK_FRAC = 0.4;               // lemming shrinks by this fraction while boarding
+const ASCEND_LEMMING_SCALE = 0.6;            // lemming scale during ascent (matches boarded size)
+export const ASCEND_BALLOON_TOP_FRAC = 0.18; // balloon top rests at this fraction of canvas height at ascent end
+export const ASCEND_SCROLL_FRAC = 1.25;      // camera scroll distance over the ascent, in canvas heights
 
-export interface TheEndCfg {
+export interface TheEndConfig {
   size: number;        // canvas px (square)
   groundY: number;     // px — lemming feet / balloon basket at rest
   balloonX: number;    // px — balloon centre x
@@ -40,7 +39,7 @@ export function theEndFrameAt(
   elapsed: number,
   liftOffElapsed: number | null,
   durations: TheEndDurations,
-  config: TheEndCfg,
+  config: TheEndConfig,
 ): TheEndFrame {
   const balloonH = config.balloonW * BALLOON_ASPECT;
   const restBalloonY = config.groundY - balloonH;

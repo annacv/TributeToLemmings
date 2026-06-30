@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { theEndFrameAt, type TheEndCfg, type TheEndDurations } from './theEndScene';
+import {
+  theEndFrameAt,
+  ASCEND_SCROLL_FRAC,
+  ASCEND_BALLOON_TOP_FRAC,
+  type TheEndConfig,
+  type TheEndDurations,
+} from './theEndScene';
 
-const cfg: TheEndCfg = {
+const config: TheEndConfig = {
   size: 800,
   groundY: 688,
   balloonX: 496,
@@ -10,54 +16,54 @@ const cfg: TheEndCfg = {
   walkStartX: 144,
   walkEndX: 430,
 };
-const dur: TheEndDurations = { walkMs: 1400, boardMs: 700, ascendMs: 4200 };
+const durations: TheEndDurations = { walkMs: 1400, boardMs: 700, ascendMs: 4200 };
 
 describe('theEndFrameAt', () => {
   it('walks the lemming toward the balloon, ground still', () => {
-    const f = theEndFrameAt(0, null, dur, cfg);
-    expect(f.phase).toBe('walk');
-    expect(f.groundScrollY).toBe(0);
-    expect(f.boarded).toBe(false);
-    expect(f.lemmingX).toBeCloseTo(cfg.walkStartX);
+    const frame = theEndFrameAt(0, null, durations, config);
+    expect(frame.phase).toBe('walk');
+    expect(frame.groundScrollY).toBe(0);
+    expect(frame.boarded).toBe(false);
+    expect(frame.lemmingX).toBeCloseTo(config.walkStartX);
   });
 
   it('reaches the prompt at the balloon once the walk completes', () => {
-    const f = theEndFrameAt(dur.walkMs, null, dur, cfg);
-    expect(f.phase).toBe('prompt');
-    expect(f.lemmingX).toBeCloseTo(cfg.walkEndX);
-    expect(f.groundScrollY).toBe(0);
+    const frame = theEndFrameAt(durations.walkMs, null, durations, config);
+    expect(frame.phase).toBe('prompt');
+    expect(frame.lemmingX).toBeCloseTo(config.walkEndX);
+    expect(frame.groundScrollY).toBe(0);
   });
 
   it('boards before ascending: lemming shrinks into the basket, ground still', () => {
-    const f = theEndFrameAt(dur.boardMs / 2, 0, dur, cfg);
-    expect(f.phase).toBe('board');
-    expect(f.boarded).toBe(true);
-    expect(f.groundScrollY).toBe(0);
-    expect(f.lemmingSize).toBeLessThan(cfg.lemmingSize);
+    const frame = theEndFrameAt(durations.boardMs / 2, 0, durations, config);
+    expect(frame.phase).toBe('board');
+    expect(frame.boarded).toBe(true);
+    expect(frame.groundScrollY).toBe(0);
+    expect(frame.lemmingSize).toBeLessThan(config.lemmingSize);
   });
 
   it('boards from the lemming\'s current walk position on an early lift-off (no jump)', () => {
-    const liftOff = dur.walkMs / 2; // pressed mid-walk
-    const walkPos = theEndFrameAt(liftOff, null, dur, cfg).lemmingX;
-    const f = theEndFrameAt(liftOff, liftOff, dur, cfg); // first board frame (bt = 0)
-    expect(f.phase).toBe('board');
-    expect(f.lemmingX).toBeCloseTo(walkPos);
-    expect(walkPos).toBeLessThan(cfg.walkEndX);
+    const liftOff = durations.walkMs / 2; // pressed mid-walk
+    const walkPos = theEndFrameAt(liftOff, null, durations, config).lemmingX;
+    const frame = theEndFrameAt(liftOff, liftOff, durations, config); // first board frame (boardProgress = 0)
+    expect(frame.phase).toBe('board');
+    expect(frame.lemmingX).toBeCloseTo(walkPos);
+    expect(walkPos).toBeLessThan(config.walkEndX);
   });
 
   it('ascends after boarding: camera rises and hair goes wild', () => {
-    const mid = dur.boardMs + dur.ascendMs / 2;
-    const f = theEndFrameAt(mid, 0, dur, cfg);
-    expect(f.phase).toBe('ascend');
-    expect(f.groundScrollY).toBeGreaterThan(0);
-    expect(f.hairLevel).toBe(4);
+    const mid = durations.boardMs + durations.ascendMs / 2;
+    const frame = theEndFrameAt(mid, 0, durations, config);
+    expect(frame.phase).toBe('ascend');
+    expect(frame.groundScrollY).toBeGreaterThan(0);
+    expect(frame.hairLevel).toBe(4);
   });
 
   it('settles the end state: scene fully scrolled, balloon high in the sky', () => {
-    const end = dur.boardMs + dur.ascendMs;
-    const f = theEndFrameAt(end, 0, dur, cfg);
-    expect(f.phase).toBe('ascend');
-    expect(f.groundScrollY).toBeCloseTo(cfg.size * 1.25);
-    expect(f.balloonY).toBeCloseTo(cfg.size * 0.18);
+    const end = durations.boardMs + durations.ascendMs;
+    const frame = theEndFrameAt(end, 0, durations, config);
+    expect(frame.phase).toBe('ascend');
+    expect(frame.groundScrollY).toBeCloseTo(config.size * ASCEND_SCROLL_FRAC);
+    expect(frame.balloonY).toBeCloseTo(config.size * ASCEND_BALLOON_TOP_FRAC);
   });
 });

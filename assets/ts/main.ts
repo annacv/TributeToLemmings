@@ -1,7 +1,7 @@
 import { SurfaceGame } from './SurfaceGame';
 import { TunnelGame } from './TunnelGame';
 import { AbyssGame } from './AbyssGame';
-import { drawLemmingMascot, drawLemmingShape } from './Player';
+import { drawLemmingMascot, drawLemmingShape, LEMMING_GRID } from './Player';
 import { submitScore, fetchTopScores, getPlayerRank, preloadLeaderboard } from './lib/leaderboard';
 import { safePlay, playLoop, stopLoop, pauseWhileHidden } from './lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from './lib/geometry';
@@ -11,7 +11,7 @@ import { getDebugScreen, consumeDebugScreen } from './lib/debugScreen';
 import { announce } from './lib/liveRegion';
 import { attachWorldLoop } from './lib/attachWorldLoop';
 import { loadImage, whenImagesSettled } from './lib/images';
-import { drawTheEndScene, theEndFrameAt, type TheEndCfg } from './lib/theEndScene';
+import { drawTheEndScene, theEndFrameAt, type TheEndConfig } from './lib/theEndScene';
 import { makeBreakdown, breakdownLines, type ScoreBreakdown } from './lib/score';
 import {
   DIE_SFX, RANKING_MUSIC, FALLING_SFX, CAVE_LOOP,
@@ -41,12 +41,18 @@ const ABYSS_CEILING_HANG_FRAC = 0.5;
 const REVEAL_FLOOR_TOP_SVG = 2688;
 const EASE_OUT_BACK_C1 = 1.70158;
 const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
-const THE_END_WALK_MS = 1400;
-const THE_END_PROMPT_HOLD_MS = 2600;
-const THE_END_BOARD_MS = 700;
-const THE_END_ASCEND_MS = 4200;
-const THE_END_CREDITS_MS = 9000;
-const THE_END_END_HOLD_MS = 4200;
+export const THE_END_WALK_MS = 1400;
+export const THE_END_PROMPT_HOLD_MS = 2600;
+export const THE_END_BOARD_MS = 700;
+export const THE_END_ASCEND_MS = 4200;
+export const THE_END_CREDITS_MS = 9000;
+export const THE_END_END_HOLD_MS = 4200;
+
+const THE_END_BALLOON_WIDTH_FRAC = 0.34;
+const THE_END_GROUND_Y_FRAC = 0.86;       // lemming feet / balloon basket rest line
+const THE_END_BALLOON_X_FRAC = 0.62;      // balloon centre x
+const THE_END_WALK_START_X_FRAC = 0.18;   // lemming start x (left)
+const THE_END_WALK_END_INSET_FRAC = 0.16; // halt point left of balloon centre, in balloon widths
 
 const CREDITS_LINES = [
   'THE END',
@@ -84,20 +90,20 @@ function escapeHtml(str: string): string {
 
 /* Runs the splash mascot's idle loop on its canvas; returns a stop handle for teardown. */
 function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
-  canvas.width = 142;
-  canvas.height = 142;
+  canvas.width = LEMMING_GRID;
+  canvas.height = LEMMING_GRID;
   const ctx = canvas.getContext('2d')!;
 
   /* Reduced motion: a single resting frame, no idle loop (the global CSS clamp
      can't reach a requestAnimationFrame-driven canvas) */
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    drawLemmingMascot(ctx, 142, 0);
+    drawLemmingMascot(ctx, LEMMING_GRID, 0);
     return () => {};
   }
 
   let frame = 0;
   let rafId = requestAnimationFrame(function tick() {
-    drawLemmingMascot(ctx, 142, frame++);
+    drawLemmingMascot(ctx, LEMMING_GRID, frame++);
     rafId = requestAnimationFrame(tick);
   });
 
@@ -380,7 +386,7 @@ function main(): void {
       }
       ctx.save();
       ctx.translate(holeX, lemmingY);
-      ctx.scale(lemmingSize / 142, lemmingSize / 142);
+      ctx.scale(lemmingSize / LEMMING_GRID, lemmingSize / LEMMING_GRID);
       drawLemmingShape(ctx, '#FFFFFF', hairLevel);
       ctx.restore();
       /* The ceiling slams down from above the frame to seal the lemming in. Drawn
@@ -640,21 +646,21 @@ function main(): void {
     const sceneImg = loadImage(THE_END_BACKGROUND_SVG);
     const balloonImg = loadImage(BALLOON_SVG);
 
-    const balloonW = size * 0.34;
-    const cfg: TheEndCfg = {
+    const balloonW = size * THE_END_BALLOON_WIDTH_FRAC;
+    const config: TheEndConfig = {
       size,
-      groundY: size * 0.86,
-      balloonX: size * 0.62,
+      groundY: size * THE_END_GROUND_Y_FRAC,
+      balloonX: size * THE_END_BALLOON_X_FRAC,
       balloonW,
       lemmingSize: size * LEMMING_SIZE_FRAC,
-      walkStartX: size * 0.18,
-      walkEndX: size * 0.62 - balloonW * 0.16,
+      walkStartX: size * THE_END_WALK_START_X_FRAC,
+      walkEndX: size * THE_END_BALLOON_X_FRAC - balloonW * THE_END_WALK_END_INSET_FRAC,
     };
-    const dur = { walkMs: THE_END_WALK_MS, boardMs: THE_END_BOARD_MS, ascendMs: THE_END_ASCEND_MS };
+    const durations = { walkMs: THE_END_WALK_MS, boardMs: THE_END_BOARD_MS, ascendMs: THE_END_ASCEND_MS };
 
-    const ac = new AbortController();
+    const abortController = new AbortController();
     const loop = new Audio(THE_END_MUSIC);
-    let t0 = 0;
+    let startTime = 0;
     let liftOffElapsed: number | null = null;
     let ascended = false;
     let routed = false;
@@ -663,7 +669,7 @@ function main(): void {
        deterministic and testable; rAF only redraws. */
     function doLiftOff(): void {
       if (liftOffElapsed !== null || routed) return;
-      liftOffElapsed = performance.now() - t0;
+      liftOffElapsed = performance.now() - startTime;
       promptEl.classList.remove('show');
       /* Board, then ascend (SFX + credits), then route — all relative to lift-off,
          so a press only *accelerates* an inevitable boarding (never a soft-lock). */
@@ -681,20 +687,20 @@ function main(): void {
     function route(): void {
       if (routed) return;
       routed = true;
-      ac.abort();
+      abortController.abort();
       stopLoop(loop);
       createRankingScreen(breakdown.total, submission);
     }
 
     function draw(): void {
       if (routed) return;
-      const f = theEndFrameAt(performance.now() - t0, liftOffElapsed, dur, cfg);
-      promptEl.classList.toggle('show', f.phase === 'prompt');
-      drawTheEndScene(ctx, size, f, sceneImg, balloonImg);
+      const frame = theEndFrameAt(performance.now() - startTime, liftOffElapsed, durations, config);
+      promptEl.classList.toggle('show', frame.phase === 'prompt');
+      drawTheEndScene(ctx, size, frame, sceneImg, balloonImg);
       requestAnimationFrame(draw);
     }
 
-    t0 = performance.now();
+    startTime = performance.now();
     {
       /* The action means "lift off" until boarded, then "skip to ranking". Focus
          stays on the overlay (not the skip button) so Space hits this handler. */
@@ -703,14 +709,14 @@ function main(): void {
           event.preventDefault();
           if (liftOffElapsed === null) doLiftOff(); else route();
         }
-      }, { signal: ac.signal });
+      }, { signal: abortController.signal });
       /* Tap the scene to lift off (touch); the Skip button always routes onward. */
-      canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: ac.signal });
+      canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: abortController.signal });
       (screen.querySelector('.the-end-skip') as HTMLButtonElement)
-        .addEventListener('click', route, { signal: ac.signal });
+        .addEventListener('click', route, { signal: abortController.signal });
 
       playLoop(loop, muted);
-      pauseWhileHidden(loop, { signal: ac.signal, shouldResume: () => !routed });
+      pauseWhileHidden(loop, { signal: abortController.signal, shouldResume: () => !routed });
       setupMuteButton(
         screen.querySelector('.mute-btn') as HTMLButtonElement,
         (m) => { loop.muted = m; },
@@ -719,8 +725,8 @@ function main(): void {
       if (reduceMotion) {
         /* Jump to the end state — balloon risen, credits static — then route. */
         liftOffElapsed = 0;
-        const f = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, dur, cfg);
-        drawTheEndScene(ctx, size, f, sceneImg, balloonImg);
+        const frame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
+        drawTheEndScene(ctx, size, frame, sceneImg, balloonImg);
         creditsEl.classList.add('the-end-credits--static');
         if (!muted) safePlay(new Audio(BALLOON_SFX));
         setTimeout(route, THE_END_END_HOLD_MS);
