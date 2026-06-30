@@ -627,6 +627,25 @@ describe('The End finale screen', () => {
     expect(document.querySelector('.ranking-screen')).not.toBeNull();
   });
 
+  it('wires Skip and the auto-route timer even while the scene assets are still loading', () => {
+    /* Pending images whose load/error never fire — the real-browser case the
+       SettledImage stub hides. Skip and the no-soft-lock timer must work anyway. */
+    class PendingImage {
+      complete = false;
+      naturalWidth = 0;
+      src = '';
+      addEventListener(): void {}
+    }
+    vi.stubGlobal('Image', PendingImage);
+    document.body.innerHTML = '<main id="site-main"></main>';
+    history.replaceState(null, '', '/?screen=theend');
+    window.dispatchEvent(new Event('load'));
+
+    expect(document.querySelector('.the-end-screen')).not.toBeNull();
+    (document.querySelector('.the-end-skip') as HTMLButtonElement).click();
+    expect(document.querySelector('.ranking-screen')).not.toBeNull();
+  });
+
   it('reduced motion jumps to the end state and routes to the ranking without the cinematic', () => {
     const realMatchMedia = window.matchMedia;
     window.matchMedia = ((query: string) => ({

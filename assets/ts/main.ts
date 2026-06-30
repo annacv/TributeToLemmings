@@ -694,8 +694,8 @@ function main(): void {
       requestAnimationFrame(draw);
     }
 
-    const start = (): void => {
-      t0 = performance.now();
+    t0 = performance.now();
+    {
       /* The action means "lift off" until boarded, then "skip to ranking". Focus
          stays on the overlay (not the skip button) so Space hits this handler. */
       document.addEventListener('keydown', (event) => {
@@ -729,9 +729,7 @@ function main(): void {
       /* Auto lift-off if the player never presses (no soft-lock). */
       setTimeout(doLiftOff, THE_END_WALK_MS + THE_END_PROMPT_HOLD_MS);
       requestAnimationFrame(draw);
-    };
-
-    whenImagesSettled([sceneImg, balloonImg], start);
+    }
   }
 
   function createRankingScreen(currentScore: number, submission: Promise<SubmissionResult>): void {
