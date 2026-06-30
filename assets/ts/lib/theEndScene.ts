@@ -1,13 +1,15 @@
 import { drawLemmingShape } from '../Player';
 import { ready } from './images';
 
-/* The End finale scene math + draw, kept pure (no timers, no audio) so the beat
-   geometry is unit-testable. The screen function (main.ts) owns the clock, audio,
-   input and routing; it calls theEndFrameAt() each rAF and hands the frame here. */
-
 export const THE_END_SKY = '#00C8FF'; // matches background-theend.svg's sky, filled above the scrolled scene
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
 const LEMMING_GRID = 142;             // drawLemmingShape coordinate space
+
+const BASKET_OFFSET_FRAC = 0.74;      // basket sits this far down the balloon height
+const BOARD_SHRINK_FRAC = 0.4;        // lemming shrinks by this fraction while boarding
+const ASCEND_LEMMING_SCALE = 0.6;     // lemming scale during ascent (matches boarded size)
+const ASCEND_BALLOON_TOP_FRAC = 0.18; // balloon top rests at this fraction of canvas height at ascent end
+const ASCEND_SCROLL_FRAC = 1.25;      // camera scroll distance over the ascent, in canvas heights
 
 export interface TheEndCfg {
   size: number;        // canvas px (square)
@@ -37,62 +39,61 @@ export interface TheEndFrame {
 export function theEndFrameAt(
   elapsed: number,
   liftOffElapsed: number | null,
-  dur: TheEndDurations,
-  cfg: TheEndCfg,
+  durations: TheEndDurations,
+  config: TheEndCfg,
 ): TheEndFrame {
-  const balloonH = cfg.balloonW * BALLOON_ASPECT;
-  const restBalloonY = cfg.groundY - balloonH;
-  const restLemmingY = cfg.groundY - cfg.lemmingSize;
-  const basketY = (balloonTop: number): number => balloonTop + balloonH * 0.74;
-
-  const base = { balloonX: cfg.balloonX, balloonW: cfg.balloonW };
+  const balloonH = config.balloonW * BALLOON_ASPECT;
+  const restBalloonY = config.groundY - balloonH;
+  const restLemmingY = config.groundY - config.lemmingSize;
+  const basketY = (balloonTop: number): number => balloonTop + balloonH * BASKET_OFFSET_FRAC;
+  const base = { balloonX: config.balloonX, balloonW: config.balloonW };
 
   if (liftOffElapsed === null) {
-    const wt = Math.min(elapsed / dur.walkMs, 1);
+    const walkProgress = Math.min(elapsed / durations.walkMs, 1);
     return {
       ...base,
-      phase: wt < 1 ? 'walk' : 'prompt',
+      phase: walkProgress < 1 ? 'walk' : 'prompt',
       groundScrollY: 0,
       balloonY: restBalloonY,
-      lemmingX: cfg.walkStartX + (cfg.walkEndX - cfg.walkStartX) * wt,
+      lemmingX: config.walkStartX + (config.walkEndX - config.walkStartX) * walkProgress,
       lemmingY: restLemmingY,
-      lemmingSize: cfg.lemmingSize,
+      lemmingSize: config.lemmingSize,
       hairLevel: 0,
       boarded: false,
     };
   }
 
-  const local = elapsed - liftOffElapsed;
-  const walkProgressAtLiftOff = Math.min(liftOffElapsed / dur.walkMs, 1);
-  const boardStartX = cfg.walkStartX + (cfg.walkEndX - cfg.walkStartX) * walkProgressAtLiftOff;
+  const sinceLiftOff = elapsed - liftOffElapsed;
+  const walkProgressAtLiftOff = Math.min(liftOffElapsed / durations.walkMs, 1);
+  const boardStartX = config.walkStartX + (config.walkEndX - config.walkStartX) * walkProgressAtLiftOff;
 
-  if (local < dur.boardMs) {
-    const bt = Math.max(local, 0) / dur.boardMs;
-    const lemmingSize = cfg.lemmingSize * (1 - 0.4 * bt);
-    const targetX = cfg.balloonX - lemmingSize / 2;
+  if (sinceLiftOff < durations.boardMs) {
+    const boardProgress = Math.max(sinceLiftOff, 0) / durations.boardMs;
+    const lemmingSize = config.lemmingSize * (1 - BOARD_SHRINK_FRAC * boardProgress);
+    const targetX = config.balloonX - lemmingSize / 2;
     return {
       ...base,
       phase: 'board',
       groundScrollY: 0,
       balloonY: restBalloonY,
-      lemmingX: boardStartX + (targetX - boardStartX) * bt,
-      lemmingY: restLemmingY + (basketY(restBalloonY) - restLemmingY) * bt,
+      lemmingX: boardStartX + (targetX - boardStartX) * boardProgress,
+      lemmingY: restLemmingY + (basketY(restBalloonY) - restLemmingY) * boardProgress,
       lemmingSize,
       hairLevel: 0,
       boarded: true,
     };
   }
 
-  const at = Math.min((local - dur.boardMs) / dur.ascendMs, 1);
-  const eased = at < 0.5 ? 2 * at * at : 1 - (-2 * at + 2) ** 2 / 2; // easeInOutQuad
-  const balloonY = restBalloonY + (cfg.size * 0.18 - restBalloonY) * eased;
-  const lemmingSize = cfg.lemmingSize * 0.6;
+  const ascendProgress = Math.min((sinceLiftOff - durations.boardMs) / durations.ascendMs, 1);
+  const eased = ascendProgress < 0.5 ? 2 * ascendProgress * ascendProgress : 1 - (-2 * ascendProgress + 2) ** 2 / 2; // easeInOutQuad
+  const balloonY = restBalloonY + (config.size * ASCEND_BALLOON_TOP_FRAC - restBalloonY) * eased;
+  const lemmingSize = config.lemmingSize * ASCEND_LEMMING_SCALE;
   return {
     ...base,
     phase: 'ascend',
-    groundScrollY: eased * cfg.size * 1.25,
+    groundScrollY: eased * config.size * ASCEND_SCROLL_FRAC,
     balloonY,
-    lemmingX: cfg.balloonX - lemmingSize / 2,
+    lemmingX: config.balloonX - lemmingSize / 2,
     lemmingY: basketY(balloonY),
     lemmingSize,
     hairLevel: 4,
@@ -105,20 +106,20 @@ export function theEndFrameAt(
 export function drawTheEndScene(
   ctx: CanvasRenderingContext2D,
   size: number,
-  f: TheEndFrame,
+  frame: TheEndFrame,
   sceneImg: HTMLImageElement,
   balloonImg: HTMLImageElement,
 ): void {
   ctx.fillStyle = THE_END_SKY;
   ctx.fillRect(0, 0, size, size);
-  if (ready(sceneImg)) ctx.drawImage(sceneImg, 0, f.groundScrollY, size, size);
+  if (ready(sceneImg)) ctx.drawImage(sceneImg, 0, frame.groundScrollY, size, size);
   if (ready(balloonImg)) {
-    const h = f.balloonW * (balloonImg.naturalHeight / balloonImg.naturalWidth);
-    ctx.drawImage(balloonImg, f.balloonX - f.balloonW / 2, f.balloonY, f.balloonW, h);
+    const balloonHeight = frame.balloonW * (balloonImg.naturalHeight / balloonImg.naturalWidth);
+    ctx.drawImage(balloonImg, frame.balloonX - frame.balloonW / 2, frame.balloonY, frame.balloonW, balloonHeight);
   }
   ctx.save();
-  ctx.translate(f.lemmingX, f.lemmingY);
-  ctx.scale(f.lemmingSize / LEMMING_GRID, f.lemmingSize / LEMMING_GRID);
-  drawLemmingShape(ctx, '#FFFFFF', f.hairLevel);
+  ctx.translate(frame.lemmingX, frame.lemmingY);
+  ctx.scale(frame.lemmingSize / LEMMING_GRID, frame.lemmingSize / LEMMING_GRID);
+  drawLemmingShape(ctx, '#FFFFFF', frame.hairLevel);
   ctx.restore();
 }
