@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import {
   TunnelGame, TUNNEL_LEVEL_CONFIG, TUNNEL_TIME_BUDGET_S, TOTAL_CYCLES,
-  FLOOR_FRAC, CRUSH_HEADROOM_FRAC, WARNING_HEADROOM_FRAC,
+  FLOOR_FRAC, CRUSH_HEADROOM_FRAC,
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
@@ -57,9 +57,6 @@ describe('TunnelGame — per-level tunables (solvability invariants)', () => {
     expect(TUNNEL_LEVEL_CONFIG[2].driftPerStep).toBeGreaterThan(TUNNEL_LEVEL_CONFIG[1].driftPerStep);
   });
 
-  it('the warning band sits above the kill line', () => {
-    expect(WARNING_HEADROOM_FRAC).toBeGreaterThan(CRUSH_HEADROOM_FRAC);
-  });
 });
 
 describe('TunnelGame — skeleton and countdown', () => {

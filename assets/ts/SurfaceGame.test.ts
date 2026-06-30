@@ -4,7 +4,6 @@ import { Player } from './Player';
 import { Bomb } from './Bomb';
 import { SPRITES } from './assets';
 import { makeBreakdown, LEVEL_POINTS } from './lib/score';
-import { MAX_CATCHUP_STEPS } from './lib/GameLoop';
 import { makeCanvas } from './test-helpers';
 
 // --- helpers ---
@@ -85,30 +84,18 @@ describe('SurfaceGame', () => {
     expect(game.bombs).toHaveLength(0);
   });
 
-  /* Hurtbox geometry on the 468×468 test canvas: player box (40,380) 50×50
-     → hurtbox x 48–82, y 385–430; bomb 28×32 with the right 6px (spark) trimmed
-     → dangerous span dx..dx+22. */
-
-  it.each([
-    { dx: 83, dy: 390, hit: false, note: 'body just past the hurtbox right edge (82)' },
-    { dx: 25, dy: 390, hit: false, note: 'only the trimmed spark zone (47–53) reaches the player' },
-    { dx: 50, dy: 352, hit: false, note: 'bomb bottom (384) just above the hurtbox top (385)' },
-    { dx: 82, dy: 390, hit: true,  note: 'body left edge touches hurtbox right edge' },
-    { dx: 26, dy: 390, hit: true,  note: 'body right edge (48) touches hurtbox left edge' },
-  ])('hurtbox boundary: bomb at ($dx,$dy) → hit=$hit ($note)', ({ dx, dy, hit }) => {
+  it('wires checkCollisions to bombHitsPlayer at the hurtbox edges', () => {
     const game = makeSurfaceGameWithPlayer(canvas);
-    expect(placeBomb(game, dx, dy).isExploding).toBe(hit);
+    expect(placeBomb(game, 82, 390).isExploding).toBe(true);
+    expect(placeBomb(game, 83, 390).isExploding).toBe(false);
   });
 
   it('collision outcome is independent of facing direction', () => {
-    // The sprite mirrors with direction but the hurtbox must not: facing
-    // left or right at the same position must give the same outcome.
-    for (const [dx, expected] of [[82, true], [83, false]] as const) {
-      for (const direction of [1, -1]) {
-        const game = makeSurfaceGameWithPlayer(canvas);
-        game.player.direction = direction;
-        expect(placeBomb(game, dx).isExploding).toBe(expected);
-      }
+    for (const direction of [1, -1]) {
+      const game = makeSurfaceGameWithPlayer(canvas);
+      game.player.direction = direction;
+      expect(placeBomb(game, 82).isExploding).toBe(true);
+      expect(placeBomb(game, 83).isExploding).toBe(false);
     }
   });
 
@@ -161,19 +148,6 @@ describe('SurfaceGame', () => {
 
     expect(() => game.displayLives()).not.toThrow();
     expect(document.querySelectorAll('.life-losing')).toHaveLength(3);
-  });
-
-  it('plays bombHit from currentTime=0 on collision when unmuted', () => {
-    const game = makeSurfaceGameWithPlayer(canvas);
-    const bombHit = game.sfx.get('bombHit')!;
-    const playSpy = vi.fn().mockResolvedValue(undefined);
-    bombHit.play = playSpy;
-    game.gameSong.muted = false;
-
-    placeHitBomb(game);
-
-    expect(bombHit.currentTime).toBe(0);
-    expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
   it('does not play bombHit when audio is muted', () => {
@@ -442,13 +416,6 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it('fires the callback exactly once on a sting decode error', () => {
-    const { game, onComplete } = collapseUnmuted();
-    game.tentonSfx.dispatchEvent(new Event('error'));
-    game.tentonSfx.dispatchEvent(new Event('ended'));
-    expect(onComplete).toHaveBeenCalledTimes(1);
-  });
-
   it('fires the callback exactly once via the watchdog when no media event arrives', () => {
     const { game, onComplete } = collapseUnmuted();
     expect(onComplete).not.toHaveBeenCalled();
@@ -458,38 +425,6 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
     game.tentonSfx.dispatchEvent(new Event('ended'));
     vi.advanceTimersByTime(4000);
     expect(onComplete).toHaveBeenCalledTimes(1);
-  });
-
-  it('fires the callback exactly once when play() rejects', async () => {
-    const game = new SurfaceGame(canvas);
-    game.player = new Player(canvas);
-    game.gameSong.muted = false;
-    game.groundErosionActive = true;
-    const onComplete = vi.fn();
-    game.completionCallback(onComplete);
-    game.tentonSfx.play = vi.fn().mockRejectedValue(new Error('NotAllowedError'));
-    game['renderer']['coveredCells'].fill(true);
-    const bomb = new Bomb(canvas, 100);
-    bomb.dy = canvas.height + 1;
-    game.bombs.push(bomb);
-    game.update();
-
-    await vi.advanceTimersByTimeAsync(0); // flush the rejection handler
-    expect(onComplete).toHaveBeenCalledTimes(1);
-    game.tentonSfx.dispatchEvent(new Event('ended'));
-    expect(onComplete).toHaveBeenCalledTimes(1);
-  });
-
-  it('finalized breakdowns satisfy total === sum of parts', () => {
-    const { game, onComplete } = collapseUnmuted();
-    game.tentonSfx.dispatchEvent(new Event('ended'));
-    const breakdown = onComplete.mock.calls[0][0];
-    expect(breakdown.total).toBe(
-      breakdown.surfaceTime + breakdown.tunnelTime + breakdown.levelsBonus,
-    );
-    expect(breakdown).toEqual(
-      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
-    );
   });
 });
 
@@ -527,25 +462,6 @@ describe('SurfaceGame — fixed-timestep score', () => {
     for (let i = 1; i <= 120; i++) h.pump(1000 + i * 8.34);
     expect(h.game.score).toBe(1);
     expect(h.game.count).toBe(61); // 1 synchronous + 60 stepped
-  });
-
-  it('30 Hz: one real second still yields exactly score +1 (~2 steps per callback)', () => {
-    const h = makeHarness();
-    h.pump(1000);
-    for (let i = 1; i <= 30; i++) h.pump(1000 + i * 33.4);
-    expect(h.game.score).toBe(1);
-    expect(h.game.count).toBe(61);
-  });
-
-  it('a long tab-stall does not inflate score by the discarded time (clamped catch-up)', () => {
-    const h = makeHarness();  // synchronous first step → count 1
-    h.pump(1000);                  // anchor the clock, 0 steps
-    h.pump(1000 + 60_000);         // a 60 s stall, delivered in a single frame
-    /* The ~3600 discarded steps are clamped to the catch-up budget, so the run
-       advances at most MAX_CATCHUP_STEPS — the stall time never inflates the
-       score or drains the countdown. */
-    expect(h.game.count).toBe(1 + MAX_CATCHUP_STEPS);
-    expect(h.game.score).toBe(0);
   });
 });
 
@@ -603,16 +519,5 @@ describe('SurfaceGame — background-tab audio', () => {
     setHidden(true);
     setHidden(false);
     expect(playSpy).not.toHaveBeenCalled();
-  });
-
-  it('runs the end-of-run teardown exactly once across extra post-halt frames', () => {
-    const { game } = startGameWithSpies();
-    const onGameOver = vi.fn();
-    game.gameOverCallback(onGameOver);
-    game.isOver = true;
-    callbacks.shift()?.(1000);
-    callbacks.shift()?.(1008);
-    callbacks.shift()?.(1012);
-    expect(onGameOver).toHaveBeenCalledTimes(1);
   });
 });

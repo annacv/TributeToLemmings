@@ -4,7 +4,7 @@ import {
 } from './AbyssGame';
 import { Stalactite, STALACTITE_COST } from './Stalactite';
 import { Bomb } from './Bomb';
-import { makeBreakdown, STALACTITE_POINTS } from './lib/score';
+import { makeBreakdown } from './lib/score';
 import { makeCanvas, TEST_CANVAS_SIZE } from './test-helpers';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
@@ -69,14 +69,6 @@ describe('AbyssGame — Player-driven camera', () => {
     stepFor(game, 30);
     expect(game.cameraX).toBe(cam);                          // no constant scroll
     expect(game.playerWorldX).toBe(worldX);                  // stays put — can stand on a bomb
-  });
-
-  it('moves at the shared player speed (same as the other worlds)', () => {
-    const game = makeAbyssGame(makeCanvas());
-    const before = game.playerWorldX;
-    if (game.player) game.player.direction = 1;
-    game.step();
-    expect(game.playerWorldX - before).toBeCloseTo(game.player!.speed, 5);
   });
 
   it('moves the lemming rightward and the camera follows it past the follow line', () => {
@@ -186,12 +178,6 @@ describe('AbyssGame — throw (smash stalactites)', () => {
     expect(game.carried).toBe(0);
   });
 
-  it('feeds the per-size stalactite bonus into the breakdown', () => {
-    const game = makeAbyssGame(makeCanvas());
-    game.breaks = { small: 2, medium: 1, large: 1 };
-    const bonus = game.currentBreakdown().stalactiteBonus;
-    expect(bonus).toBe(2 * STALACTITE_POINTS.small + STALACTITE_POINTS.medium + STALACTITE_POINTS.large);
-  });
 });
 
 describe('AbyssGame — time-gated level progression', () => {

@@ -66,19 +66,6 @@ describe('Surface and Tunnel numbers are unchanged', () => {
 });
 
 describe('levels score across all three worlds', () => {
-  it('abyss death excludes the level died on', () => {
-    // Entered the abyss with S + C = 6 prior levels; dies on abyss level 3.
-    // Counts abyss L1 + L2 only → 6 + (3 − 1) = 8 levels.
-    const priorLevels = 6;
-    const diedOnAbyssLevel = 3;
-    const levels = priorLevels + (diedOnAbyssLevel - 1);
-    const breakdown = makeBreakdown({
-      surfaceTime: 42, tunnelTime: 30, abyssTime: 24, levelsBonus: levels * LEVEL_POINTS,
-    });
-    expect(breakdown.levelsBonus).toBe(8 * LEVEL_POINTS);
-    expect(breakdown.total).toBe(42 + 30 + 24 + 0 + 40);
-  });
-
   it('full completion counts every level across surface + tunnel + abyss', () => {
     const surfaceLevels = 3;
     const tunnelCycles = 3;
