@@ -181,7 +181,7 @@ export class TunnelGame implements TunnelView {
   }
 
   get runSignal(): AbortSignal {
-    return this.host.signal;
+    return this.host.runSignal;
   }
 
   gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {

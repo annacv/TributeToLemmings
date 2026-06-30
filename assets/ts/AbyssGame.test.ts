@@ -5,16 +5,14 @@ import {
 import { Stalactite, STALACTITE_COST } from './Stalactite';
 import { Bomb } from './Bomb';
 import { makeBreakdown, STALACTITE_POINTS } from './lib/score';
-import { makeCanvas } from './test-helpers';
+import { makeCanvas, TEST_CANVAS_SIZE } from './test-helpers';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
-const W = 400;
-
-function makeAbyss(
+function makeAbyssGame(
   canvas: HTMLCanvasElement,
-  base = makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }),
+  breakdown = makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }),
 ) {
-  const game = new AbyssGame(canvas, base);
+  const game = new AbyssGame(canvas, breakdown);
   game.startGame();
   return game;
 }
@@ -31,10 +29,10 @@ function invincible(game: AbyssGame): AbyssGame {
 
 /** Drops a stalactite of `size` directly over the lemming and arms `carried` bombs. */
 function setOverhead(game: AbyssGame, size: 'small' | 'medium' | 'large', carried: number): Stalactite {
-  const st = new Stalactite(size, game.playerWorldX);
-  game.stalactites = [st];
+  const stalactite = new Stalactite(size, game.playerWorldX);
+  game.stalactites = [stalactite];
   game.carried = carried;
-  return st;
+  return stalactite;
 }
 
 beforeAll(() => {
@@ -63,7 +61,7 @@ describe('AbyssGame — per-level tunables (escalation)', () => {
 
 describe('AbyssGame — Player-driven camera', () => {
   it('spawns the lemming below the ceiling door and does not auto-scroll while idle', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     if (game.player) game.player.direction = 0;
     const cam = game.cameraX;
     const worldX = game.playerWorldX;
@@ -74,7 +72,7 @@ describe('AbyssGame — Player-driven camera', () => {
   });
 
   it('moves at the shared player speed (same as the other worlds)', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     const before = game.playerWorldX;
     if (game.player) game.player.direction = 1;
     game.step();
@@ -82,15 +80,15 @@ describe('AbyssGame — Player-driven camera', () => {
   });
 
   it('moves the lemming rightward and the camera follows it past the follow line', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     if (game.player) game.player.direction = 1;
     stepFor(game, 200);
     expect(game.cameraX).toBeGreaterThan(0);                 // camera pulled forward by the lemming
-    expect(game.playerScreenX()).toBeCloseTo(W * 0.5, 5);    // pinned at the follow line on screen
+    expect(game.playerScreenX()).toBeCloseTo(TEST_CANVAS_SIZE * 0.5, 5);    // pinned at the follow line on screen
   });
 
   it('never walks onto the left framing column and never scrolls back (one-way)', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     if (game.player) game.player.direction = 1;
     stepFor(game, 200);
     const advanced = game.cameraX;
@@ -98,13 +96,13 @@ describe('AbyssGame — Player-driven camera', () => {
     if (game.player) game.player.direction = -1;
     stepFor(game, 600);
     expect(game.cameraX).toBe(advanced);                                  // no scroll-back
-    expect(game.playerWorldX).toBeGreaterThanOrEqual(W * 0.34 - 1e-9);    // off the start column
+    expect(game.playerWorldX).toBeGreaterThanOrEqual(TEST_CANVAS_SIZE * 0.34 - 1e-9);    // off the start column
   });
 });
 
 describe('AbyssGame — gather (pickup + cap)', () => {
   it('picks up a floor bomb underfoot and plays the pickup cue', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     const play = vi.spyOn(game.sfx, 'play');
     game.floorBombs = [game.playerWorldX];
     game.carried = 0;
@@ -115,7 +113,7 @@ describe('AbyssGame — gather (pickup + cap)', () => {
   });
 
   it('will not pick up past the carry cap', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     game.carried = game.carryCap;
     game.floorBombs = [game.playerWorldX];
     game.action();
@@ -126,17 +124,17 @@ describe('AbyssGame — gather (pickup + cap)', () => {
 
 describe('AbyssGame — bomb spawning', () => {
   it('keeps bombs inside the walkable corridor (off the left framing column)', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
+    const game = invincible(makeAbyssGame(makeCanvas()));
     if (game.player) game.player.direction = 0; // idle: camera stays at the corridor start
     stepFor(game, 300);
-    const minX = W * 0.34 - 1e-9; // CORRIDOR_START_FRAC
-    for (const b of game.fallingBombs) expect(b.dx).toBeGreaterThanOrEqual(minX);
+    const minX = TEST_CANVAS_SIZE * 0.34 - 1e-9; // CORRIDOR_START_FRAC
+    for (const bomb of game.fallingBombs) expect(bomb.dx).toBeGreaterThanOrEqual(minX);
     for (const x of game.floorBombs) expect(x).toBeGreaterThanOrEqual(minX);
     expect(game.fallingBombs.length + game.floorBombs.length).toBeGreaterThan(0);
   });
 
   it('plays the bomb-hit cue and drops a life when a bomb strikes the lemming', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     const play = vi.spyOn(game.sfx, 'play');
     const before = game.player!.lives;
     const bomb = new Bomb(game.canvas, game.playerWorldX, 1.2);
@@ -150,46 +148,46 @@ describe('AbyssGame — bomb spawning', () => {
 
 describe('AbyssGame — throw (smash stalactites)', () => {
   it('does nothing empty-handed', () => {
-    const game = makeAbyss(makeCanvas(W, W));
-    const st = setOverhead(game, 'small', 0);
+    const game = makeAbyssGame(makeCanvas());
+    const stalactite = setOverhead(game, 'small', 0);
     game.action();
-    expect(st.hitsRemaining).toBe(1);
+    expect(stalactite.hitsRemaining).toBe(1);
     expect(game.carried).toBe(0);
   });
 
   it('smashes a small stalactite in one hit and scores it', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     const play = vi.spyOn(game.sfx, 'play');
-    const st = setOverhead(game, 'small', 1);
+    const stalactite = setOverhead(game, 'small', 1);
     game.action();
     expect(game.carried).toBe(0);
     expect(play).toHaveBeenCalledWith('pickup'); // throw cue at release
     expect(game.thrownBombs).toHaveLength(1);    // a bomb is in flight…
-    expect(st.destroyed).toBe(false);            // …and hasn't struck yet
+    expect(stalactite.destroyed).toBe(false);            // …and hasn't struck yet
     stepFor(game, THROW_FLIGHT_STEPS);           // let it land
-    expect(st.destroyed).toBe(true);
+    expect(stalactite.destroyed).toBe(true);
     expect(game.breaks.small).toBe(1);
     expect(play).toHaveBeenCalledWith('mantrap');
     expect(play).toHaveBeenCalledWith('thud');
   });
 
   it('needs the size-scaled hit count: a medium takes two throws', () => {
-    const game = makeAbyss(makeCanvas(W, W));
-    const st = setOverhead(game, 'medium', 2);
+    const game = makeAbyssGame(makeCanvas());
+    const stalactite = setOverhead(game, 'medium', 2);
     game.action();
     stepFor(game, THROW_FLIGHT_STEPS);
-    expect(st.destroyed).toBe(false);
-    expect(st.hitsTaken).toBe(1);
+    expect(stalactite.destroyed).toBe(false);
+    expect(stalactite.hitsTaken).toBe(1);
     expect(game.breaks.medium).toBe(0);
     game.action();
     stepFor(game, THROW_FLIGHT_STEPS);
-    expect(st.destroyed).toBe(true);
+    expect(stalactite.destroyed).toBe(true);
     expect(game.breaks.medium).toBe(1);
     expect(game.carried).toBe(0);
   });
 
   it('feeds the per-size stalactite bonus into the breakdown', () => {
-    const game = makeAbyss(makeCanvas(W, W));
+    const game = makeAbyssGame(makeCanvas());
     game.breaks = { small: 2, medium: 1, large: 1 };
     const bonus = game.currentBreakdown().stalactiteBonus;
     expect(bonus).toBe(2 * STALACTITE_POINTS.small + STALACTITE_POINTS.medium + STALACTITE_POINTS.large);
@@ -198,7 +196,7 @@ describe('AbyssGame — throw (smash stalactites)', () => {
 
 describe('AbyssGame — time-gated level progression', () => {
   it('advances to L2 at 18 s and L3 at 36 s, by time alone', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
+    const game = invincible(makeAbyssGame(makeCanvas()));
     expect(game.currentLevel).toBe(0);
     stepFor(game, 18 * STEPS_PER_SECOND);
     expect(game.currentLevel).toBe(1);
@@ -207,7 +205,7 @@ describe('AbyssGame — time-gated level progression', () => {
   });
 
   it('plays the level-up cue on a time-gated level change', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
+    const game = invincible(makeAbyssGame(makeCanvas()));
     const play = vi.spyOn(game.sfx, 'play');
     stepFor(game, 18 * STEPS_PER_SECOND);
     expect(game.currentLevel).toBe(1);
@@ -215,33 +213,33 @@ describe('AbyssGame — time-gated level progression', () => {
   });
 
   it('breaking stalactites does not gate progression', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
-    const st = setOverhead(game, 'small', 3);
+    const game = invincible(makeAbyssGame(makeCanvas()));
+    const stalactite = setOverhead(game, 'small', 3);
     game.action(); // a break well before 18 s
     stepFor(game, 5 * STEPS_PER_SECOND);
-    expect(st.destroyed).toBe(true); // the thrown bomb landed
+    expect(stalactite.destroyed).toBe(true); // the thrown bomb landed
     expect(game.currentLevel).toBe(0); // still L1 — time, not breaks, advances
   });
 
   it('ends the run at the L3 time budget and routes as a completion', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
+    const game = invincible(makeAbyssGame(makeCanvas()));
     stepFor(game, ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND);
     expect(game.isOver).toBe(true);
-    const b = game.currentBreakdown();
-    expect(b.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
+    const breakdown = game.currentBreakdown();
+    expect(breakdown.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
     // full completion counts all three abyss levels on top of the base
-    expect(b.levelsBonus).toBe(30 + 3 * 5);
+    expect(breakdown.levelsBonus).toBe(30 + 3 * 5);
   });
 });
 
 describe('AbyssGame — scoring (levels exclude the one died on)', () => {
   it('on death, counts only abyss levels fully passed', () => {
-    const game = invincible(makeAbyss(makeCanvas(W, W)));
+    const game = invincible(makeAbyssGame(makeCanvas()));
     stepFor(game, 18 * STEPS_PER_SECOND); // now in L2 (index 1)
     expect(game.currentLevel).toBe(1);
     // death keeps the default 'death' outcome → L2 (the level died on) excluded
-    const b = game.currentBreakdown();
-    expect(b.levelsBonus).toBe(30 + 1 * 5);
+    const breakdown = game.currentBreakdown();
+    expect(breakdown.levelsBonus).toBe(30 + 1 * 5);
   });
 });
 
@@ -258,7 +256,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('cold-open holds the closed hatch, plays DOOR.WAV, then hands off to play', () => {
     vi.useFakeTimers();
-    const game = new AbyssGame(makeCanvas(W, W), makeBreakdown({}));
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({}));
     const play = vi.spyOn(game.sfx, 'play');
     const onDone = vi.fn();
     game.coldOpen(onDone);
@@ -275,7 +273,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('reduced motion resolves the cold-open straight to the grounded, door-open state', () => {
     vi.stubGlobal('matchMedia', reducedMotion);
-    const game = new AbyssGame(makeCanvas(W, W), makeBreakdown({}));
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({}));
     const play = vi.spyOn(game.sfx, 'play');
     const onDone = vi.fn();
     game.coldOpen(onDone);
@@ -286,7 +284,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('reduced-motion exit close plays LETSGO and routes the completion at once', () => {
     vi.stubGlobal('matchMedia', reducedMotion);
-    const game = new AbyssGame(makeCanvas(W, W), makeBreakdown({ levelsBonus: 30 }));
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({ levelsBonus: 30 }));
     game.startGame();
     invincible(game);
     const onComplete = vi.fn();

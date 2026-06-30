@@ -4,8 +4,8 @@ import { GameLoop, STEP_MS, MAX_CATCHUP_STEPS } from './GameLoop';
 /* Captures rAF callbacks so tests drive the loop with chosen timestamps */
 function makeHarness(stepImpl: () => boolean = () => true) {
   const callbacks: FrameRequestCallback[] = [];
-  const raf = vi.fn((cb: FrameRequestCallback) => {
-    callbacks.push(cb);
+  const raf = vi.fn((frameCallback: FrameRequestCallback) => {
+    callbacks.push(frameCallback);
     return callbacks.length;
   });
   const caf = vi.fn();
@@ -23,9 +23,9 @@ function makeHarness(stepImpl: () => boolean = () => true) {
     raf,
     caf,
     pump(timestamp: number): void {
-      const cb = callbacks.shift();
-      if (!cb) throw new Error('no rAF callback pending');
-      cb(timestamp);
+      const frameCallback = callbacks.shift();
+      if (!frameCallback) throw new Error('no rAF callback pending');
+      frameCallback(timestamp);
     },
     get pending(): number {
       return callbacks.length;

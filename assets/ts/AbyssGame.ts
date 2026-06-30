@@ -149,7 +149,7 @@ export class AbyssGame implements AbyssView {
   }
 
   get runSignal(): AbortSignal {
-    return this.host.signal;
+    return this.host.runSignal;
   }
 
   gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {

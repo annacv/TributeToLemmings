@@ -6,8 +6,8 @@ import { STEP_MS } from './GameLoop';
    mirroring the GameLoop harness it composes. */
 function makeHarness(overrides: Partial<RunHostHooks> = {}) {
   const callbacks: FrameRequestCallback[] = [];
-  vi.stubGlobal('requestAnimationFrame', vi.fn((cb: FrameRequestCallback) => {
-    callbacks.push(cb);
+  vi.stubGlobal('requestAnimationFrame', vi.fn((frameCallback: FrameRequestCallback) => {
+    callbacks.push(frameCallback);
     return callbacks.length;
   }));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -27,9 +27,9 @@ function makeHarness(overrides: Partial<RunHostHooks> = {}) {
     hooks,
     setOver(value: boolean): void { over = value; },
     pump(timestamp: number): void {
-      const cb = callbacks.shift();
-      if (!cb) throw new Error('no rAF callback pending');
-      cb(timestamp);
+      const frameCallback = callbacks.shift();
+      if (!frameCallback) throw new Error('no rAF callback pending');
+      frameCallback(timestamp);
     },
     get pending(): number { return callbacks.length; },
   };
@@ -61,12 +61,12 @@ describe('RunHost', () => {
 
   it('aborts the run signal in lockstep with teardown', () => {
     const h = makeHarness();
-    expect(h.host.signal.aborted).toBe(false);
+    expect(h.host.runSignal.aborted).toBe(false);
     h.host.start();
-    expect(h.host.signal.aborted).toBe(false);
+    expect(h.host.runSignal.aborted).toBe(false);
     h.setOver(true);
     h.pump(STEP_MS);
-    expect(h.host.signal.aborted).toBe(true);
+    expect(h.host.runSignal.aborted).toBe(true);
     expect(h.hooks.onEnd).toHaveBeenCalledTimes(1);
   });
 });

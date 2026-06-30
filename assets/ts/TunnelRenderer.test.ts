@@ -31,7 +31,7 @@ function makeView(overrides: Partial<TunnelView> = {}): TunnelView {
 }
 
 describe('TunnelRenderer — breach choreography', () => {
-  const canvas = makeCanvas(468, 468);
+  const canvas = makeCanvas();
 
   it('the breach blasts the ground-hole open, then holds it open through the pan', () => {
     const renderer = new TunnelRenderer(canvas);
@@ -45,9 +45,9 @@ describe('TunnelRenderer — breach choreography', () => {
     const renderer = new TunnelRenderer(canvas);
     let prev = -1;
     for (let s = BREACH_BOOM_STEPS + 1; s <= BREACH_PAN_END_STEPS; s++) {
-      const d = renderer['dropOffsetPx'](makeView({ breachStep: s }));
-      expect(d).toBeGreaterThanOrEqual(prev); // the camera only ever drops further
-      prev = d;
+      const dropOffset = renderer['dropOffsetPx'](makeView({ breachStep: s }));
+      expect(dropOffset).toBeGreaterThanOrEqual(prev); // the camera only ever drops further
+      prev = dropOffset;
     }
     expect(prev).toBeCloseTo(canvas.height, 5); // arrived a full chamber down
   });

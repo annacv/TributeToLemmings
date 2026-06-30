@@ -18,9 +18,9 @@ export function attachWorldLoop(
   src: string,
   wireMute: (onToggle: (muted: boolean) => void) => void,
 ): HTMLAudioElement {
-  const loop = new Audio(src);
-  playLoop(loop, game.muted);
-  pauseWhileHidden(loop, { signal: game.runSignal, shouldResume: () => !game.isOver });
-  wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); loop.muted = muted; });
-  return loop;
+  const music = new Audio(src);
+  playLoop(music, game.muted);
+  pauseWhileHidden(music, { signal: game.runSignal, shouldResume: () => !game.isOver });
+  wireMute((muted) => { game.muted = muted; game.sfx.applyMute(muted); music.muted = muted; });
+  return music;
 }

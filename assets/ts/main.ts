@@ -112,7 +112,7 @@ function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
 }
 
 function main(): void {
-  const mainElement = document.querySelector('#site-main') as HTMLElement;
+  const root = document.querySelector('#site-main') as HTMLElement;
   let playerName = '';
   let rankingMusic: HTMLAudioElement | null = null;
 
@@ -123,8 +123,8 @@ function main(): void {
   });
 
   function buildDom(html: string): HTMLElement {
-    mainElement.innerHTML = html;
-    return mainElement;
+    root.innerHTML = html;
+    return root;
   }
 
   /* INFO MODALS */
@@ -245,10 +245,10 @@ function main(): void {
       </section>
     `);
 
-    const stopMascot = startMascotAnimation(mainElement.querySelector('.splash-mascot') as HTMLCanvasElement);
+    const stopMascot = startMascotAnimation(root.querySelector('.splash-mascot') as HTMLCanvasElement);
 
-    const nameInput = mainElement.querySelector('.splash-name-input') as HTMLInputElement;
-    const startBtn = mainElement.querySelector('.splash-start') as HTMLButtonElement;
+    const nameInput = root.querySelector('.splash-name-input') as HTMLInputElement;
+    const startBtn = root.querySelector('.splash-start') as HTMLButtonElement;
 
     if (playerName) {
       nameInput.value = playerName;
@@ -257,7 +257,7 @@ function main(): void {
 
     /* Form submit covers both the Start button and Enter in the name input
        (incl. the mobile keyboard's Go key); an empty name falls back to a guest handle */
-    const form = mainElement.querySelector('.splash-form') as HTMLFormElement;
+    const form = root.querySelector('.splash-form') as HTMLFormElement;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       stopMascot();
@@ -270,7 +270,7 @@ function main(): void {
   function createGameScreen(): void {
     preloadLeaderboard();
 
-    const { canvas, wireMovement, wireMute } = buildPlayScreen(mainElement, {
+    const { canvas, wireMovement, wireMute } = buildPlayScreen(root, {
       canvasClass: 'game-canvas',
       canvasAriaLabel: 'Game area — dodge the falling bombs',
       secondsStart: 0,
@@ -301,7 +301,7 @@ function main(): void {
   function createTransitionScreen(
     breakdown: ScoreBreakdown,
     stingerHtml = '&gt; somewhere underground...',
-    onArrive: (b: ScoreBreakdown) => void = createTunnelScreen,
+    onArrive: (breakdown: ScoreBreakdown) => void = createTunnelScreen,
     backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
     messageScrollT = TRANSITION_MESSAGE_AT_REST,
     ceilingSvg: string = TUNNEL_CEILING_SVG,
@@ -455,7 +455,7 @@ function main(): void {
   }
 
   function createTunnelScreen(breakdown: ScoreBreakdown): void {
-    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(root, {
       canvasClass: 'tunnel-game-canvas',
       canvasAriaLabel: 'Tunnel — find the crack and blast your way out',
       secondsStart: 60,
@@ -463,8 +463,8 @@ function main(): void {
     });
 
     const game = new TunnelGame(canvas, breakdown);
-    game.completionCallback((b) => createTransitionScreen(
-      b,
+    game.completionCallback((breakdown) => createTransitionScreen(
+      breakdown,
       '&gt; the air grows warm...',
       createAbyssScreen,
       UNDERGROUND_ABYSS_BACKGROUND_SVG,
@@ -504,7 +504,7 @@ function main(): void {
       ? '<p class="go-boom">CONGRATS!!!</p><h1 class="go-title">&gt; You made it!</h1>'
       : '<p class="go-boom">BOOOM!!!</p><h1 class="go-title">GAME OVER</h1>';
 
-    const gameOverScreen = buildDom(`
+    const screen = buildDom(`
       <section class="section-container game-over-screen">
         <div class="game-stage">
           ${canvasHtml}
@@ -517,18 +517,18 @@ function main(): void {
       </section>
     `);
 
-    const canvas = gameOverScreen.querySelector('.game-over-canvas, .win-canvas') as HTMLCanvasElement | null;
+    const canvas = screen.querySelector('.game-over-canvas, .win-canvas') as HTMLCanvasElement | null;
     if (canvas) {
       canvas.width = size;
       canvas.height = size;
     }
 
-    const title = gameOverScreen.querySelector('.go-title') as HTMLElement;
+    const title = screen.querySelector('.go-title') as HTMLElement;
     title.tabIndex = -1;
     title.focus();
 
     const startRankingMusic = (): void => {
-      if (!mainElement.querySelector('.game-over-screen, .ranking-screen')) return;
+      if (!root.querySelector('.game-over-screen, .ranking-screen')) return;
       if (rankingMusic) return;
       rankingMusic = new Audio(RANKING_MUSIC);
       rankingMusic.loop = true;
@@ -548,10 +548,10 @@ function main(): void {
       if (src && !muted) safePlay(new Audio(src));
     };
 
-    const scoreEl = gameOverScreen.querySelector('.go-score-value');
-    const countList = gameOverScreen.querySelector('.go-count');
+    const score = screen.querySelector('.go-score-value');
+    const countList = screen.querySelector('.go-count');
 
-    if (hasCount && countList && scoreEl) {
+    if (hasCount && countList && score) {
       const lineEls = countLines.map(({ label, rule, value }) => {
         const li = document.createElement('li');
         li.className = 'go-count-line';
@@ -562,10 +562,10 @@ function main(): void {
 
       if (reduceMotion) {
         lineEls.forEach((li) => li.classList.add('show'));
-        scoreEl.textContent = String(breakdown.total);
+        score.textContent = String(breakdown.total);
         announce(`Score: ${breakdown.total}`);
       } else {
-        scoreEl.textContent = '0';
+        score.textContent = '0';
         lineEls.forEach((li, i) => setTimeout(() => {
           li.classList.add('show');
           playOptionalSfx(COUNT_TICK_SFX);
@@ -577,9 +577,9 @@ function main(): void {
         setTimeout(() => {
           playOptionalSfx(COUNT_CHIME_SFX);
           const rollTimer = setInterval(() => {
-            if (!mainElement.contains(scoreEl)) { clearInterval(rollTimer); return; }
-            const next = Math.min(breakdown.total, Number(scoreEl.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
-            scoreEl.textContent = String(next);
+            if (!root.contains(score)) { clearInterval(rollTimer); return; }
+            const next = Math.min(breakdown.total, Number(score.textContent) + Math.ceil(breakdown.total / (ROLL_MS / 40)));
+            score.textContent = String(next);
             if (next >= breakdown.total) {
               clearInterval(rollTimer);
               announce(`Score: ${breakdown.total}`); // settled total, once the roll lands
@@ -587,8 +587,8 @@ function main(): void {
           }, 40);
         }, rollStartMs);
       }
-    } else if (scoreEl) {
-      scoreEl.textContent = String(breakdown.total);
+    } else if (score) {
+      score.textContent = String(breakdown.total);
       announce(`Score: ${breakdown.total}`);
     }
 
@@ -639,8 +639,8 @@ function main(): void {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
     const overlay = screen.querySelector('.the-end-overlay') as HTMLElement;
-    const promptEl = screen.querySelector('.the-end-prompt') as HTMLElement;
-    const creditsEl = screen.querySelector('.the-end-credits') as HTMLElement;
+    const prompt = screen.querySelector('.the-end-prompt') as HTMLElement;
+    const credits = screen.querySelector('.the-end-credits') as HTMLElement;
     overlay.tabIndex = -1;
     overlay.focus();
 
@@ -659,8 +659,8 @@ function main(): void {
     };
     const durations = { walkMs: THE_END_WALK_MS, boardMs: THE_END_BOARD_MS, ascendMs: THE_END_ASCEND_MS };
 
-    const abortController = new AbortController();
-    const loop = new Audio(THE_END_MUSIC);
+    const controller = new AbortController();
+    const music = new Audio(THE_END_MUSIC);
     let startTime = 0;
     let liftOffElapsed: number | null = null;
     let ascended = false;
@@ -671,7 +671,7 @@ function main(): void {
     function doLiftOff(): void {
       if (liftOffElapsed !== null || routed) return;
       liftOffElapsed = performance.now() - startTime;
-      promptEl.classList.remove('show');
+      prompt.classList.remove('show');
       /* Board, then ascend (SFX + credits), then route — all relative to lift-off,
          so a press only *accelerates* an inevitable boarding (never a soft-lock). */
       setTimeout(onAscendStart, THE_END_BOARD_MS);
@@ -682,21 +682,21 @@ function main(): void {
       if (ascended || routed) return;
       ascended = true;
       if (!muted) safePlay(new Audio(BALLOON_SFX)); // at ascent start — after boarding
-      creditsEl.classList.add('the-end-credits--roll');
+      credits.classList.add('the-end-credits--roll');
     }
 
     function route(): void {
       if (routed) return;
       routed = true;
-      abortController.abort();
-      stopLoop(loop);
+      controller.abort();
+      stopLoop(music);
       createRankingScreen(breakdown.total, submission);
     }
 
     function draw(): void {
       if (routed) return;
       const frame = theEndFrameAt(performance.now() - startTime, liftOffElapsed, durations, config);
-      promptEl.classList.toggle('show', frame.phase === 'prompt');
+      prompt.classList.toggle('show', frame.phase === 'prompt');
       drawTheEndScene(ctx, size, frame, sceneImg, balloonImg);
       requestAnimationFrame(draw);
     }
@@ -710,24 +710,24 @@ function main(): void {
           event.preventDefault();
           if (liftOffElapsed === null) doLiftOff(); else route();
         }
-      }, { signal: abortController.signal });
+      }, { signal: controller.signal });
       /* Tap the scene to lift off (touch); the Skip button always routes onward. */
-      canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: abortController.signal });
+      canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: controller.signal });
       (screen.querySelector('.the-end-skip') as HTMLButtonElement)
-        .addEventListener('click', route, { signal: abortController.signal });
+        .addEventListener('click', route, { signal: controller.signal });
 
-      playLoop(loop, muted);
-      pauseWhileHidden(loop, { signal: abortController.signal, shouldResume: () => !routed });
+      playLoop(music, muted);
+      pauseWhileHidden(music, { signal: controller.signal, shouldResume: () => !routed });
       setupMuteButton(
         screen.querySelector('.mute-btn') as HTMLButtonElement,
-        (m) => { loop.muted = m; },
+        (m) => { music.muted = m; },
       );
 
       if (reduceMotion) {
         /* Jump to the end state — balloon risen, credits static — then route. */
         liftOffElapsed = 0;
         const endFrame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
-        creditsEl.classList.add('the-end-credits--static');
+        credits.classList.add('the-end-credits--static');
         if (!muted) safePlay(new Audio(BALLOON_SFX));
         setTimeout(route, THE_END_END_HOLD_MS);
         const drawEndState = (): void => {
@@ -762,7 +762,7 @@ function main(): void {
       </section>
     `);
 
-    const canvas = mainElement.querySelector('.ranking-canvas') as HTMLCanvasElement;
+    const canvas = root.querySelector('.ranking-canvas') as HTMLCanvasElement;
     canvas.width = size;
     canvas.height = size;
 
@@ -785,11 +785,11 @@ function main(): void {
     }
 
     setupMuteButton(
-      mainElement.querySelector('.mute-btn') as HTMLButtonElement,
+      root.querySelector('.mute-btn') as HTMLButtonElement,
       (muted) => { if (rankingMusic) rankingMusic.muted = muted; },
     );
 
-    const playAgainBtn = mainElement.querySelector('.ranking-play-again') as HTMLButtonElement;
+    const playAgainBtn = root.querySelector('.ranking-play-again') as HTMLButtonElement;
     playAgainBtn.focus();
     playAgainBtn.addEventListener('click', () => {
       tileObserver.disconnect();
@@ -805,8 +805,8 @@ function main(): void {
   }
 
   async function loadRanking(currentScore: number, submission: Promise<SubmissionResult>): Promise<void> {
-    const listEl = mainElement.querySelector('.ranking-list');
-    if (!listEl) return;
+    const list = root.querySelector('.ranking-list');
+    if (!list) return;
 
     /* Bounded wait for the submission; falls back to failed if still pending */
     const resolveSubmission = (): Promise<SubmissionResult> =>
@@ -818,8 +818,8 @@ function main(): void {
       ]);
 
     function showSaveErrorBanner(): void {
-      if (mainElement.querySelector('.ranking-save-error')) return;
-      const overlay = mainElement.querySelector('.ranking-overlay');
+      if (root.querySelector('.ranking-save-error')) return;
+      const overlay = root.querySelector('.ranking-overlay');
       const title = overlay?.querySelector('.ranking-title');
       if (!overlay || !title) return;
       const banner = document.createElement('p');
@@ -838,15 +838,15 @@ function main(): void {
         ),
       ]);
 
-      if (!mainElement.querySelector('.ranking-list')) return; // navigated away
+      if (!root.querySelector('.ranking-list')) return; // navigated away
 
       const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
 
-      if (!mainElement.querySelector('.ranking-list')) return;
+      if (!root.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
 
       if (scores.length === 0) {
-        listEl.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
+        list.innerHTML = '<p class="ranking-empty">&gt; no scores yet — be the first!</p>';
         return;
       }
 
@@ -879,7 +879,7 @@ function main(): void {
         const effectiveScore = bestScore ?? currentScore;
         const rank = await getPlayerRank(effectiveScore).catch(() => null);
 
-        if (!mainElement.querySelector('.ranking-list')) return;
+        if (!root.querySelector('.ranking-list')) return;
 
         if (rank !== null) {
           playerRank = rank;
@@ -895,31 +895,31 @@ function main(): void {
         }
       }
 
-      listEl.innerHTML = html;
+      list.innerHTML = html;
       /* Announce the settled rank once, after the list renders (both the in-top-10
          row and the appended below-top-10 row are covered) */
       if (playerRank !== null) announce(`Rank ${playerRank}`);
     } catch {
-      if (!mainElement.querySelector('.ranking-list')) return;
+      if (!root.querySelector('.ranking-list')) return;
       const { error: submissionError } = await resolveSubmission();
-      if (!mainElement.querySelector('.ranking-list')) return;
+      if (!root.querySelector('.ranking-list')) return;
       if (submissionError) showSaveErrorBanner();
 
-      listEl.innerHTML = `
+      list.innerHTML = `
         <p class="ranking-error">&gt; could not load rankings.</p>
         <a class="ranking-retry" href="#">try again</a>
       `;
 
-      listEl.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
+      list.querySelector('.ranking-retry')?.addEventListener('click', (e) => {
         e.preventDefault();
-        listEl.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
+        list.innerHTML = '<p class="ranking-loading">&gt; loading...</p>';
         loadRanking(currentScore, submission);
       });
     }
   }
 
   function createAbyssScreen(breakdown: ScoreBreakdown): void {
-    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(mainElement, {
+    const { canvas, wireMovement, wireAction, wireMute } = buildPlayScreen(root, {
       canvasClass: 'abyss-game-canvas',
       canvasAriaLabel: 'The Abyss — gather bombs and bring down the stalactites',
       secondsStart: 72,
@@ -927,7 +927,7 @@ function main(): void {
     });
 
     const game = new AbyssGame(canvas, breakdown);
-    game.completionCallback((b) => createGameOverScreen(b, 'win'));
+    game.completionCallback((breakdown) => createGameOverScreen(breakdown, 'win'));
     game.gameOverCallback(createGameOverScreen);
 
     const hint = document.createElement('div');
@@ -942,7 +942,7 @@ function main(): void {
           <img class="abyss-hint-icon" src="${SPRITES.bomb}" alt="Bombs carried">
           <span class="abyss-hint-count abyss-bombs">0/3</span>
         </span>${stalItems}`;
-    (mainElement.querySelector('.game-stage') as HTMLElement).appendChild(hint);
+    (root.querySelector('.game-stage') as HTMLElement).appendChild(hint);
 
     game.abyssLoop = attachWorldLoop(game, ABYSS_LOOP, wireMute);
     wireMovement(() => game.player, game.runSignal, () => game.paused);

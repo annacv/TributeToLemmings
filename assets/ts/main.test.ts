@@ -42,15 +42,15 @@ vi.mock('./SurfaceGame', () => ({
     onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
     startSong = vi.fn();
     startGame = vi.fn();
-    private runController = new AbortController();
-    get runSignal(): AbortSignal { return this.runController.signal; }
+    private controller = new AbortController();
+    get runSignal(): AbortSignal { return this.controller.signal; }
     constructor() { gameInstances.push(this); }
     /* The real SurfaceGame aborts runSignal before firing these — keep the mock honest */
     gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onGameOver = (breakdown) => { this.runController.abort(); cb(breakdown); };
+      this.onGameOver = (breakdown) => { this.controller.abort(); cb(breakdown); };
     }
     completionCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onComplete = (breakdown) => { this.runController.abort(); cb(breakdown); };
+      this.onComplete = (breakdown) => { this.controller.abort(); cb(breakdown); };
     }
   },
 }));
@@ -293,8 +293,6 @@ describe('cumulative score passthrough (seam-test gate)', () => {
      that silently drops a prior component (the exact regression a future screen/
      ScreenManager refactor could introduce) fails loudly here. */
 
-  const W = 400;
-
   beforeAll(() => {
     vi.stubGlobal('requestAnimationFrame', vi.fn(() => 0));
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -312,7 +310,7 @@ describe('cumulative score passthrough (seam-test gate)', () => {
     });
 
     /* Tunnel carries the surface forward and adds banked seconds + cleared cycles. */
-    const tunnel = new TunnelGame(makeCanvas(W, W), surfaceBreakdown);
+    const tunnel = new TunnelGame(makeCanvas(), surfaceBreakdown);
     tunnel.bankedSeconds = TUNNEL_BANKED;
     tunnel.cyclesCleared = TOTAL_CYCLES;
     const tunnelBreakdown = tunnel.currentBreakdown();
@@ -322,7 +320,7 @@ describe('cumulative score passthrough (seam-test gate)', () => {
 
     /* Abyss carries surface + tunnel forward and adds abyss time + stalactites +
        abyss levels; drive it to the real completion (crossing the L3 time budget). */
-    const abyss = new AbyssGame(makeCanvas(W, W), tunnelBreakdown);
+    const abyss = new AbyssGame(makeCanvas(), tunnelBreakdown);
     abyss.startGame();
     if (abyss.player) abyss.player.lives = Number.MAX_SAFE_INTEGER;
     abyss.breaks = { small: 2, medium: 1, large: 1 };
@@ -330,21 +328,21 @@ describe('cumulative score passthrough (seam-test gate)', () => {
     abyss.step(); // crosses the budget → reachDoor → completion
     expect(abyss.isOver).toBe(true);
 
-    const win = abyss.currentBreakdown();
+    const breakdown = abyss.currentBreakdown();
 
     /* Every prior component survived both hops. */
-    expect(win.surfaceTime).toBe(SURFACE_TIME);
-    expect(win.tunnelTime).toBe(TUNNEL_BANKED);
-    expect(win.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
-    expect(win.stalactites).toEqual({ small: 2, medium: 1, large: 1 });
+    expect(breakdown.surfaceTime).toBe(SURFACE_TIME);
+    expect(breakdown.tunnelTime).toBe(TUNNEL_BANKED);
+    expect(breakdown.abyssTime).toBe(ABYSS_TIME_BUDGET_S);
+    expect(breakdown.stalactites).toEqual({ small: 2, medium: 1, large: 1 });
 
     const stalactiteBonus = 2 * STALACTITE_POINTS.small + STALACTITE_POINTS.medium + STALACTITE_POINTS.large;
     const levelsBonus = (SURFACE_LEVELS + TOTAL_CYCLES + ABYSS_LEVEL_CONFIG.length) * LEVEL_POINTS;
-    expect(win.stalactiteBonus).toBe(stalactiteBonus);
-    expect(win.levelsBonus).toBe(levelsBonus);
+    expect(breakdown.stalactiteBonus).toBe(stalactiteBonus);
+    expect(breakdown.levelsBonus).toBe(levelsBonus);
 
     /* The total equals the sum of all three worlds — nothing dropped at any handoff. */
-    expect(win.total).toBe(SURFACE_TIME + TUNNEL_BANKED + ABYSS_TIME_BUDGET_S + stalactiteBonus + levelsBonus);
+    expect(breakdown.total).toBe(SURFACE_TIME + TUNNEL_BANKED + ABYSS_TIME_BUDGET_S + stalactiteBonus + levelsBonus);
   });
 });
 

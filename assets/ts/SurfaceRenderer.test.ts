@@ -7,7 +7,7 @@ import { makeCanvas } from './test-helpers';
 describe('SurfaceRenderer — erosion canvas drawing', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
 
   it('draws each loaded stamp onto the erosion canvas', () => {
     const renderer = new SurfaceRenderer(canvas);
@@ -34,7 +34,7 @@ describe('SurfaceRenderer — erosion canvas drawing', () => {
 describe('SurfaceRenderer — ground coverage', () => {
   let canvas: HTMLCanvasElement;
 
-  beforeEach(() => { canvas = makeCanvas(468, 468); });
+  beforeEach(() => { canvas = makeCanvas(); });
 
   it('reports zero coverage until a hole is stamped, then more than zero', () => {
     const renderer = new SurfaceRenderer(canvas);

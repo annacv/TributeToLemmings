@@ -1,5 +1,7 @@
 import { vi } from 'vitest';
 
+export const TEST_CANVAS_SIZE = 468;
+
 export function makeCtx(canvas?: HTMLCanvasElement) {
   const fills: string[] = [];
   const ctx = {
@@ -29,7 +31,7 @@ export function makeCtx(canvas?: HTMLCanvasElement) {
   return ctx;
 }
 
-export function makeCanvas(width = 400, height = 400) {
+export function makeCanvas(width = TEST_CANVAS_SIZE, height = TEST_CANVAS_SIZE) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
