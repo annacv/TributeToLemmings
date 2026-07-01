@@ -174,10 +174,10 @@ export class TunnelGame implements TunnelView {
     this.player.minX = this.canvas.width * WALL_LEFT_FRAC;
     this.player.maxX = this.canvas.width * WALL_RIGHT_FRAC - this.player.dWidth;
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
-    this.hud.setText('.lives-value', String(this.player.lives));
+    this.hud.setLivesValue(this.player.lives);
     /* The score slot now counts down */
     this.hud.setScore(this.secondsLeft());
-    this.hud.blinkItem('.hud-score');
+    this.hud.blinkHudScore();
     this.beginCycle(0);
     this.host.start();
   }

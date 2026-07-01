@@ -168,7 +168,7 @@ export class AbyssGame implements AbyssView {
     this.playerWorldX = this.entranceWorldX - this.player.dWidth / 2; // land below the opened ceiling door
     this.player.dx = this.playerScreenX();
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
-    this.hud.setText('.lives-value', String(this.player.lives));
+    this.hud.setLivesValue(this.player.lives);
     this.hud.setScore(0);
     this.hud.setLevel('1');
     this.nextStalactiteWorldX = canvasWidth * 0.8;
@@ -316,14 +316,8 @@ export class AbyssGame implements AbyssView {
   }
 
   private updateHint(): void {
-    this.hud.setText('.abyss-bombs', `${this.carried}/${CARRY_CAP}`);
-    for (const size of ['small', 'medium', 'large'] as const) {
-      const item = this.hud.el(`.abyss-stal[data-size="${size}"]`);
-      if (!item) continue;
-      const available = this.availableSizes.includes(size);
-      item.toggleAttribute('hidden', !available);
-      if (available) this.hud.setText(`.abyss-stal[data-size="${size}"] .abyss-hint-count`, String(this.breaks[size]));
-    }
+    this.hud.setAbyssBombs(this.carried, CARRY_CAP);
+    this.hud.updateAbyssStalactites(this.breaks, this.availableSizes);
   }
 
   /** Player-driven, the lemming moves at full control speed; the camera
