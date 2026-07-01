@@ -1,4 +1,5 @@
 import { drawLemmingShape, LEMMING_GRID } from '../entities/Player';
+import { prefersReducedMotion } from '../lib/fx';
 import { isMuted, safePlay } from '../lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';
@@ -71,7 +72,7 @@ export function createTransitionScreen(
   overlay.tabIndex = -1;
   overlay.focus();
   const ctx2d = canvas.getContext('2d')!;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = prefersReducedMotion();
 
   const undergroundImg = loadImage(backgroundSvg);
   const ceilingImg = loadImage(ceilingSvg);

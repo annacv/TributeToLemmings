@@ -3,7 +3,7 @@ import { RunHost } from '../../lib/RunHost';
 import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 import { PICKUP_RANGE_FRAC } from '../../lib/geometry';
 import { Hud } from '../../lib/Hud';
-import { restartAnimation } from '../../lib/fx';
+import { prefersReducedMotion, restartAnimation } from '../../lib/fx';
 import { TunnelRenderer } from './TunnelRenderer';
 import * as audio from '../../lib/audio';
 import { SoundEffectBank } from '../../lib/SoundEffectBank';
@@ -153,7 +153,7 @@ export class TunnelGame implements TunnelView {
     this.cyclesCleared = 0;
     this.breachStep = 0;
     this.warningArmed = true;
-    this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.reduceMotion = prefersReducedMotion();
     this.onGameOver = null;
     this.onComplete = null;
     this.caveLoop = null;

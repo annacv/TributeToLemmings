@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from '../lib/fx';
 import { isMuted, safePlay } from '../lib/audio';
 import { getDebugScreen } from '../lib/debugScreen';
 import { announce } from '../lib/liveRegion';
@@ -16,7 +17,7 @@ export function createGameOverScreen(
   variant: 'death' | 'win' = 'death',
 ): void {
   const size = getCanvasSize();
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = prefersReducedMotion();
   const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
   const hasCount = breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus > 0;
   const isWin = variant === 'win';

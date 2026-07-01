@@ -2,6 +2,7 @@ import { Player } from '../../entities/Player';
 import { Bomb } from '../../entities/Bomb';
 import { Stalactite } from '../../entities/Stalactite';
 import { isMuted } from '../../lib/audio';
+import { prefersReducedMotion } from '../../lib/fx';
 import { RunHost } from '../../lib/RunHost';
 import { Hud } from '../../lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
@@ -127,7 +128,7 @@ export class AbyssGame implements AbyssView {
   constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
     this.canvas = canvas;
     this.base = baseBreakdown;
-    this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.reduceMotion = prefersReducedMotion();
     this.muted = isMuted();
     this.hud = new Hud();
     this.sfx = new SoundEffectBank({
