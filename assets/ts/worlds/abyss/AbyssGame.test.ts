@@ -158,7 +158,7 @@ describe('AbyssGame — throw (smash stalactites)', () => {
     game.action();
     stepUntil(game, THROW_FLIGHT_STEPS);
     expect(stalactite.destroyed).toBe(false);
-    expect(stalactite.hitsTaken).toBe(1);
+    expect(stalactite.hitsRemaining).toBe(1);
     expect(game.breaks.medium).toBe(0);
     game.action();
     stepUntil(game, THROW_FLIGHT_STEPS);

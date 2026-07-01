@@ -1,7 +1,7 @@
 import { BOMB_WIDTH, BOMB_HEIGHT } from '../../lib/geometry';
 import { loadImage, loadImages, ready } from '../../lib/images';
 import { drawFootingPad } from '../../lib/footingPad';
-import { Stalactite } from '../../entities/Stalactite';
+import { Stalactite, STALACTITE_COST } from '../../entities/Stalactite';
 import {
   ABYSS_FLOOR_FRAC, ABYSS_CEILING_FRAC, THROW_RANGE_FRAC, THROW_FLIGHT_STEPS, type AbyssView,
 } from './AbyssGame';
@@ -167,8 +167,9 @@ export class AbyssRenderer {
     }
 
     // crack overlay indexed by hits taken (guarded so a destroyed one never indexes [-1])
-    if (!stalactite.destroyed && stalactite.hitsTaken > 0) {
-      const crack = this.crackImgs[stalactite.hitsTaken - 1];
+    if (!stalactite.destroyed && stalactite.hitsRemaining < STALACTITE_COST[stalactite.size]) {
+      const hitsTaken = STALACTITE_COST[stalactite.size] - stalactite.hitsRemaining;
+      const crack = this.crackImgs[hitsTaken - 1];
       if (crack && ready(crack)) ctx.drawImage(crack, drawX, drawY, drawWidth, drawHeight);
     }
 
