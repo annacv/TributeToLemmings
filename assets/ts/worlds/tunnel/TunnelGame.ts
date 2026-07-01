@@ -90,26 +90,26 @@ export interface TunnelView {
 }
 
 export class TunnelGame implements TunnelView {
-  player: Player | null;
-  isOver: boolean;
-  paused: boolean;
+  player: Player | null = null;
+  isOver = false;
+  paused = false;
   canvas: HTMLCanvasElement;
-  state: TunnelState;
-  cycle: number;        // 0-based index into TUNNEL_LEVEL_CONFIG
-  ceilingFrac: number;  // collision line, canvas fraction from the top
-  crackXFrac: number;
-  floorBombs: number[];
-  bombSpawns: number[]; // this cycle's spawn layout (for crush respawn)
-  placedCount: number;
-  lightPresses: number;
-  fuseStepsLeft: number;
-  stepCount: number;
-  bankedSeconds: number;
-  cyclesCleared: number;
-  caveLoop: HTMLAudioElement | null;
+  state: TunnelState = 'explore';
+  cycle = 0;
+  ceilingFrac = FLOOR_FRAC - TUNNEL_LEVEL_CONFIG[0].startHeadroomFrac;
+  crackXFrac = 0.5;
+  floorBombs: number[] = [];
+  bombSpawns: number[] = [];
+  placedCount = 0;
+  lightPresses = 0;
+  fuseStepsLeft = 0;
+  stepCount = 0;
+  bankedSeconds = 0;
+  cyclesCleared = 0;
+  caveLoop: HTMLAudioElement | null = null;
   sfx: SoundEffectBank;
   muted: boolean;
-  breachStep: number;
+  breachStep = 0;
   private readonly baseBreakdown: ScoreBreakdown;
   private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
   private readonly onComplete: (breakdown: ScoreBreakdown) => void;
@@ -118,9 +118,9 @@ export class TunnelGame implements TunnelView {
   /* Ceiling-drop choreography between cycles: hold while the ground shakes,
      then tween the ceiling from→target over stepsLeft */
   private drop = { stepsLeft: 0, shakeLeft: 0, fromFrac: 0, targetFrac: 0 };
-  private warningArmed: boolean;
+  private warningArmed = true;
   readonly reduceMotion: boolean;
-  private hud: Hud;
+  private hud = new Hud();
   private host: RunHost;
   private renderer: TunnelRenderer;
   padArriveSteps = 0;
@@ -141,30 +141,10 @@ export class TunnelGame implements TunnelView {
   ) {
     this.onGameOver = onGameOver;
     this.onComplete = onComplete;
-    this.player = null;
-    this.isOver = false;
-    this.paused = false;
     this.canvas = canvas;
     this.baseBreakdown = baseBreakdown;
-    this.state = 'explore';
-    this.cycle = 0;
-    this.ceilingFrac = this.cycleStartCeilingFrac(0);
-    this.crackXFrac = 0.5;
-    this.floorBombs = [];
-    this.bombSpawns = [];
-    this.placedCount = 0;
-    this.lightPresses = 0;
-    this.fuseStepsLeft = 0;
-    this.stepCount = 0;
-    this.bankedSeconds = 0;
-    this.cyclesCleared = 0;
-    this.breachStep = 0;
-    this.warningArmed = true;
     this.reduceMotion = prefersReducedMotion();
-    this.caveLoop = null;
     this.muted = audio.isMuted();
-    this.hud = new Hud();
-
     this.sfx = new SoundEffectBank({
       pickup: EXPLODE_SFX,
       scrape: SCRAPE_SFX,
@@ -174,9 +154,7 @@ export class TunnelGame implements TunnelView {
       rumble: CHAIN_SFX,
       falling: FALLING_SFX,
     }, () => this.muted);
-
     this.renderer = new TunnelRenderer(canvas);
-
     this.host = new RunHost({
       step: () => this.step(),
       render: () => this.renderer.render(this),

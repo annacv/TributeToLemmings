@@ -38,26 +38,26 @@ export interface SurfaceView {
 }
 
 export class SurfaceGame implements SurfaceView {
-  player: Player | null;
-  bombs: Bomb[];
-  isOver: boolean;
+  player: Player | null = null;
+  bombs: Bomb[] = [];
+  isOver = false;
   canvas: HTMLCanvasElement;
-  score: number;
-  count: number;
-  currentLevel: number;
-  lastSpawnFrame: number;
-  groundErosionActive: boolean;
-  erosionCounter: number;
-  gameSong: HTMLAudioElement;
-  tentonSfx: HTMLAudioElement;
+  score = 0;
+  count = 0;
+  currentLevel = 0;
+  lastSpawnFrame = 0;
+  groundErosionActive = false;
+  erosionCounter = 0;
+  gameSong = new Audio(GAME_SONG);
+  tentonSfx = new Audio(TENTON_SFX);
   sfx: SoundEffectBank;
   /* Neutral halt is outcome-neutral; this records which outcome occurred so
      teardown routes to onGameOver (death) or leaves onComplete to the sting. */
-  private outcome: 'death' | 'complete';
+  private outcome: 'death' | 'complete' = 'death';
   private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
   private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   private renderer: SurfaceRenderer;
-  private hud: Hud;
+  private hud = new Hud();
   private host: RunHost;
 
   constructor(
@@ -67,30 +67,14 @@ export class SurfaceGame implements SurfaceView {
   ) {
     this.onGameOver = onGameOver;
     this.onComplete = onComplete;
-    this.player = null;
-    this.bombs = [];
-    this.isOver = false;
     this.canvas = canvas;
-    this.score = 0;
-    this.count = 0;
-    this.currentLevel = 0;
-    this.lastSpawnFrame = 0;
-    this.groundErosionActive = false;
-    this.erosionCounter = 0;
-    this.outcome = 'death';
-    this.hud = new Hud();
-
-    this.gameSong = new Audio(GAME_SONG);
-    this.tentonSfx = new Audio(TENTON_SFX);
     this.sfx = new SoundEffectBank({
       bombHit: FIRE_SFX,
       levelUp: YIPPEE_SFX,
       electric: ELECTRIC_SFX,
       bang: BANG_SFX,
     }, () => this.gameSong.muted);
-
     this.renderer = new SurfaceRenderer(canvas);
-
     this.host = new RunHost({
       step: () => this.step(),
       render: () => this.renderer.render(this),
