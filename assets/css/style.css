@@ -332,6 +332,15 @@ canvas {
   background-image: url("../images/backgrounds/background-win.svg");
 }
 
+/* These plates are pure background-image (no drawn canvas), so unlike the game
+   canvases they get no width/height attributes — size them as a responsive
+   square mirroring getCanvasSize (cap = MAX_CANVAS_SIZE). */
+.game-over-canvas,
+.win-canvas {
+  width: min(100vw, 100dvh, 532px);
+  aspect-ratio: 1;
+}
+
 .ranking-canvas {
   background-image: url("../images/backgrounds/background-ranking.svg");
   background-repeat: repeat-x;

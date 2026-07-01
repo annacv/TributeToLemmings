@@ -6,19 +6,12 @@ import type { AppContext, ScreenRoutes, SubmissionResult } from '../lib/appConte
 
 const SUBMISSION_TIMEOUT_MS = 2500;
 
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: () => T): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          resolve(fallback());
-        } catch (err) {
-          reject(err);
-        }
-      }, ms);
-    }),
-  ]);
+function withFallback<T>(p: Promise<T>, ms: number, fallback: () => T): Promise<T> {
+  return Promise.race([p, new Promise<T>(resolve => setTimeout(() => resolve(fallback()), ms))]);
+}
+
+function withDeadline<T>(p: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
 }
 
 function appendRankingRow(
@@ -108,7 +101,7 @@ async function loadRanking(
   const list = ctx.root.querySelector('.ranking-list');
   if (!list) return;
 
-  const submissionResult = withTimeout(
+  const submissionResult = withFallback(
     submission,
     SUBMISSION_TIMEOUT_MS,
     () => ({ error: true, docId: null, bestScore: null }),
@@ -126,10 +119,10 @@ async function loadRanking(
   }
 
   try {
-    const scores = await withTimeout(
+    const scores = await withDeadline(
       fetchTopScores(10),
       SUBMISSION_TIMEOUT_MS,
-      () => { throw new Error('leaderboard fetch timeout'); },
+      'leaderboard fetch timeout',
     );
 
     if (!ctx.root.querySelector('.ranking-list')) return; // navigated away
