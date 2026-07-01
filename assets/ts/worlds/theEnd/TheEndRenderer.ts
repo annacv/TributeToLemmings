@@ -13,7 +13,10 @@ export function drawTheEndScene(
 ): void {
   ctx.fillStyle = THE_END_SKY;
   ctx.fillRect(0, 0, size, size);
-  if (ready(sceneImg)) ctx.drawImage(sceneImg, 0, frame.groundScrollY, size, size);
+  if (ready(sceneImg)) {
+    const bgH = size * (sceneImg.naturalHeight / sceneImg.naturalWidth);
+    ctx.drawImage(sceneImg, 0, size - bgH + frame.groundScrollY, size, bgH);
+  }
   if (ready(balloonImg)) {
     const balloonHeight = frame.balloonW * (balloonImg.naturalHeight / balloonImg.naturalWidth);
     ctx.drawImage(balloonImg, frame.balloonX - frame.balloonW / 2, frame.balloonY, frame.balloonW, balloonHeight);
