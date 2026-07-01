@@ -6,6 +6,21 @@ import type { AppContext, ScreenRoutes, SubmissionResult } from '../lib/appConte
 
 const SUBMISSION_TIMEOUT_MS = 2500;
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: () => T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve, reject) => {
+      setTimeout(() => {
+        try {
+          resolve(fallback());
+        } catch (err) {
+          reject(err);
+        }
+      }, ms);
+    }),
+  ]);
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -75,14 +90,11 @@ async function loadRanking(
   const list = ctx.root.querySelector('.ranking-list');
   if (!list) return;
 
-  /* Bounded wait for the submission; falls back to failed if still pending */
-  const resolveSubmission = (): Promise<SubmissionResult> =>
-    Promise.race([
-      submission,
-      new Promise<SubmissionResult>((resolve) =>
-        setTimeout(() => resolve({ error: true, docId: null, bestScore: null }), SUBMISSION_TIMEOUT_MS)
-      ),
-    ]);
+  const submissionResult = withTimeout(
+    submission,
+    SUBMISSION_TIMEOUT_MS,
+    () => ({ error: true, docId: null, bestScore: null }),
+  );
 
   function showSaveErrorBanner(): void {
     if (ctx.root.querySelector('.ranking-save-error')) return;
@@ -96,18 +108,15 @@ async function loadRanking(
   }
 
   try {
-    /* Bounded fetch (mirrors resolveSubmission): an unreachable Firestore
-       surfaces the error/retry UI instead of an indefinite loading state */
-    const scores = await Promise.race([
+    const scores = await withTimeout(
       fetchTopScores(10),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('leaderboard fetch timeout')), SUBMISSION_TIMEOUT_MS)
-      ),
-    ]);
+      SUBMISSION_TIMEOUT_MS,
+      () => { throw new Error('leaderboard fetch timeout'); },
+    );
 
     if (!ctx.root.querySelector('.ranking-list')) return; // navigated away
 
-    const { error: submissionError, docId: submittedDocId, bestScore } = await resolveSubmission();
+    const { error: submissionError, docId: submittedDocId, bestScore } = await submissionResult;
 
     if (!ctx.root.querySelector('.ranking-list')) return;
     if (submissionError) showSaveErrorBanner();
@@ -169,7 +178,7 @@ async function loadRanking(
     if (playerRank !== null) announce(`Rank ${playerRank}`);
   } catch {
     if (!ctx.root.querySelector('.ranking-list')) return;
-    const { error: submissionError } = await resolveSubmission();
+    const { error: submissionError } = await submissionResult;
     if (!ctx.root.querySelector('.ranking-list')) return;
     if (submissionError) showSaveErrorBanner();
 
