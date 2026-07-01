@@ -1,6 +1,8 @@
 import { Player } from '../../entities/Player';
 import { Bomb } from '../../entities/Bomb';
 import { Stalactite } from '../../entities/Stalactite';
+import { isMuted } from '../../lib/audio';
+import { prefersReducedMotion } from '../../lib/fx';
 import { RunHost } from '../../lib/RunHost';
 import { Hud } from '../../lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
@@ -109,13 +111,13 @@ export class AbyssGame implements AbyssView {
   exitOpenFrac = 0;
   exitWorldX = Number.MAX_SAFE_INTEGER;
   readonly reduceMotion: boolean;
-  onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
-  onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
   abyssLoop: HTMLAudioElement | null = null;
   muted: boolean;
   sfx: SoundEffectBank;
   private outcome: 'death' | 'complete' = 'death';
   private readonly base: ScoreBreakdown;
+  private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
+  private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   private lastBombSpawn = 0;
   private nextStalactiteWorldX = 0;
   private stalactiteSeq = 0;
@@ -123,11 +125,18 @@ export class AbyssGame implements AbyssView {
   private host: RunHost;
   private renderer: AbyssRenderer;
 
-  constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    baseBreakdown: ScoreBreakdown,
+    onGameOver: (breakdown: ScoreBreakdown) => void,
+    onComplete: (breakdown: ScoreBreakdown) => void,
+  ) {
+    this.onGameOver = onGameOver;
+    this.onComplete = onComplete;
     this.canvas = canvas;
     this.base = baseBreakdown;
-    this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.muted = localStorage.getItem('audio-muted') === '1';
+    this.reduceMotion = prefersReducedMotion();
+    this.muted = isMuted();
     this.hud = new Hud();
     this.sfx = new SoundEffectBank({
       pickup: EXPLODE_SFX,
@@ -152,14 +161,6 @@ export class AbyssGame implements AbyssView {
     return this.host.runSignal;
   }
 
-  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onGameOver = callback;
-  }
-
-  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onComplete = callback;
-  }
-
   startGame(): void {
     const canvasWidth = this.canvas.width;
     this.player = new Player(this.canvas);
@@ -167,7 +168,7 @@ export class AbyssGame implements AbyssView {
     this.playerWorldX = this.entranceWorldX - this.player.dWidth / 2; // land below the opened ceiling door
     this.player.dx = this.playerScreenX();
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
-    this.hud.setText('.lives-value', String(this.player.lives));
+    this.hud.setLivesValue(this.player.lives);
     this.hud.setScore(0);
     this.hud.setLevel('1');
     this.nextStalactiteWorldX = canvasWidth * 0.8;
@@ -315,14 +316,8 @@ export class AbyssGame implements AbyssView {
   }
 
   private updateHint(): void {
-    this.hud.setText('.abyss-bombs', `${this.carried}/${CARRY_CAP}`);
-    for (const size of ['small', 'medium', 'large'] as const) {
-      const item = this.hud.el(`.abyss-stal[data-size="${size}"]`);
-      if (!item) continue;
-      const available = this.availableSizes.includes(size);
-      item.toggleAttribute('hidden', !available);
-      if (available) this.hud.setText(`.abyss-stal[data-size="${size}"] .abyss-hint-count`, String(this.breaks[size]));
-    }
+    this.hud.setAbyssBombs(this.carried, CARRY_CAP);
+    this.hud.updateAbyssStalactites(this.breaks, this.availableSizes);
   }
 
   /** Player-driven, the lemming moves at full control speed; the camera
@@ -360,7 +355,7 @@ export class AbyssGame implements AbyssView {
     const minWorldX = Math.max(this.cameraX + canvasWidth * SCREEN_LEFT_MARGIN_FRAC, canvasWidth * CORRIDOR_START_FRAC);
     const maxWorldX = this.cameraX + canvasWidth * BOMB_SPAWN_MAX_FRAC;
     const worldX = minWorldX + Math.random() * (maxWorldX - minWorldX);
-    const bomb = new Bomb(this.canvas, worldX, level.bombSpeed);
+    const bomb = new Bomb(worldX, level.bombSpeed);
     bomb.dy = this.canvas.height * ABYSS_CEILING_FRAC;
     this.fallingBombs.push(bomb);
     this.lastBombSpawn = this.stepCount;
@@ -470,9 +465,9 @@ export class AbyssGame implements AbyssView {
   private endRun(): void {
     if (this.abyssLoop) this.abyssLoop.pause();
     if (this.outcome === 'complete') {
-      this.exitClose(() => this.onComplete?.(this.currentBreakdown()));
+      this.exitClose(() => this.onComplete(this.currentBreakdown()));
     } else {
-      this.onGameOver?.(this.currentBreakdown());
+      this.onGameOver(this.currentBreakdown());
     }
   }
 

@@ -5,17 +5,28 @@ import {
   CRACK_MIN_X_FRAC, CRACK_MAX_X_FRAC,
   BREACH_PAN_END_STEPS,
 } from './TunnelGame';
-import { makeBreakdown } from '../../lib/score';
+import { makeBreakdown, type ScoreBreakdown } from '../../lib/score';
 import { makeCanvas, stubAnimationFrame } from '../../test-helpers';
 import { SURFACE_HANDOFF_BREAKDOWN } from '../../test-game-factories';
 import { STEPS_PER_SECOND } from '../../lib/GameLoop';
+
+const noop = (): void => {};
 
 function timeToCrushSteps(level: (typeof TUNNEL_LEVEL_CONFIG)[number]): number {
   return (level.startHeadroomFrac - CRUSH_HEADROOM_FRAC) / level.driftPerStep;
 }
 
-function makeTunnelGame(canvas: HTMLCanvasElement, breakdown = SURFACE_HANDOFF_BREAKDOWN) {
-  const game = new TunnelGame(canvas, breakdown);
+function makeTunnelGame(
+  canvas: HTMLCanvasElement,
+  breakdown = SURFACE_HANDOFF_BREAKDOWN,
+  callbacks: { onGameOver?: (breakdown: ScoreBreakdown) => void; onComplete?: (breakdown: ScoreBreakdown) => void } = {},
+) {
+  const game = new TunnelGame(
+    canvas,
+    breakdown,
+    callbacks.onGameOver ?? noop,
+    callbacks.onComplete ?? noop,
+  );
   game.startGame();
   return game;
 }
@@ -346,7 +357,9 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
   });
 
   it('the third crush ends the run once, with the banked-only breakdown', () => {
-    const game = makeTunnelGame(canvas);
+    const onGameOver = vi.fn();
+    const onComplete = vi.fn();
+    const game = makeTunnelGame(canvas, SURFACE_HANDOFF_BREAKDOWN, { onGameOver, onComplete });
     game.player!.lives = 1;
     game.bankedSeconds = 25;
     game.cyclesCleared = 1;
@@ -359,10 +372,6 @@ describe('TunnelGame — crush death and respawn (D10)', () => {
     for (let i = 0; i < 60 && !game.isOver; i++) game.step();
     expect(game.isOver).toBe(true);
 
-    const onGameOver = vi.fn();
-    const onComplete = vi.fn();
-    game.gameOverCallback(onGameOver);
-    game.completionCallback(onComplete);
     game['host']['frame']();
     game['host']['frame']();
     expect(onGameOver).toHaveBeenCalledTimes(1);
@@ -381,7 +390,9 @@ describe('TunnelGame — completion routing', () => {
   afterEach(() => { document.body.innerHTML = ''; });
 
   it('the third breach banks the rest and completes exactly once', () => {
-    const game = makeTunnelGame(canvas);
+    const onGameOver = vi.fn();
+    const onComplete = vi.fn();
+    const game = makeTunnelGame(canvas, SURFACE_HANDOFF_BREAKDOWN, { onGameOver, onComplete });
     game.stepCount = 10 * STEPS_PER_SECOND; // 50 s left
     game.bankedSeconds = 30;
     game.cyclesCleared = 2;
@@ -396,10 +407,6 @@ describe('TunnelGame — completion routing', () => {
     expect(game.isOver).toBe(true);
     expect(game.secondsLeft()).toBe(frozen); // the countdown froze with the bank
 
-    const onGameOver = vi.fn();
-    const onComplete = vi.fn();
-    game.gameOverCallback(onGameOver);
-    game.completionCallback(onComplete);
     game['host']['frame']();
     game['host']['frame']();
     expect(onComplete).toHaveBeenCalledTimes(1);

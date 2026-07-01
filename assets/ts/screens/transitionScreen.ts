@@ -1,5 +1,6 @@
 import { drawLemmingShape, LEMMING_GRID } from '../entities/Player';
-import { safePlay } from '../lib/audio';
+import { prefersReducedMotion } from '../lib/fx';
+import { isMuted, safePlay } from '../lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';
 import { FALLING_SFX, TUNNEL_CEILING_SVG, UNDERGROUND_BACKGROUND_SVG } from '../assets';
@@ -17,6 +18,17 @@ export const TRANSITION_MESSAGE_AT_REST = 1;
 export const TRANSITION_MESSAGE_FROM_START = 0.0125;
 export const TUNNEL_CEILING_HANG_FRAC = 0.24;
 export const ABYSS_CEILING_HANG_FRAC = 0.5;
+
+export type TransitionConfig = {
+  breakdown: ScoreBreakdown;
+  stingerHtml?: string;
+  onArrive?: (breakdown: ScoreBreakdown) => void;
+  backgroundSvg?: string;
+  messageScrollT?: number;
+  ceilingSvg?: string;
+  ceilingHangFrac?: number;
+};
+
 const REVEAL_FLOOR_TOP_SVG = 2688;
 const EASE_OUT_BACK_C1 = 1.70158;
 const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
@@ -28,14 +40,17 @@ const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
 export function createTransitionScreen(
   ctx: AppContext,
   routes: ScreenRoutes,
-  breakdown: ScoreBreakdown,
-  stingerHtml = '&gt; somewhere underground...',
-  onArrive: (breakdown: ScoreBreakdown) => void = routes.createTunnelScreen,
-  backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
-  messageScrollT = TRANSITION_MESSAGE_AT_REST,
-  ceilingSvg: string = TUNNEL_CEILING_SVG,
-  ceilingHangFrac = TUNNEL_CEILING_HANG_FRAC,
+  config: TransitionConfig,
 ): void {
+  const {
+    breakdown,
+    stingerHtml = '&gt; somewhere underground...',
+    onArrive = routes.createTunnelScreen,
+    backgroundSvg = UNDERGROUND_BACKGROUND_SVG,
+    messageScrollT = TRANSITION_MESSAGE_AT_REST,
+    ceilingSvg = TUNNEL_CEILING_SVG,
+    ceilingHangFrac = TUNNEL_CEILING_HANG_FRAC,
+  } = config;
   const size = getCanvasSize();
   const screen = ctx.buildDom(`
       <section class="section-container to-be-continued-screen">
@@ -57,12 +72,12 @@ export function createTransitionScreen(
   overlay.tabIndex = -1;
   overlay.focus();
   const ctx2d = canvas.getContext('2d')!;
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = prefersReducedMotion();
 
   const undergroundImg = loadImage(backgroundSvg);
   const ceilingImg = loadImage(ceilingSvg);
 
-  if (localStorage.getItem('audio-muted') !== '1') {
+  if (!isMuted()) {
     safePlay(new Audio(FALLING_SFX));
   }
 
@@ -181,11 +196,4 @@ export function createTransitionScreen(
   };
 
   whenImagesSettled([undergroundImg, ceilingImg], start);
-}
-
-export function bindTransitionScreen(
-  ctx: AppContext,
-  routes: ScreenRoutes,
-): ScreenRoutes['createTransitionScreen'] {
-  return (...args) => createTransitionScreen(ctx, routes, ...args);
 }

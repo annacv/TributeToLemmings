@@ -303,8 +303,6 @@ canvas {
 }
 
 .game-canvas,
-.tunnel-game-canvas,
-.abyss-game-canvas,
 .game-over-canvas,
 .win-canvas {
   background-position: 50% 50%;
@@ -313,14 +311,6 @@ canvas {
 
 .game-canvas {
   background-image: url("../images/backgrounds/background-game.svg");
-}
-
-.tunnel-game-canvas {
-  background-image: url("../images/backgrounds/background-tunnel.svg");
-}
-
-.abyss-game-canvas {
-  background-image: url("../images/backgrounds/background-abyss.svg");
 }
 
 @keyframes shake-light {

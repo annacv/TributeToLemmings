@@ -142,13 +142,14 @@ export class Player {
   }
 
   move(): void {
-    this.dx = this.dx + this.direction * this.speed;
-    const next = this.dx + this.direction * this.speed;
-
-    if (next <= this.minX || next >= this.maxX) {
+    this.dx += this.direction * this.speed;
+    if (this.dx <= this.minX) {
+      this.dx = this.minX;
+      this.direction = -this.direction;
+    } else if (this.dx >= this.maxX) {
+      this.dx = this.maxX;
       this.direction = -this.direction;
     }
-    this.dx = Math.max(this.minX, Math.min(this.dx, this.maxX));
   }
 
   triggerBlink(livesSnapshot?: number): void {

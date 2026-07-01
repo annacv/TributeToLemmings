@@ -1,4 +1,5 @@
-import { safePlay } from '../lib/audio';
+import { prefersReducedMotion } from '../lib/fx';
+import { isMuted, safePlay } from '../lib/audio';
 import { getDebugScreen } from '../lib/debugScreen';
 import { announce } from '../lib/liveRegion';
 import { submitScore } from '../lib/leaderboard';
@@ -16,7 +17,7 @@ export function createGameOverScreen(
   variant: 'death' | 'win' = 'death',
 ): void {
   const size = getCanvasSize();
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduceMotion = prefersReducedMotion();
   const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
   const hasCount = breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus > 0;
   const isWin = variant === 'win';
@@ -58,7 +59,7 @@ export function createGameOverScreen(
 
   ctx.rankingMusic.stop();
 
-  const muted = localStorage.getItem('audio-muted') === '1';
+  const muted = isMuted();
   const playOptionalSfx = (src: string | null): void => {
     if (src && !muted) safePlay(new Audio(src));
   };

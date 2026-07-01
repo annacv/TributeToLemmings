@@ -1,5 +1,6 @@
 import { drawLemmingMascot, LEMMING_GRID } from '../entities/Player';
 import { consumeDebugScreen } from '../lib/debugScreen';
+import { prefersReducedMotion } from '../lib/fx';
 import type { AppContext, ScreenRoutes } from '../lib/appContext';
 
 export function generateGuestHandle(): string {
@@ -13,7 +14,7 @@ function startMascotAnimation(canvas: HTMLCanvasElement): () => void {
   canvas.height = LEMMING_GRID;
   const ctx = canvas.getContext('2d')!;
 
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (prefersReducedMotion()) {
     drawLemmingMascot(ctx, LEMMING_GRID, 0);
     return () => {};
   }

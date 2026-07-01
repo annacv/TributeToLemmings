@@ -43,12 +43,14 @@ vi.mock('./worlds/surface/SurfaceGame', () => ({
     startGame = vi.fn();
     private controller = new AbortController();
     get runSignal(): AbortSignal { return this.controller.signal; }
-    constructor() { gameInstances.push(this); }
-    gameOverCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onGameOver = (breakdown) => { this.controller.abort(); cb(breakdown); };
-    }
-    completionCallback(cb: (breakdown: ScoreBreakdown) => void): void {
-      this.onComplete = (breakdown) => { this.controller.abort(); cb(breakdown); };
+    constructor(
+      _canvas: HTMLCanvasElement,
+      onGameOver: (breakdown: ScoreBreakdown) => void,
+      onComplete: (breakdown: ScoreBreakdown) => void,
+    ) {
+      this.onGameOver = (breakdown) => { this.controller.abort(); onGameOver(breakdown); };
+      this.onComplete = (breakdown) => { this.controller.abort(); onComplete(breakdown); };
+      gameInstances.push(this);
     }
   },
 }));

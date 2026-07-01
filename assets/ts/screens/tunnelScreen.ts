@@ -19,17 +19,20 @@ export function createTunnelScreen(ctx: AppContext, routes: ScreenRoutes, breakd
     withAction: true,
   });
 
-  const game = new TunnelGame(canvas, breakdown);
-  game.completionCallback((bd) => routes.createTransitionScreen(
-    bd,
-    '&gt; the air grows warm...',
-    routes.createAbyssScreen,
-    UNDERGROUND_ABYSS_BACKGROUND_SVG,
-    TRANSITION_MESSAGE_FROM_START,
-    ABYSS_CEILING_SVG,
-    ABYSS_CEILING_HANG_FRAC,
-  ));
-  game.gameOverCallback(routes.createGameOverScreen);
+  const game = new TunnelGame(
+    canvas,
+    breakdown,
+    routes.createGameOverScreen,
+    (bd) => routes.createTransitionScreen({
+      breakdown: bd,
+      stingerHtml: '&gt; the air grows warm...',
+      onArrive: routes.createAbyssScreen,
+      backgroundSvg: UNDERGROUND_ABYSS_BACKGROUND_SVG,
+      messageScrollT: TRANSITION_MESSAGE_FROM_START,
+      ceilingSvg: ABYSS_CEILING_SVG,
+      ceilingHangFrac: ABYSS_CEILING_HANG_FRAC,
+    }),
+  );
 
   /* Cave loop: respects the mute gate, pauses with the hidden tab, dies with the run */
   game.caveLoop = attachWorldLoop(game, CAVE_LOOP, wireMute);

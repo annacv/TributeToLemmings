@@ -19,13 +19,4 @@ export class Stalactite {
     this.worldX = worldX;
     this.hitsRemaining = STALACTITE_COST[size];
   }
-
-  get cost(): number {
-    return STALACTITE_COST[this.size];
-  }
-
-  /** Hits landed so far → crack-overlay index is `hitsTaken − 1` (0 = light). */
-  get hitsTaken(): number {
-    return this.cost - this.hitsRemaining;
-  }
 }

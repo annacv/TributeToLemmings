@@ -1,5 +1,5 @@
-import { loadImages } from '../../lib/images';
-import { CRACK_MARK_SVGS, GROUND_HOLE_SVGS } from '../../assets';
+import { loadImage, loadImages, ready } from '../../lib/images';
+import { CRACK_MARK_SVGS, GROUND_HOLE_SVGS, SPRITES } from '../../assets';
 import type { SurfaceView } from './SurfaceGame';
 
 /* Ground-band geometry, baked to the surface artwork. */
@@ -33,6 +33,8 @@ export class SurfaceRenderer {
   private readonly erosionCtx: CanvasRenderingContext2D;
   private readonly crackImgs: HTMLImageElement[];
   private readonly holeImgs: HTMLImageElement[];
+  private readonly bombImg: HTMLImageElement;
+  private readonly booomImg: HTMLImageElement;
   private crackStamps: GroundStamp[] = [];
   private holeStamps: GroundStamp[] = [];
   private coveredCells: boolean[] = new Array(COVERAGE_COLS * COVERAGE_ROWS).fill(false);
@@ -46,13 +48,18 @@ export class SurfaceRenderer {
     this.erosionCtx = this.erosionCanvas.getContext('2d')!;
     this.crackImgs = loadImages(CRACK_MARK_SVGS);
     this.holeImgs = loadImages(GROUND_HOLE_SVGS);
+    this.bombImg = loadImage(SPRITES.bomb);
+    this.booomImg = loadImage(SPRITES.booom);
   }
 
   render(view: SurfaceView): void {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (view.groundErosionActive) this.ctx.drawImage(this.erosionCanvas, 0, 0);
     view.player?.drawImage(view.count);
-    view.bombs.forEach((bomb) => bomb.drawImage());
+    for (const bomb of view.bombs) {
+      const img = bomb.isExploding ? this.booomImg : this.bombImg;
+      if (ready(img)) this.ctx.drawImage(img, bomb.dx, bomb.dy, bomb.dWidth, bomb.dHeight);
+    }
   }
 
   /** Stamps a crack mark centered under the impact point, alternating between the

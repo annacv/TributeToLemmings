@@ -38,55 +38,43 @@ export interface SurfaceView {
 }
 
 export class SurfaceGame implements SurfaceView {
-  player: Player | null;
-  bombs: Bomb[];
-  isOver: boolean;
+  player: Player | null = null;
+  bombs: Bomb[] = [];
+  isOver = false;
   canvas: HTMLCanvasElement;
-  onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
-  score: number;
-  count: number;
-  currentLevel: number;
-  lastSpawnFrame: number;
-  groundErosionActive: boolean;
-  erosionCounter: number;
-  gameSong: HTMLAudioElement;
-  tentonSfx: HTMLAudioElement;
+  score = 0;
+  count = 0;
+  currentLevel = 0;
+  lastSpawnFrame = 0;
+  groundErosionActive = false;
+  erosionCounter = 0;
+  gameSong = new Audio(GAME_SONG);
+  tentonSfx = new Audio(TENTON_SFX);
   sfx: SoundEffectBank;
   /* Neutral halt is outcome-neutral; this records which outcome occurred so
      teardown routes to onGameOver (death) or leaves onComplete to the sting. */
-  private outcome: 'death' | 'complete';
+  private outcome: 'death' | 'complete' = 'death';
+  private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
+  private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   private renderer: SurfaceRenderer;
-  private hud: Hud;
+  private hud = new Hud();
   private host: RunHost;
 
-  constructor(canvas: HTMLCanvasElement) {
-    this.player = null;
-    this.bombs = [];
-    this.isOver = false;
+  constructor(
+    canvas: HTMLCanvasElement,
+    onGameOver: (breakdown: ScoreBreakdown) => void,
+    onComplete: (breakdown: ScoreBreakdown) => void,
+  ) {
+    this.onGameOver = onGameOver;
+    this.onComplete = onComplete;
     this.canvas = canvas;
-    this.onGameOver = null;
-    this.onComplete = null;
-    this.score = 0;
-    this.count = 0;
-    this.currentLevel = 0;
-    this.lastSpawnFrame = 0;
-    this.groundErosionActive = false;
-    this.erosionCounter = 0;
-    this.outcome = 'death';
-    this.hud = new Hud();
-
-    this.gameSong = new Audio(GAME_SONG);
-    this.tentonSfx = new Audio(TENTON_SFX);
     this.sfx = new SoundEffectBank({
       bombHit: FIRE_SFX,
       levelUp: YIPPEE_SFX,
       electric: ELECTRIC_SFX,
       bang: BANG_SFX,
     }, () => this.gameSong.muted);
-
     this.renderer = new SurfaceRenderer(canvas);
-
     this.host = new RunHost({
       step: () => this.step(),
       render: () => this.renderer.render(this),
@@ -130,7 +118,7 @@ export class SurfaceGame implements SurfaceView {
 
     if (this.count - this.lastSpawnFrame >= SURFACE_LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
       const randomX = Math.random() * (this.canvas.width - BOMB_WIDTH);
-      this.bombs.push(new Bomb(this.canvas, randomX, SURFACE_LEVEL_CONFIG[this.currentLevel].bombSpeed));
+      this.bombs.push(new Bomb(randomX, SURFACE_LEVEL_CONFIG[this.currentLevel].bombSpeed));
       this.lastSpawnFrame = this.count;
     }
 
@@ -147,7 +135,7 @@ export class SurfaceGame implements SurfaceView {
   private endRun(): void {
     this.gameSong.pause();
     if (this.outcome === 'death') {
-      this.onGameOver?.(this.currentBreakdown());
+      this.onGameOver(this.currentBreakdown());
     }
   }
 
@@ -251,7 +239,6 @@ export class SurfaceGame implements SurfaceView {
       if (bomb.isExploding) continue;
 
       if (bombHitsPlayer(player.dx, player.dy, player.dWidth, player.dHeight, bomb.dx, bomb.dy)) {
-        bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionStepsLeft = EXPLOSION_STEPS;
         this.sfx.play('bombHit');
@@ -262,14 +249,6 @@ export class SurfaceGame implements SurfaceView {
   displayLives(): void {
     if (!this.player) return;
     this.hud.displayLives(this.player.lives);
-  }
-
-  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onGameOver = callback;
-  }
-
-  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onComplete = callback;
   }
 
   private currentBreakdown(levelsCompleted = this.currentLevel): ScoreBreakdown {
@@ -296,8 +275,7 @@ export class SurfaceGame implements SurfaceView {
       fired = true;
       clearTimeout(watchdog);
 
-      const finish = this.onComplete ?? this.onGameOver;
-      finish?.(breakdown);
+      this.onComplete(breakdown);
     };
 
     if (this.gameSong.muted) {

@@ -9,6 +9,8 @@ import { makeCanvas, stubAnimationFrame, stepUntil, TEST_CANVAS_SIZE } from '../
 import { makeAbyssGame } from '../../test-game-factories';
 import { STEPS_PER_SECOND } from '../../lib/GameLoop';
 
+const noop = (): void => {};
+
 /** Survive falling bombs so a long run can reach a time/level milestone. */
 function invincible(game: AbyssGame): AbyssGame {
   if (game.player) game.player.lives = Number.MAX_SAFE_INTEGER;
@@ -116,7 +118,7 @@ describe('AbyssGame — bomb spawning', () => {
     const game = makeAbyssGame(makeCanvas());
     const play = vi.spyOn(game.sfx, 'play');
     const before = game.player!.lives;
-    const bomb = new Bomb(game.canvas, game.playerWorldX, 1.2);
+    const bomb = new Bomb(game.playerWorldX, 1.2);
     bomb.dy = game.player!.dy - 5; // overlapping the lemming, above the floor line
     game.fallingBombs = [bomb];
     game.step();
@@ -156,7 +158,7 @@ describe('AbyssGame — throw (smash stalactites)', () => {
     game.action();
     stepUntil(game, THROW_FLIGHT_STEPS);
     expect(stalactite.destroyed).toBe(false);
-    expect(stalactite.hitsTaken).toBe(1);
+    expect(stalactite.hitsRemaining).toBe(1);
     expect(game.breaks.medium).toBe(0);
     game.action();
     stepUntil(game, THROW_FLIGHT_STEPS);
@@ -227,7 +229,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('cold-open holds the closed hatch, plays DOOR.WAV, then hands off to play', () => {
     vi.useFakeTimers();
-    const game = new AbyssGame(makeCanvas(), makeBreakdown({}));
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({}), noop, noop);
     const play = vi.spyOn(game.sfx, 'play');
     const onDone = vi.fn();
     game.coldOpen(onDone);
@@ -244,7 +246,7 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('reduced motion resolves the cold-open straight to the grounded, door-open state', () => {
     vi.stubGlobal('matchMedia', reducedMotion);
-    const game = new AbyssGame(makeCanvas(), makeBreakdown({}));
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({}), noop, noop);
     const play = vi.spyOn(game.sfx, 'play');
     const onDone = vi.fn();
     game.coldOpen(onDone);
@@ -255,11 +257,10 @@ describe('AbyssGame — cold-open and exit-door beats', () => {
 
   it('reduced-motion exit close plays LETSGO and routes the completion at once', () => {
     vi.stubGlobal('matchMedia', reducedMotion);
-    const game = new AbyssGame(makeCanvas(), makeBreakdown({ levelsBonus: 30 }));
+    const onComplete = vi.fn();
+    const game = new AbyssGame(makeCanvas(), makeBreakdown({ levelsBonus: 30 }), noop, onComplete);
     game.startGame();
     invincible(game);
-    const onComplete = vi.fn();
-    game.completionCallback(onComplete);
     const play = vi.spyOn(game.sfx, 'play');
     game.stepCount = ABYSS_TIME_BUDGET_S * STEPS_PER_SECOND - 1;
     game.step(); // crosses the L3 budget → reachDoor (completion)

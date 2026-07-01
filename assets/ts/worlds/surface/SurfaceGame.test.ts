@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SurfaceGame } from './SurfaceGame';
 import { Bomb } from '../../entities/Bomb';
-import { SPRITES } from '../../assets';
 import { makeBreakdown, LEVEL_POINTS } from '../../lib/score';
 import { makeCanvas, makeRafQueue, setDocumentHidden } from '../../test-helpers';
 import { dropGroundBomb, makeSurfaceGame } from '../../test-game-factories';
 
+const noop = (): void => {};
+
 // --- helpers ---
 
 function placeBomb(game: SurfaceGame, dx: number, dy = 390): Bomb {
-  const bomb = new Bomb(game.canvas, dx);
+  const bomb = new Bomb(dx);
   bomb.dy = dy;
   game.bombs.push(bomb);
   game.checkCollisions();
@@ -54,17 +55,16 @@ describe('SurfaceGame', () => {
 
     expect(bomb.isExploding).toBe(true);
     expect(bomb.explosionStepsLeft).toBe(6);
-    expect(bomb.image.src).toContain(SPRITES.booom);
     expect(game.bombs).toHaveLength(1);
-    expect(game.player.lives).toBe(3);
+    expect(game.player?.lives).toBe(3);
 
     runFrames(game, 5);
     expect(game.bombs).toHaveLength(1);
-    expect(game.player.lives).toBe(3);
+    expect(game.player?.lives).toBe(3);
 
     game.update();
     expect(game.bombs).toHaveLength(0);
-    expect(game.player.lives).toBe(2);
+    expect(game.player?.lives).toBe(2);
   });
 
   it('registers all overlapping bomb hits in the same frame', () => {
@@ -74,7 +74,7 @@ describe('SurfaceGame', () => {
 
     runFrames(game);
 
-    expect(game.player.lives).toBe(1);
+    expect(game.player?.lives).toBe(1);
     expect(game.bombs).toHaveLength(0);
   });
 
@@ -87,7 +87,7 @@ describe('SurfaceGame', () => {
   it('collision outcome is independent of facing direction', () => {
     for (const direction of [1, -1]) {
       const game = makeSurfaceGame(canvas);
-      game.player.direction = direction;
+      game.player?.setDirection(direction);
       expect(placeBomb(game, 82).isExploding).toBe(true);
       expect(placeBomb(game, 83).isExploding).toBe(false);
     }
@@ -95,22 +95,21 @@ describe('SurfaceGame', () => {
 
   it('sets isOver when last life is lost', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = 1;
+    game.player!.lives = 1;
     placeHitBomb(game);
 
     runFrames(game);
 
-    expect(game.player.lives).toBe(0);
+    expect(game.player?.lives).toBe(0);
     expect(game.isOver).toBe(true);
   });
 
   it('a surface death scores only completed levels, never the level died on', () => {
-    const game = makeSurfaceGame(canvas);
     const onGameOver = vi.fn();
-    game.gameOverCallback(onGameOver);
+    const game = makeSurfaceGame(canvas, { onGameOver });
     game.score = 40;
     game.currentLevel = 2;
-    game.player.lives = 1;
+    game.player!.lives = 1;
 
     placeHitBomb(game);
     runFrames(game);
@@ -131,13 +130,13 @@ describe('SurfaceGame', () => {
 
     runFrames(game);
 
-    expect(game.player.blinkColor).toBe('#FFFFFF');
-    expect(game.player.blinkStepsLeft).toBe(30);
+    expect(game.player?.blinkColor).toBe('#FFFFFF');
+    expect(game.player?.blinkStepsLeft).toBe(30);
   });
 
   it('displayLives does not throw when lives drop below zero', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = -1;
+    game.player!.lives = -1;
     setupHud();
 
     expect(() => game.displayLives()).not.toThrow();
@@ -158,7 +157,7 @@ describe('SurfaceGame', () => {
 
   it('removes all excess life icons when multiple lives are lost at once', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = 1;
+    game.player!.lives = 1;
     setupHud();
 
     game.displayLives();
@@ -180,7 +179,7 @@ describe('SurfaceGame — level system', () => {
     { from: 1, score: 36, to: 2 },   // reaches level 3
     { from: 2, score: 9999, to: 2 }, // never past level 3
   ])('checkLevelUp: level $from at score $score → level $to', ({ from, score, to }) => {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.currentLevel = from;
     game.score = score;
     game['checkLevelUp']();
@@ -188,7 +187,7 @@ describe('SurfaceGame — level system', () => {
   });
 
   it('resets lastSpawnFrame on level-up', () => {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.count = 1080;
     game.lastSpawnFrame = 960;
     game.score = 18;
@@ -269,11 +268,9 @@ describe('SurfaceGame — tunnel world transition', () => {
 
   it('fires onComplete callback (not onGameOver) after the muted hold elapses', () => {
     vi.useFakeTimers();
-    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     const onComplete = vi.fn();
     const onGameOver = vi.fn();
-    game.completionCallback(onComplete);
-    game.gameOverCallback(onGameOver);
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true, onComplete, onGameOver });
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     dropGroundBomb(game, canvas);
 
@@ -283,21 +280,6 @@ describe('SurfaceGame — tunnel world transition', () => {
       makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
     );
     expect(onGameOver).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('falls back to onGameOver when onComplete is null (muted)', () => {
-    vi.useFakeTimers();
-    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
-    const onGameOver = vi.fn();
-    game.gameOverCallback(onGameOver);
-    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
-    dropGroundBomb(game, canvas);
-    vi.advanceTimersByTime(500);
-
-    expect(onGameOver).toHaveBeenCalledWith(
-      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
-    );
     vi.useRealTimers();
   });
 
@@ -323,10 +305,9 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
   /* Unmuted: triggerTunnelWorld holds on the collapse sting and exits via
      whichever of ended/error/watchdog/play-rejection resolves first */
   function collapseUnmuted() {
-    const game = makeSurfaceGame(canvas, { erosion: true });
-    game.gameSong.muted = false;
     const onComplete = vi.fn();
-    game.completionCallback(onComplete);
+    const game = makeSurfaceGame(canvas, { erosion: true, onComplete });
+    game.gameSong.muted = false;
     game['renderer']['coveredCells'].fill(true);
     dropGroundBomb(game, canvas);
     return { game, onComplete };
@@ -363,7 +344,7 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
 describe('SurfaceGame — fixed-timestep score', () => {
   function makeHarness() {
     const queue = makeRafQueue();
-    const game = new SurfaceGame(makeCanvas());
+    const game = new SurfaceGame(makeCanvas(), noop, noop);
     game.gameSong.muted = true;
     game.startGame(); // synchronous first step → count is already 1 here
     return { game, pump: queue.pump };
@@ -400,7 +381,7 @@ describe('SurfaceGame — background-tab audio', () => {
   });
 
   function startGameWithSpies() {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.gameSong.muted = true;
     const playSpy = vi.fn().mockResolvedValue(undefined);
     const pauseSpy = vi.fn();

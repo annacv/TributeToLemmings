@@ -1,21 +1,14 @@
 import { RANKING_MUSIC } from '../assets';
-import { safePlay } from './audio';
-import type { ScoreBreakdown } from './score';
+import { isMuted, safePlay } from './audio';
+import type { ScoreBreakdown } from '../lib/score';
+import type { TransitionConfig } from '../screens/transitionScreen';
 
 export type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
 
 export type ScreenRoutes = {
   createStartScreen: () => void;
   createGameScreen: () => void;
-  createTransitionScreen: (
-    breakdown: ScoreBreakdown,
-    stingerHtml?: string,
-    onArrive?: (breakdown: ScoreBreakdown) => void,
-    backgroundSvg?: string,
-    messageScrollT?: number,
-    ceilingSvg?: string,
-    ceilingHangFrac?: number,
-  ) => void;
+  createTransitionScreen: (config: TransitionConfig) => void;
   createTunnelScreen: (breakdown: ScoreBreakdown) => void;
   createAbyssScreen: (breakdown: ScoreBreakdown) => void;
   createGameOverScreen: (breakdown: ScoreBreakdown, variant?: 'death' | 'win') => void;
@@ -41,21 +34,21 @@ class RankingMusicController {
     }
   }
 
-  startOnGameOver(root: HTMLElement): void {
-    if (!root.querySelector('.game-over-screen, .ranking-screen')) return;
+  private ensureMusic(): void {
     if (this.music) return;
     this.music = new Audio(RANKING_MUSIC);
     this.music.loop = true;
-    this.music.muted = localStorage.getItem('audio-muted') === '1';
+    this.music.muted = isMuted();
     if (!document.hidden) safePlay(this.music);
   }
 
+  startOnGameOver(root: HTMLElement): void {
+    if (!root.querySelector('.game-over-screen, .ranking-screen')) return;
+    this.ensureMusic();
+  }
+
   ensureOnRankingMount(): void {
-    if (this.music) return;
-    this.music = new Audio(RANKING_MUSIC);
-    this.music.loop = true;
-    this.music.muted = localStorage.getItem('audio-muted') === '1';
-    if (!document.hidden) safePlay(this.music);
+    this.ensureMusic();
   }
 
   setMuted(muted: boolean): void {

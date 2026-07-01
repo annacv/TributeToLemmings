@@ -5,6 +5,8 @@ import { AbyssGame, ABYSS_TIME_BUDGET_S, ABYSS_LEVEL_CONFIG } from './worlds/aby
 import { makeCanvas, stubAnimationFrame } from './test-helpers';
 import { STEPS_PER_SECOND } from './lib/GameLoop';
 
+const noop = (): void => {};
+
 describe('cumulative score passthrough (seam-test gate)', () => {
   beforeAll(() => {
     stubAnimationFrame();
@@ -20,7 +22,7 @@ describe('cumulative score passthrough (seam-test gate)', () => {
       levelsBonus: SURFACE_LEVELS * LEVEL_POINTS,
     });
 
-    const tunnel = new TunnelGame(makeCanvas(), surfaceBreakdown);
+    const tunnel = new TunnelGame(makeCanvas(), surfaceBreakdown, noop, noop);
     tunnel.bankedSeconds = TUNNEL_BANKED;
     tunnel.cyclesCleared = TOTAL_CYCLES;
     const tunnelBreakdown = tunnel.currentBreakdown();
@@ -28,7 +30,7 @@ describe('cumulative score passthrough (seam-test gate)', () => {
     expect(tunnelBreakdown.tunnelTime).toBe(TUNNEL_BANKED);
     expect(tunnelBreakdown.levelsBonus).toBe((SURFACE_LEVELS + TOTAL_CYCLES) * LEVEL_POINTS);
 
-    const abyss = new AbyssGame(makeCanvas(), tunnelBreakdown);
+    const abyss = new AbyssGame(makeCanvas(), tunnelBreakdown, noop, noop);
     abyss.startGame();
     if (abyss.player) abyss.player.lives = Number.MAX_SAFE_INTEGER;
     abyss.breaks = { small: 2, medium: 1, large: 1 };
