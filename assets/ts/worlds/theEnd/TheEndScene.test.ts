@@ -3,6 +3,9 @@ import {
   theEndFrameAt,
   ASCEND_SCROLL_FRAC,
   ASCEND_BALLOON_TOP_FRAC,
+  theEndCreditsScroll,
+  THE_END_CREDITS_MIN_SCROLL_MS,
+  THE_END_CREDITS_SCROLL_PX_PER_S,
 } from './TheEndScene';
 import { THE_END_TEST_CONFIG as config, THE_END_TEST_DURATIONS as durations } from './theEndTestFixtures';
 
@@ -53,5 +56,21 @@ describe('theEndFrameAt', () => {
     expect(frame.phase).toBe('ascend');
     expect(frame.groundScrollY).toBeCloseTo(config.size * ASCEND_SCROLL_FRAC);
     expect(frame.balloonY).toBeCloseTo(config.size * ASCEND_BALLOON_TOP_FRAC);
+  });
+});
+
+describe('theEndCreditsScroll', () => {
+  it('scales crawl duration with travel distance', () => {
+    const rollH = 200;
+    const viewH = 500;
+    const travelPx = rollH + viewH;
+    const computed = Math.round((travelPx / THE_END_CREDITS_SCROLL_PX_PER_S) * 1000);
+    expect(theEndCreditsScroll(rollH, viewH).ms).toBe(computed);
+    expect(theEndCreditsScroll(0, 500).ms).toBe(THE_END_CREDITS_MIN_SCROLL_MS);
+    expect(theEndCreditsScroll(200, 0).ms).toBe(THE_END_CREDITS_MIN_SCROLL_MS);
+  });
+
+  it('scroll end clears the roll once its bottom passes the viewport top', () => {
+    expect(theEndCreditsScroll(200, 500).endPct).toBe(-(500 / 200) * 100);
   });
 });

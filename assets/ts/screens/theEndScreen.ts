@@ -3,8 +3,10 @@ import { getCanvasSize, LEMMING_SIZE_FRAC } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';
 import { setupMuteButton } from '../lib/muteButton';
 import {
-  THE_END_ASCEND_MS, THE_END_BOARD_MS, THE_END_CREDITS_MS, THE_END_END_HOLD_MS,
-  THE_END_PROMPT_HOLD_MS, THE_END_WALK_MS, theEndFrameAt, type TheEndConfig,
+  THE_END_ASCEND_MS, THE_END_BOARD_MS, THE_END_CREDITS_START_MS,
+  THE_END_END_HOLD_MS, THE_END_PROMPT_HINT_VISIBLE_MS,
+  THE_END_PROMPT_HOLD_MS, THE_END_PROMPT_HOLD_MS_MOBILE, THE_END_WALK_MS,
+  theEndCreditsScroll, theEndFrameAt, type TheEndConfig,
 } from '../worlds/theEnd/TheEndScene';
 import { drawTheEndScene } from '../worlds/theEnd/TheEndRenderer';
 import { BALLOON_SVG, BALLOON_SFX, THE_END_BACKGROUND_SVG, THE_END_MUSIC } from '../assets';
@@ -17,33 +19,14 @@ const THE_END_BALLOON_X_FRAC = 0.62;
 const THE_END_WALK_START_X_FRAC = 0.18;
 const THE_END_WALK_END_INSET_FRAC = 0.16;
 
-const CREDITS_LINES = [
-  'THE END',
-  '',
-  'A tribute to',
-  "DMA Design's Lemmings (1991)",
-  '',
-  'Music — Lemmings DOS OST',
-  'SFX — Lemmings DOS set',
-  '',
-  'Made with fun by Anna Condal',
-];
+const CREDITS_HTML = `<p class="the-end-credit the-end-credit--copy">THE END
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+Tribute to Lemmings is a loving nod to the original DMA Design's Lemmings game (1991)
 
-function creditsRollHtml(): string {
-  return CREDITS_LINES
-    .map((line) => line
-      ? `<p class="the-end-credit">${escapeHtml(line)}</p>`
-      : '<p class="the-end-credit the-end-credit--gap"></p>')
-    .join('');
-}
+Music — Lemmings DOS OST
+SFX — Lemmings DOS set
+
+Made with fun by Anna Condal</p>`;
 
 export function createTheEndScreen(
   ctx: AppContext,
@@ -53,15 +36,20 @@ export function createTheEndScreen(
 ): void {
   const size = getCanvasSize();
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const isMobile = window.matchMedia('(max-width: 767px)').matches;
   const muted = localStorage.getItem('audio-muted') === '1';
+  const promptHoldMs = isMobile ? THE_END_PROMPT_HOLD_MS_MOBILE : THE_END_PROMPT_HOLD_MS;
 
   const screen = ctx.buildDom(`
       <section class="section-container the-end-screen">
         <div class="game-stage">
           <canvas class="the-end-canvas" aria-hidden="true"></canvas>
-          <div class="the-end-credits" aria-hidden="true"><div class="the-end-credits-roll">${creditsRollHtml()}</div></div>
+          <div class="the-end-credits" aria-hidden="true"><div class="the-end-credits-roll">${CREDITS_HTML}</div></div>
           <div class="the-end-overlay">
-            <p class="the-end-prompt">Press <kbd class="key-hint-text">SPACE</kbd> to lift off</p>
+            <p class="the-end-prompt">
+              <span class="the-end-prompt-desktop">Press <kbd class="key-hint-text">SPACE</kbd> to lift off</span>
+              <span class="the-end-prompt-mobile">Tap to lift off</span>
+            </p>
           </div>
           <button class="the-end-skip" aria-label="Skip to ranking">Skip &gt;&gt;</button>
           <button class="mute-btn" aria-label="Mute sound"></button>
@@ -73,11 +61,11 @@ export function createTheEndScreen(
   canvas.width = size;
   canvas.height = size;
   const ctx2d = canvas.getContext('2d')!;
-  const overlay = screen.querySelector('.the-end-overlay') as HTMLElement;
   const prompt = screen.querySelector('.the-end-prompt') as HTMLElement;
   const credits = screen.querySelector('.the-end-credits') as HTMLElement;
-  overlay.tabIndex = -1;
-  overlay.focus();
+  const creditsRoll = credits.querySelector('.the-end-credits-roll') as HTMLElement;
+  prompt.tabIndex = -1;
+  prompt.focus();
 
   const sceneImg = loadImage(THE_END_BACKGROUND_SVG);
   const balloonImg = loadImage(BALLOON_SVG);
@@ -96,29 +84,46 @@ export function createTheEndScreen(
 
   const controller = new AbortController();
   const music = new Audio(THE_END_MUSIC);
-  let startTime = 0;
+  let startTime = performance.now();
   let liftOffElapsed: number | null = null;
-  let ascended = false;
+  let promptReadyAt: number | null = null;
   let routed = false;
+  let creditsRouteTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function canLiftOff(): boolean {
+    if (liftOffElapsed !== null || routed) return false;
+    const frame = theEndFrameAt(performance.now() - startTime, liftOffElapsed, durations, config);
+    if (frame.phase !== 'prompt') return false;
+    if (!isMobile) return true;
+    return promptReadyAt !== null
+      && performance.now() - promptReadyAt >= THE_END_PROMPT_HINT_VISIBLE_MS;
+  }
+
+  function startCredits(): void {
+    if (routed) return;
+    credits.classList.add('the-end-credits--roll');
+    requestAnimationFrame(() => {
+      if (routed) return;
+      const { ms, endPct } = theEndCreditsScroll(creditsRoll.offsetHeight, size);
+      creditsRoll.style.setProperty('--the-end-credits-duration', `${ms}ms`);
+      creditsRoll.style.setProperty('--the-end-credits-scroll-end', `${endPct}%`);
+      creditsRoll.classList.add('the-end-credits-roll--scrolling');
+      creditsRouteTimer = setTimeout(route, ms);
+    });
+  }
 
   function doLiftOff(): void {
     if (liftOffElapsed !== null || routed) return;
     liftOffElapsed = performance.now() - startTime;
     prompt.classList.remove('show');
-    setTimeout(onAscendStart, THE_END_BOARD_MS);
-    setTimeout(route, THE_END_BOARD_MS + Math.max(THE_END_ASCEND_MS, THE_END_CREDITS_MS));
-  }
-
-  function onAscendStart(): void {
-    if (ascended || routed) return;
-    ascended = true;
-    if (!muted) safePlay(new Audio(BALLOON_SFX));
-    credits.classList.add('the-end-credits--roll');
+    setTimeout(() => { if (!routed && !muted) safePlay(new Audio(BALLOON_SFX)); }, THE_END_BOARD_MS);
+    setTimeout(startCredits, THE_END_CREDITS_START_MS);
   }
 
   function route(): void {
     if (routed) return;
     routed = true;
+    if (creditsRouteTimer !== null) clearTimeout(creditsRouteTimer);
     controller.abort();
     stopLoop(music);
     routes.createRankingScreen(breakdown.total, submission);
@@ -127,45 +132,44 @@ export function createTheEndScreen(
   function draw(): void {
     if (routed) return;
     const frame = theEndFrameAt(performance.now() - startTime, liftOffElapsed, durations, config);
+    if (frame.phase === 'prompt' && promptReadyAt === null) promptReadyAt = performance.now();
     prompt.classList.toggle('show', frame.phase === 'prompt');
     drawTheEndScene(ctx2d, size, frame, sceneImg, balloonImg);
     requestAnimationFrame(draw);
   }
 
-  startTime = performance.now();
-  {
-    document.addEventListener('keydown', (event) => {
-      if (event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault();
-        if (liftOffElapsed === null) doLiftOff(); else route();
-      }
-    }, { signal: controller.signal });
-    canvas.addEventListener('pointerdown', () => { if (liftOffElapsed === null) doLiftOff(); }, { signal: controller.signal });
-    (screen.querySelector('.the-end-skip') as HTMLButtonElement)
-      .addEventListener('click', route, { signal: controller.signal });
-
-    playLoop(music, muted);
-    pauseWhileHidden(music, { signal: controller.signal, shouldResume: () => !routed });
-    setupMuteButton(
-      screen.querySelector('.mute-btn') as HTMLButtonElement,
-      (m) => { music.muted = m; },
-    );
-
-    if (reduceMotion) {
-      liftOffElapsed = 0;
-      const endFrame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
-      credits.classList.add('the-end-credits--static');
-      if (!muted) safePlay(new Audio(BALLOON_SFX));
-      setTimeout(route, THE_END_END_HOLD_MS);
-      const drawEndState = (): void => {
-        if (routed) return;
-        drawTheEndScene(ctx2d, size, endFrame, sceneImg, balloonImg);
-      };
-      drawEndState();
-      whenImagesSettled([sceneImg, balloonImg], drawEndState);
-      return;
+  document.addEventListener('keydown', (event) => {
+    if (event.key === ' ' || event.key === 'Enter') {
+      event.preventDefault();
+      if (liftOffElapsed === null) { if (canLiftOff()) doLiftOff(); }
+      else route();
     }
-    setTimeout(doLiftOff, THE_END_WALK_MS + THE_END_PROMPT_HOLD_MS);
-    requestAnimationFrame(draw);
+  }, { signal: controller.signal });
+  canvas.addEventListener('pointerdown', () => { if (canLiftOff()) doLiftOff(); }, { signal: controller.signal });
+  (screen.querySelector('.the-end-skip') as HTMLButtonElement)
+    .addEventListener('click', route, { signal: controller.signal });
+
+  playLoop(music, muted);
+  pauseWhileHidden(music, { signal: controller.signal, shouldResume: () => !routed });
+  setupMuteButton(
+    screen.querySelector('.mute-btn') as HTMLButtonElement,
+    (m) => { music.muted = m; },
+  );
+
+  if (reduceMotion) {
+    liftOffElapsed = 0;
+    const endFrame = theEndFrameAt(THE_END_BOARD_MS + THE_END_ASCEND_MS, 0, durations, config);
+    credits.classList.add('the-end-credits--static');
+    if (!muted) safePlay(new Audio(BALLOON_SFX));
+    setTimeout(route, THE_END_END_HOLD_MS);
+    const drawEndState = (): void => {
+      if (!routed) drawTheEndScene(ctx2d, size, endFrame, sceneImg, balloonImg);
+    };
+    drawEndState();
+    whenImagesSettled([sceneImg, balloonImg], drawEndState);
+    return;
   }
+
+  setTimeout(doLiftOff, THE_END_WALK_MS + promptHoldMs);
+  requestAnimationFrame(draw);
 }

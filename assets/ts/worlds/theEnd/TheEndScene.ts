@@ -1,17 +1,31 @@
 export const THE_END_WALK_MS = 1400;
-export const THE_END_PROMPT_HOLD_MS = 2600;
+export const THE_END_PROMPT_HOLD_MS = 3200;
+export const THE_END_PROMPT_HOLD_MS_MOBILE = 2400;
+export const THE_END_PROMPT_HINT_VISIBLE_MS = 200; // matches .the-end-prompt opacity transition
 export const THE_END_BOARD_MS = 700;
-export const THE_END_ASCEND_MS = 4200;
-export const THE_END_CREDITS_MS = 9000;
-export const THE_END_END_HOLD_MS = 4200;
+export const THE_END_ASCEND_MS = 5000;
+export const THE_END_CREDITS_LEAD_MS = 2000; // credits begin before the balloon settles at the top
+export const THE_END_CREDITS_START_MS = THE_END_BOARD_MS + THE_END_ASCEND_MS - THE_END_CREDITS_LEAD_MS;
+export const THE_END_CREDITS_SCROLL_PX_PER_S = 90;
+export const THE_END_CREDITS_MIN_SCROLL_MS = 9000;
+export const THE_END_END_HOLD_MS = 6000;
+
+export function theEndCreditsScroll(rollH: number, viewH: number): { ms: number; endPct: number } {
+  if (rollH <= 0 || viewH <= 0) return { ms: THE_END_CREDITS_MIN_SCROLL_MS, endPct: -100 };
+  return {
+    ms: Math.round(((rollH + viewH) / THE_END_CREDITS_SCROLL_PX_PER_S) * 1000),
+    endPct: -(viewH / rollH) * 100,
+  };
+}
 
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
 
 const BASKET_OFFSET_FRAC = 0.74;             // basket sits this far down the balloon height
 const BOARD_SHRINK_FRAC = 0.4;               // lemming shrinks by this fraction while boarding
 const ASCEND_LEMMING_SCALE = 0.6;            // lemming scale during ascent (matches boarded size)
+export const THE_END_BG_ASPECT = 2800 / 800;   // background-theend.svg viewBox h/w
 export const ASCEND_BALLOON_TOP_FRAC = 0.18; // balloon top rests at this fraction of canvas height at ascent end
-export const ASCEND_SCROLL_FRAC = 1.25;      // camera scroll distance over the ascent, in canvas heights
+export const ASCEND_SCROLL_FRAC = THE_END_BG_ASPECT - 1; // rest shows the bottom viewport; full ascent pans through the sky strip
 
 export interface TheEndConfig {
   size: number;        // canvas px (square)

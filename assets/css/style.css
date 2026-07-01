@@ -85,12 +85,10 @@
   --border-brand: 1px solid var(--brand);
   --border-brand-thick: 2px solid var(--brand);
   --radius-sm: 0.25rem;
-  --radius-pixel: 4px;
   --gap-sm: 0.5rem;
   --gap-md: 1rem;
   --gap-lg: 1.5rem;
   --transition-pixel-btn: background-color .15s ease, color .15s ease;
-  --touch-controls-font-size: 1.5rem;
   --touch-control-size: 3rem;
 }
 
@@ -440,7 +438,8 @@ canvas {
 
   /* Square canvas buffer fills the taller mobile box; cover keeps the scene
      undistorted (centred lemming/hole stay put, only the sides crop) */
-  .transition-canvas {
+  .transition-canvas,
+  .the-end-canvas {
     object-fit: cover;
   }
 }
@@ -602,16 +601,15 @@ canvas {
 
 .abyss-hint {
   position: absolute;
-  left: 0.75rem;
-  bottom: 0.75rem;
+  left: 1rem;
+  bottom: 0.5rem;
   display: flex;
-  flex-direction: row;
+  flex-direction: row;  
   align-items: center;
   gap: 0.75rem;
-  padding: 0.35rem 0.6rem;
+  padding: 0.35rem 0.75rem;
   background: rgba(var(--black-rgb), 0.82);
-  border: 1px solid rgba(var(--accent-rgb), 0.45);
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   font-family: var(--font-pixel);
   font-size: var(--text-2xs);
   color: var(--neutral-0);
@@ -663,12 +661,10 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: var(--font-pixel);
-  text-align: center;
   border: var(--border-brand-thick);
   color: var(--brand);
   background-color: var(--neutral-100);
-  border-radius: var(--radius-pixel);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -676,12 +672,21 @@ canvas {
   transition: background-color .1s ease, color .1s ease;
 }
 
+.touch-action {
+  font-family: var(--font-pixel);
+  text-align: center;
+}
+
 .touch-left,
 .touch-right {
   width: var(--touch-control-size);
-  padding: 0rem .35rem .35rem .35rem;
-  font-size: var(--touch-controls-font-size);
-  line-height: 1.5;
+  padding: 0;
+}
+
+.touch-left svg,
+.touch-right svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* Touch action button: static SPACE label. */
@@ -930,7 +935,7 @@ canvas {
    lemming waits at the balloon. */
 .the-end-overlay {
   position: absolute;
-  inset: 1.5rem;
+  inset: 1rem;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -945,7 +950,6 @@ canvas {
   text-shadow: 2px 2px 0 var(--neutral-100);
   letter-spacing: var(--tracking-pixel);
   text-align: center;
-  margin-bottom: 0.25rem;
   opacity: 0;
   transition: opacity .2s ease;
 }
@@ -954,7 +958,20 @@ canvas {
   opacity: 1;
 }
 
-/* Credits crawl over the sky during the ascent; hidden until it rolls. */
+.the-end-prompt-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .the-end-prompt-desktop {
+    display: none;
+  }
+
+  .the-end-prompt-mobile {
+    display: inline;
+  }
+}
+
 .the-end-credits {
   position: absolute;
   inset: 0;
@@ -973,6 +990,7 @@ canvas {
   position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -981,8 +999,8 @@ canvas {
   transform: translateY(100%);
 }
 
-.the-end-credits--roll .the-end-credits-roll {
-  animation: the-end-credits-scroll 9s linear forwards;
+.the-end-credits--roll .the-end-credits-roll--scrolling {
+  animation: the-end-credits-scroll var(--the-end-credits-duration) linear forwards;
 }
 
 /* Reduced motion: no crawl — show the credits resting near the top instead. */
@@ -994,7 +1012,7 @@ canvas {
 
 @keyframes the-end-credits-scroll {
   from { transform: translateY(100%); }
-  to   { transform: translateY(-110%); }
+  to   { transform: translateY(var(--the-end-credits-scroll-end)); }
 }
 
 .the-end-credit {
@@ -1003,11 +1021,17 @@ canvas {
   color: var(--neutral-0);
   text-shadow: 2px 2px 0 var(--neutral-100);
   letter-spacing: var(--tracking-pixel);
-  line-height: var(--leading-tight);
+  line-height: var(--leading-loose);
 }
 
-.the-end-credit--gap {
-  height: var(--gap-md);
+.the-end-credit--copy {
+  max-width: min(85%, 22rem);
+  white-space: pre-line;
+}
+
+.the-end-credit--copy::first-line {
+  font-size: var(--text-xl);
+  text-transform: uppercase;
 }
 
 .the-end-skip {
@@ -1227,22 +1251,26 @@ button:active {
 }
 
 .key-hint, .key-hint-text {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: var(--border-brand);
   color: var(--brand);
-  font-family: var(--font-pixel);
   border-radius: 2px;
-  font-style: normal;
-  line-height: 1;
 }
 
 .key-hint {
-  font-size: var(--text-md);
-  padding: 0rem .35rem .35rem .35rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex-shrink: 0;
+  padding: 0.25rem;
 }
 
 .key-hint-text {
+  font-family: var(--font-pixel);
   font-size: var(--text-sm);
+  font-style: normal;
+  line-height: 1;
   padding: 0.35rem;
 }
 
