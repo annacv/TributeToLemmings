@@ -34,8 +34,7 @@ class RankingMusicController {
     }
   }
 
-  startOnGameOver(root: HTMLElement): void {
-    if (!root.querySelector('.game-over-screen, .ranking-screen')) return;
+  private ensureMusic(): void {
     if (this.music) return;
     this.music = new Audio(RANKING_MUSIC);
     this.music.loop = true;
@@ -43,12 +42,13 @@ class RankingMusicController {
     if (!document.hidden) safePlay(this.music);
   }
 
+  startOnGameOver(root: HTMLElement): void {
+    if (!root.querySelector('.game-over-screen, .ranking-screen')) return;
+    this.ensureMusic();
+  }
+
   ensureOnRankingMount(): void {
-    if (this.music) return;
-    this.music = new Audio(RANKING_MUSIC);
-    this.music.loop = true;
-    this.music.muted = isMuted();
-    if (!document.hidden) safePlay(this.music);
+    this.ensureMusic();
   }
 
   setMuted(muted: boolean): void {
