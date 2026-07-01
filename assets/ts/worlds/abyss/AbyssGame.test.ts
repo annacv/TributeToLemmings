@@ -52,7 +52,7 @@ describe('AbyssGame — Player-driven camera', () => {
     if (game.player) game.player.direction = 0;
     const cam = game.cameraX;
     const worldX = game.playerWorldX;
-    expect(game.playerScreenX()).toBeCloseTo(game.entranceWorldX, 5); // under the door on the ground
+    expect(game.playerScreenX()).toBeCloseTo(game.entranceWorldX - (game.player?.dWidth ?? 0) / 2, 5); // centered under the door
     stepUntil(game, 30);
     expect(game.cameraX).toBe(cam);                          // no constant scroll
     expect(game.playerWorldX).toBe(worldX);                  // stays put — can stand on a bomb
