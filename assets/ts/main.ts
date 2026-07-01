@@ -6,7 +6,7 @@ import { makeBreakdown } from './lib/score';
 import { createAppContext, type ScreenRoutes } from './lib/appContext';
 import { createStartScreen } from './screens/startScreen';
 import { createGameScreen } from './screens/surfaceScreen';
-import { bindTransitionScreen } from './screens/transitionScreen';
+import { createTransitionScreen } from './screens/transitionScreen';
 import { createTunnelScreen } from './screens/tunnelScreen';
 import { createAbyssScreen } from './screens/abyssScreen';
 import { createGameOverScreen } from './screens/gameOverScreen';
@@ -20,7 +20,7 @@ function main(): void {
   const routes = {} as ScreenRoutes;
   routes.createStartScreen = () => createStartScreen(ctx, routes);
   routes.createGameScreen = () => createGameScreen(ctx, routes);
-  routes.createTransitionScreen = bindTransitionScreen(ctx, routes);
+  routes.createTransitionScreen = (config) => createTransitionScreen(ctx, routes, config);
   routes.createTunnelScreen = (breakdown) => createTunnelScreen(ctx, routes, breakdown);
   routes.createAbyssScreen = (breakdown) => createAbyssScreen(ctx, routes, breakdown);
   routes.createGameOverScreen = (breakdown, variant) => createGameOverScreen(ctx, routes, breakdown, variant);

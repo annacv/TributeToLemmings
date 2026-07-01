@@ -197,10 +197,3 @@ export function createTransitionScreen(
 
   whenImagesSettled([undergroundImg, ceilingImg], start);
 }
-
-export function bindTransitionScreen(
-  ctx: AppContext,
-  routes: ScreenRoutes,
-): ScreenRoutes['createTransitionScreen'] {
-  return (config) => createTransitionScreen(ctx, routes, config);
-}
