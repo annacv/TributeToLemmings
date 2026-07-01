@@ -1,5 +1,5 @@
 import { RANKING_MUSIC } from '../assets';
-import { safePlay } from './audio';
+import { isMuted, safePlay } from './audio';
 import type { ScoreBreakdown } from './score';
 
 export type SubmissionResult = { error: boolean; docId: string | null; bestScore: number | null };
@@ -46,7 +46,7 @@ class RankingMusicController {
     if (this.music) return;
     this.music = new Audio(RANKING_MUSIC);
     this.music.loop = true;
-    this.music.muted = localStorage.getItem('audio-muted') === '1';
+    this.music.muted = isMuted();
     if (!document.hidden) safePlay(this.music);
   }
 
@@ -54,7 +54,7 @@ class RankingMusicController {
     if (this.music) return;
     this.music = new Audio(RANKING_MUSIC);
     this.music.loop = true;
-    this.music.muted = localStorage.getItem('audio-muted') === '1';
+    this.music.muted = isMuted();
     if (!document.hidden) safePlay(this.music);
   }
 

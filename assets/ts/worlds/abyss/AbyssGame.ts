@@ -1,6 +1,7 @@
 import { Player } from '../../entities/Player';
 import { Bomb } from '../../entities/Bomb';
 import { Stalactite } from '../../entities/Stalactite';
+import { isMuted } from '../../lib/audio';
 import { RunHost } from '../../lib/RunHost';
 import { Hud } from '../../lib/Hud';
 import { AbyssRenderer } from './AbyssRenderer';
@@ -127,7 +128,7 @@ export class AbyssGame implements AbyssView {
     this.canvas = canvas;
     this.base = baseBreakdown;
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.muted = localStorage.getItem('audio-muted') === '1';
+    this.muted = isMuted();
     this.hud = new Hud();
     this.sfx = new SoundEffectBank({
       pickup: EXPLODE_SFX,

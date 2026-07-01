@@ -157,7 +157,7 @@ export class TunnelGame implements TunnelView {
     this.onGameOver = null;
     this.onComplete = null;
     this.caveLoop = null;
-    this.muted = localStorage.getItem('audio-muted') === '1';
+    this.muted = audio.isMuted();
     this.hud = new Hud();
 
     this.sfx = new SoundEffectBank({

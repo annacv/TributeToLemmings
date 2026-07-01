@@ -1,4 +1,4 @@
-import { safePlay, playLoop, stopLoop, pauseWhileHidden } from '../lib/audio';
+import { isMuted, safePlay, playLoop, stopLoop, pauseWhileHidden } from '../lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';
 import { setupMuteButton } from '../lib/muteButton';
@@ -37,7 +37,7 @@ export function createTheEndScreen(
   const size = getCanvasSize();
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isMobile = window.matchMedia('(max-width: 767px)').matches;
-  const muted = localStorage.getItem('audio-muted') === '1';
+  const muted = isMuted();
   const promptHoldMs = isMobile ? THE_END_PROMPT_HOLD_MS_MOBILE : THE_END_PROMPT_HOLD_MS;
 
   const screen = ctx.buildDom(`

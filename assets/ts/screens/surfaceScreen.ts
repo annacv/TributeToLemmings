@@ -1,3 +1,4 @@
+import { isMuted } from '../lib/audio';
 import { SurfaceGame } from '../worlds/surface/SurfaceGame';
 import { preloadLeaderboard } from '../lib/leaderboard';
 import { buildPlayScreen } from '../lib/playScreen';
@@ -18,7 +19,7 @@ export function createGameScreen(ctx: AppContext, routes: ScreenRoutes): void {
   game.gameOverCallback(routes.createGameOverScreen);
   game.completionCallback(routes.createTransitionScreen);
 
-  game.gameSong.muted = localStorage.getItem('audio-muted') === '1';
+  game.gameSong.muted = isMuted();
   wireMute((muted) => { game.gameSong.muted = muted; });
   wireMovement(() => game.player, game.runSignal);
 

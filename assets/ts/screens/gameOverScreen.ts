@@ -1,4 +1,4 @@
-import { safePlay } from '../lib/audio';
+import { isMuted, safePlay } from '../lib/audio';
 import { getDebugScreen } from '../lib/debugScreen';
 import { announce } from '../lib/liveRegion';
 import { submitScore } from '../lib/leaderboard';
@@ -58,7 +58,7 @@ export function createGameOverScreen(
 
   ctx.rankingMusic.stop();
 
-  const muted = localStorage.getItem('audio-muted') === '1';
+  const muted = isMuted();
   const playOptionalSfx = (src: string | null): void => {
     if (src && !muted) safePlay(new Audio(src));
   };

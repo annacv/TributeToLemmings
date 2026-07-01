@@ -1,5 +1,5 @@
 import { drawLemmingShape, LEMMING_GRID } from '../entities/Player';
-import { safePlay } from '../lib/audio';
+import { isMuted, safePlay } from '../lib/audio';
 import { getCanvasSize, LEMMING_SIZE_FRAC, TRANSITION_GEOMETRY } from '../lib/geometry';
 import { loadImage, whenImagesSettled } from '../lib/images';
 import { FALLING_SFX, TUNNEL_CEILING_SVG, UNDERGROUND_BACKGROUND_SVG } from '../assets';
@@ -62,7 +62,7 @@ export function createTransitionScreen(
   const undergroundImg = loadImage(backgroundSvg);
   const ceilingImg = loadImage(ceilingSvg);
 
-  if (localStorage.getItem('audio-muted') !== '1') {
+  if (!isMuted()) {
     safePlay(new Audio(FALLING_SFX));
   }
 

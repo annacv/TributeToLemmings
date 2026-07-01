@@ -1,3 +1,6 @@
+export const isMuted = (): boolean => localStorage.getItem('audio-muted') === '1';
+export const setMuted = (m: boolean): void => localStorage.setItem('audio-muted', m ? '1' : '0');
+
 /* play() rejects under browser's autoplay policy or when the source fails; audio is a
    nice-to-have here, so swallowing the rejection instead of surfacing unhandled rejections */
 export function safePlay(audio: HTMLAudioElement): void {
