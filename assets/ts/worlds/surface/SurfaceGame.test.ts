@@ -5,6 +5,8 @@ import { makeBreakdown, LEVEL_POINTS } from '../../lib/score';
 import { makeCanvas, makeRafQueue, setDocumentHidden } from '../../test-helpers';
 import { dropGroundBomb, makeSurfaceGame } from '../../test-game-factories';
 
+const noop = (): void => {};
+
 // --- helpers ---
 
 function placeBomb(game: SurfaceGame, dx: number, dy = 390): Bomb {
@@ -103,9 +105,8 @@ describe('SurfaceGame', () => {
   });
 
   it('a surface death scores only completed levels, never the level died on', () => {
-    const game = makeSurfaceGame(canvas);
     const onGameOver = vi.fn();
-    game.gameOverCallback(onGameOver);
+    const game = makeSurfaceGame(canvas, { onGameOver });
     game.score = 40;
     game.currentLevel = 2;
     game.player!.lives = 1;
@@ -178,7 +179,7 @@ describe('SurfaceGame — level system', () => {
     { from: 1, score: 36, to: 2 },   // reaches level 3
     { from: 2, score: 9999, to: 2 }, // never past level 3
   ])('checkLevelUp: level $from at score $score → level $to', ({ from, score, to }) => {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.currentLevel = from;
     game.score = score;
     game['checkLevelUp']();
@@ -186,7 +187,7 @@ describe('SurfaceGame — level system', () => {
   });
 
   it('resets lastSpawnFrame on level-up', () => {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.count = 1080;
     game.lastSpawnFrame = 960;
     game.score = 18;
@@ -267,11 +268,9 @@ describe('SurfaceGame — tunnel world transition', () => {
 
   it('fires onComplete callback (not onGameOver) after the muted hold elapses', () => {
     vi.useFakeTimers();
-    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
     const onComplete = vi.fn();
     const onGameOver = vi.fn();
-    game.completionCallback(onComplete);
-    game.gameOverCallback(onGameOver);
+    const game = makeSurfaceGame(canvas, { muted: true, erosion: true, onComplete, onGameOver });
     game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
     dropGroundBomb(game, canvas);
 
@@ -281,21 +280,6 @@ describe('SurfaceGame — tunnel world transition', () => {
       makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
     );
     expect(onGameOver).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('falls back to onGameOver when onComplete is null (muted)', () => {
-    vi.useFakeTimers();
-    const game = makeSurfaceGame(canvas, { muted: true, erosion: true });
-    const onGameOver = vi.fn();
-    game.gameOverCallback(onGameOver);
-    game['renderer']['coveredCells'].fill(true); // ground already at full coverage; next miss collapses it
-    dropGroundBomb(game, canvas);
-    vi.advanceTimersByTime(500);
-
-    expect(onGameOver).toHaveBeenCalledWith(
-      makeBreakdown({ surfaceTime: game.score, levelsBonus: (game.currentLevel + 1) * LEVEL_POINTS }),
-    );
     vi.useRealTimers();
   });
 
@@ -321,10 +305,9 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
   /* Unmuted: triggerTunnelWorld holds on the collapse sting and exits via
      whichever of ended/error/watchdog/play-rejection resolves first */
   function collapseUnmuted() {
-    const game = makeSurfaceGame(canvas, { erosion: true });
-    game.gameSong.muted = false;
     const onComplete = vi.fn();
-    game.completionCallback(onComplete);
+    const game = makeSurfaceGame(canvas, { erosion: true, onComplete });
+    game.gameSong.muted = false;
     game['renderer']['coveredCells'].fill(true);
     dropGroundBomb(game, canvas);
     return { game, onComplete };
@@ -361,7 +344,7 @@ describe('SurfaceGame — unmuted sting exit routes (seam-test gate)', () => {
 describe('SurfaceGame — fixed-timestep score', () => {
   function makeHarness() {
     const queue = makeRafQueue();
-    const game = new SurfaceGame(makeCanvas());
+    const game = new SurfaceGame(makeCanvas(), noop, noop);
     game.gameSong.muted = true;
     game.startGame(); // synchronous first step → count is already 1 here
     return { game, pump: queue.pump };
@@ -398,7 +381,7 @@ describe('SurfaceGame — background-tab audio', () => {
   });
 
   function startGameWithSpies() {
-    const game = new SurfaceGame(canvas);
+    const game = new SurfaceGame(canvas, noop, noop);
     game.gameSong.muted = true;
     const playSpy = vi.fn().mockResolvedValue(undefined);
     const pauseSpy = vi.fn();

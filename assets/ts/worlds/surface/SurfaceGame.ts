@@ -42,8 +42,6 @@ export class SurfaceGame implements SurfaceView {
   bombs: Bomb[];
   isOver: boolean;
   canvas: HTMLCanvasElement;
-  onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
   score: number;
   count: number;
   currentLevel: number;
@@ -56,17 +54,23 @@ export class SurfaceGame implements SurfaceView {
   /* Neutral halt is outcome-neutral; this records which outcome occurred so
      teardown routes to onGameOver (death) or leaves onComplete to the sting. */
   private outcome: 'death' | 'complete';
+  private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
+  private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   private renderer: SurfaceRenderer;
   private hud: Hud;
   private host: RunHost;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    onGameOver: (breakdown: ScoreBreakdown) => void,
+    onComplete: (breakdown: ScoreBreakdown) => void,
+  ) {
+    this.onGameOver = onGameOver;
+    this.onComplete = onComplete;
     this.player = null;
     this.bombs = [];
     this.isOver = false;
     this.canvas = canvas;
-    this.onGameOver = null;
-    this.onComplete = null;
     this.score = 0;
     this.count = 0;
     this.currentLevel = 0;
@@ -147,7 +151,7 @@ export class SurfaceGame implements SurfaceView {
   private endRun(): void {
     this.gameSong.pause();
     if (this.outcome === 'death') {
-      this.onGameOver?.(this.currentBreakdown());
+      this.onGameOver(this.currentBreakdown());
     }
   }
 
@@ -263,14 +267,6 @@ export class SurfaceGame implements SurfaceView {
     this.hud.displayLives(this.player.lives);
   }
 
-  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onGameOver = callback;
-  }
-
-  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onComplete = callback;
-  }
-
   private currentBreakdown(levelsCompleted = this.currentLevel): ScoreBreakdown {
     return makeBreakdown({
       surfaceTime: this.score,
@@ -295,8 +291,7 @@ export class SurfaceGame implements SurfaceView {
       fired = true;
       clearTimeout(watchdog);
 
-      const finish = this.onComplete ?? this.onGameOver;
-      finish?.(breakdown);
+      this.onComplete(breakdown);
     };
 
     if (this.gameSong.muted) {

@@ -111,13 +111,13 @@ export class AbyssGame implements AbyssView {
   exitOpenFrac = 0;
   exitWorldX = Number.MAX_SAFE_INTEGER;
   readonly reduceMotion: boolean;
-  onGameOver: ((breakdown: ScoreBreakdown) => void) | null = null;
-  onComplete: ((breakdown: ScoreBreakdown) => void) | null = null;
   abyssLoop: HTMLAudioElement | null = null;
   muted: boolean;
   sfx: SoundEffectBank;
   private outcome: 'death' | 'complete' = 'death';
   private readonly base: ScoreBreakdown;
+  private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
+  private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   private lastBombSpawn = 0;
   private nextStalactiteWorldX = 0;
   private stalactiteSeq = 0;
@@ -125,7 +125,14 @@ export class AbyssGame implements AbyssView {
   private host: RunHost;
   private renderer: AbyssRenderer;
 
-  constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    baseBreakdown: ScoreBreakdown,
+    onGameOver: (breakdown: ScoreBreakdown) => void,
+    onComplete: (breakdown: ScoreBreakdown) => void,
+  ) {
+    this.onGameOver = onGameOver;
+    this.onComplete = onComplete;
     this.canvas = canvas;
     this.base = baseBreakdown;
     this.reduceMotion = prefersReducedMotion();
@@ -152,14 +159,6 @@ export class AbyssGame implements AbyssView {
 
   get runSignal(): AbortSignal {
     return this.host.runSignal;
-  }
-
-  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onGameOver = callback;
-  }
-
-  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onComplete = callback;
   }
 
   startGame(): void {
@@ -472,9 +471,9 @@ export class AbyssGame implements AbyssView {
   private endRun(): void {
     if (this.abyssLoop) this.abyssLoop.pause();
     if (this.outcome === 'complete') {
-      this.exitClose(() => this.onComplete?.(this.currentBreakdown()));
+      this.exitClose(() => this.onComplete(this.currentBreakdown()));
     } else {
-      this.onGameOver?.(this.currentBreakdown());
+      this.onGameOver(this.currentBreakdown());
     }
   }
 

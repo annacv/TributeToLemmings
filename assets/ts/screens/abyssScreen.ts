@@ -14,9 +14,12 @@ export function createAbyssScreen(ctx: AppContext, routes: ScreenRoutes, breakdo
     withAction: true,
   });
 
-  const game = new AbyssGame(canvas, breakdown);
-  game.completionCallback((bd) => routes.createGameOverScreen(bd, 'win'));
-  game.gameOverCallback(routes.createGameOverScreen);
+  const game = new AbyssGame(
+    canvas,
+    breakdown,
+    routes.createGameOverScreen,
+    (bd) => routes.createGameOverScreen(bd, 'win'),
+  );
 
   const hint = document.createElement('div');
   hint.className = 'abyss-hint';

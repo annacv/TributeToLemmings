@@ -106,13 +106,13 @@ export class TunnelGame implements TunnelView {
   stepCount: number;
   bankedSeconds: number;
   cyclesCleared: number;
-  onGameOver: ((breakdown: ScoreBreakdown) => void) | null;
-  onComplete: ((breakdown: ScoreBreakdown) => void) | null;
   caveLoop: HTMLAudioElement | null;
   sfx: SoundEffectBank;
   muted: boolean;
   breachStep: number;
   private readonly baseBreakdown: ScoreBreakdown;
+  private readonly onGameOver: (breakdown: ScoreBreakdown) => void;
+  private readonly onComplete: (breakdown: ScoreBreakdown) => void;
   /* Crush feedback: ~250 ms input/world freeze + the white flash overlay */
   private crush = { hitstop: 0, flash: 0 };
   /* Ceiling-drop choreography between cycles: hold while the ground shakes,
@@ -133,7 +133,14 @@ export class TunnelGame implements TunnelView {
     return this.crush.flash;
   }
 
-  constructor(canvas: HTMLCanvasElement, baseBreakdown: ScoreBreakdown) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    baseBreakdown: ScoreBreakdown,
+    onGameOver: (breakdown: ScoreBreakdown) => void,
+    onComplete: (breakdown: ScoreBreakdown) => void,
+  ) {
+    this.onGameOver = onGameOver;
+    this.onComplete = onComplete;
     this.player = null;
     this.isOver = false;
     this.paused = false;
@@ -154,8 +161,6 @@ export class TunnelGame implements TunnelView {
     this.breachStep = 0;
     this.warningArmed = true;
     this.reduceMotion = prefersReducedMotion();
-    this.onGameOver = null;
-    this.onComplete = null;
     this.caveLoop = null;
     this.muted = audio.isMuted();
     this.hud = new Hud();
@@ -182,14 +187,6 @@ export class TunnelGame implements TunnelView {
 
   get runSignal(): AbortSignal {
     return this.host.runSignal;
-  }
-
-  gameOverCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onGameOver = callback;
-  }
-
-  completionCallback(callback: (breakdown: ScoreBreakdown) => void): void {
-    this.onComplete = callback;
   }
 
   startGame(): void {
@@ -503,7 +500,7 @@ export class TunnelGame implements TunnelView {
     if (this.caveLoop) audio.stopLoop(this.caveLoop);
     this.sfx.stopLoop('fuse');
     const finish = this.cyclesCleared >= TOTAL_CYCLES ? this.onComplete : this.onGameOver;
-    finish?.(this.currentBreakdown());
+    finish(this.currentBreakdown());
   }
 
   /** Near-crush warning: rumble before the kill line. */

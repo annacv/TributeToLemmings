@@ -10,16 +10,29 @@ export const SURFACE_HANDOFF_BREAKDOWN = makeBreakdown({ surfaceTime: 42, levels
 /** Tunnel → abyss handoff (surface + tunnel time + 6 cleared levels). */
 export const TUNNEL_HANDOFF_BREAKDOWN = makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 });
 
+const noop = (): void => {};
+
+export interface WorldCallbackOptions {
+  onGameOver?: (breakdown: ScoreBreakdown) => void;
+  onComplete?: (breakdown: ScoreBreakdown) => void;
+}
+
 export function makeAbyssGame(
   canvas: HTMLCanvasElement,
   breakdown: ScoreBreakdown = TUNNEL_HANDOFF_BREAKDOWN,
+  callbacks: WorldCallbackOptions = {},
 ): AbyssGame {
-  const game = new AbyssGame(canvas, breakdown);
+  const game = new AbyssGame(
+    canvas,
+    breakdown,
+    callbacks.onGameOver ?? noop,
+    callbacks.onComplete ?? noop,
+  );
   game.startGame();
   return game;
 }
 
-export interface SurfaceGameTestOptions {
+export interface SurfaceGameTestOptions extends WorldCallbackOptions {
   player?: boolean;
   muted?: boolean;
   erosion?: boolean;
@@ -29,7 +42,11 @@ export function makeSurfaceGame(
   canvas: HTMLCanvasElement,
   opts: SurfaceGameTestOptions = { player: true },
 ): SurfaceGame {
-  const game = new SurfaceGame(canvas);
+  const game = new SurfaceGame(
+    canvas,
+    opts.onGameOver ?? noop,
+    opts.onComplete ?? noop,
+  );
   if (opts.player !== false) game.player = new Player(canvas);
   if (opts.muted) game.gameSong.muted = true;
   if (opts.erosion) game.groundErosionActive = true;
