@@ -303,24 +303,16 @@ canvas {
 }
 
 .game-canvas,
-.tunnel-game-canvas,
-.abyss-game-canvas,
 .game-over-canvas,
 .win-canvas {
   background-position: 50% 50%;
   background-size: cover;
 }
 
+/* Surface: the renderer clears each frame but draws only erosion, bombs, and the
+   lemming — the CSS backdrop supplies the grass-and-sky chamber art. */
 .game-canvas {
   background-image: url("../images/backgrounds/background-game.svg");
-}
-
-.tunnel-game-canvas {
-  background-image: url("../images/backgrounds/background-tunnel.svg");
-}
-
-.abyss-game-canvas {
-  background-image: url("../images/backgrounds/background-abyss.svg");
 }
 
 @keyframes shake-light {
