@@ -28,7 +28,7 @@ function appendRankingRow(
   score: number,
   current: boolean,
 ): void {
-  const row = document.createElement(current ? 'div' : 'li');
+  const row = document.createElement(parent.tagName === 'OL' ? 'li' : 'div');
   row.className = `ranking-row${current ? ' ranking-row--current' : ''}`;
 
   const rankEl = document.createElement('span');

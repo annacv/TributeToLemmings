@@ -309,8 +309,6 @@ canvas {
   background-size: cover;
 }
 
-/* Surface: the renderer clears each frame but draws only erosion, bombs, and the
-   lemming — the CSS backdrop supplies the grass-and-sky chamber art. */
 .game-canvas {
   background-image: url("../images/backgrounds/background-game.svg");
 }
