@@ -4,7 +4,6 @@ import { getDebugScreen } from '../lib/debugScreen';
 import { announce } from '../lib/liveRegion';
 import { submitScore } from '../lib/leaderboard';
 import { breakdownLines, type ScoreBreakdown } from '../lib/score';
-import { getCanvasSize } from '../lib/geometry';
 import { COUNT_CHIME_SFX, COUNT_TICK_SFX, DIE_SFX } from '../assets';
 import type { AppContext, ScreenRoutes, SubmissionResult } from '../lib/appContext';
 
@@ -16,15 +15,14 @@ export function createGameOverScreen(
   breakdown: ScoreBreakdown,
   variant: 'death' | 'win' = 'death',
 ): void {
-  const size = getCanvasSize();
   const reduceMotion = prefersReducedMotion();
   const countLines = breakdownLines(breakdown).filter((line) => line.value > 0);
   const hasCount = breakdown.tunnelTime + breakdown.abyssTime + breakdown.stalactiteBonus + breakdown.levelsBonus > 0;
   const isWin = variant === 'win';
 
   const canvasHtml = isWin
-    ? '<canvas class="win-canvas" aria-hidden="true"></canvas>'
-    : '<canvas class="game-over-canvas" aria-hidden="true"></canvas>';
+    ? '<div class="win-canvas" aria-hidden="true"></div>'
+    : '<div class="game-over-canvas" aria-hidden="true"></div>';
 
   const headingHtml = isWin
     ? '<p class="go-boom">CONGRATS!!!</p><h1 class="go-title">&gt; You made it!</h1>'
@@ -43,12 +41,6 @@ export function createGameOverScreen(
       </section>
     `);
 
-  const canvas = screen.querySelector('.game-over-canvas, .win-canvas') as HTMLCanvasElement | null;
-  if (canvas) {
-    canvas.width = size;
-    canvas.height = size;
-  }
-
   const title = screen.querySelector('.go-title') as HTMLElement;
   title.tabIndex = -1;
   title.focus();
@@ -60,8 +52,8 @@ export function createGameOverScreen(
   ctx.rankingMusic.stop();
 
   const muted = isMuted();
-  const playOptionalSfx = (src: string | null): void => {
-    if (src && !muted) safePlay(new Audio(src));
+  const playOptionalSfx = (src: string): void => {
+    if (!muted) safePlay(new Audio(src));
   };
 
   const score = screen.querySelector('.go-score-value');

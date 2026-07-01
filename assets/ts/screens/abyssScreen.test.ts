@@ -56,9 +56,8 @@ describe('abyss screen win path', () => {
     vi.advanceTimersByTime(1000);
     expect(sfx).toHaveBeenCalledWith('letsgo');
 
-    const winCanvas = document.querySelector('.win-canvas') as HTMLCanvasElement | null;
+    const winCanvas = document.querySelector('.win-canvas');
     expect(winCanvas).not.toBeNull();
-    expect(winCanvas!.width).toBeGreaterThan(0);
     expect(document.querySelectorAll('.go-count-line').length).toBeGreaterThan(0);
     expect(audioSrcs.some((src) => /die\.wav/i.test(src))).toBe(false);
 
