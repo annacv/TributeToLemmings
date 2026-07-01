@@ -17,7 +17,7 @@ export function createGameScreen(ctx: AppContext, routes: ScreenRoutes): void {
 
   const game = new SurfaceGame(canvas);
   game.gameOverCallback(routes.createGameOverScreen);
-  game.completionCallback(routes.createTransitionScreen);
+  game.completionCallback((breakdown) => routes.createTransitionScreen({ breakdown }));
 
   game.gameSong.muted = isMuted();
   wireMute((muted) => { game.gameSong.muted = muted; });

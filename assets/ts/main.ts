@@ -28,7 +28,7 @@ function main(): void {
   routes.createRankingScreen = (currentScore, submission) => createRankingScreen(ctx, routes, currentScore, submission);
 
   const debugScreen = getDebugScreen();
-  if (debugScreen === 'transition') routes.createTransitionScreen(makeBreakdown({ surfaceTime: 42 }));
+  if (debugScreen === 'transition') routes.createTransitionScreen({ breakdown: makeBreakdown({ surfaceTime: 42 }) });
   else if (debugScreen === 'tunnel') routes.createTunnelScreen(makeBreakdown({ surfaceTime: 42, levelsBonus: 15 }));
   else if (debugScreen === 'abyss') routes.createAbyssScreen(makeBreakdown({ surfaceTime: 42, tunnelTime: 30, levelsBonus: 30 }));
   else if (debugScreen === 'theend') {

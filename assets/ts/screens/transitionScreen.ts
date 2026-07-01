@@ -17,6 +17,17 @@ export const TRANSITION_MESSAGE_AT_REST = 1;
 export const TRANSITION_MESSAGE_FROM_START = 0.0125;
 export const TUNNEL_CEILING_HANG_FRAC = 0.24;
 export const ABYSS_CEILING_HANG_FRAC = 0.5;
+
+export type TransitionConfig = {
+  breakdown: ScoreBreakdown;
+  stingerHtml?: string;
+  onArrive?: (breakdown: ScoreBreakdown) => void;
+  backgroundSvg?: string;
+  messageScrollT?: number;
+  ceilingSvg?: string;
+  ceilingHangFrac?: number;
+};
+
 const REVEAL_FLOOR_TOP_SVG = 2688;
 const EASE_OUT_BACK_C1 = 1.70158;
 const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
@@ -28,14 +39,17 @@ const EASE_OUT_BACK_C3 = EASE_OUT_BACK_C1 + 1;
 export function createTransitionScreen(
   ctx: AppContext,
   routes: ScreenRoutes,
-  breakdown: ScoreBreakdown,
-  stingerHtml = '&gt; somewhere underground...',
-  onArrive: (breakdown: ScoreBreakdown) => void = routes.createTunnelScreen,
-  backgroundSvg: string = UNDERGROUND_BACKGROUND_SVG,
-  messageScrollT = TRANSITION_MESSAGE_AT_REST,
-  ceilingSvg: string = TUNNEL_CEILING_SVG,
-  ceilingHangFrac = TUNNEL_CEILING_HANG_FRAC,
+  config: TransitionConfig,
 ): void {
+  const {
+    breakdown,
+    stingerHtml = '&gt; somewhere underground...',
+    onArrive = routes.createTunnelScreen,
+    backgroundSvg = UNDERGROUND_BACKGROUND_SVG,
+    messageScrollT = TRANSITION_MESSAGE_AT_REST,
+    ceilingSvg = TUNNEL_CEILING_SVG,
+    ceilingHangFrac = TUNNEL_CEILING_HANG_FRAC,
+  } = config;
   const size = getCanvasSize();
   const screen = ctx.buildDom(`
       <section class="section-container to-be-continued-screen">
@@ -187,5 +201,5 @@ export function bindTransitionScreen(
   ctx: AppContext,
   routes: ScreenRoutes,
 ): ScreenRoutes['createTransitionScreen'] {
-  return (...args) => createTransitionScreen(ctx, routes, ...args);
+  return (config) => createTransitionScreen(ctx, routes, config);
 }
