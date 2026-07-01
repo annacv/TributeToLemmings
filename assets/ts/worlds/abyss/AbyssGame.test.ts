@@ -116,7 +116,7 @@ describe('AbyssGame — bomb spawning', () => {
     const game = makeAbyssGame(makeCanvas());
     const play = vi.spyOn(game.sfx, 'play');
     const before = game.player!.lives;
-    const bomb = new Bomb(game.canvas, game.playerWorldX, 1.2);
+    const bomb = new Bomb(game.playerWorldX, 1.2);
     bomb.dy = game.player!.dy - 5; // overlapping the lemming, above the floor line
     game.fallingBombs = [bomb];
     game.step();

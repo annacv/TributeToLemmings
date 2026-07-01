@@ -37,9 +37,9 @@ export function makeSurfaceGame(
 }
 
 /** Drops a bomb past the ground line and runs one update (erosion / collapse tests). */
-export function dropGroundBomb(game: SurfaceGame, canvas: HTMLCanvasElement, dx = 100): Bomb {
-  const bomb = new Bomb(canvas, dx);
-  bomb.dy = canvas.height + 1;
+export function dropGroundBomb(game: SurfaceGame, _canvas: HTMLCanvasElement, dx = 100): Bomb {
+  const bomb = new Bomb(dx);
+  bomb.dy = game.canvas.height + 1;
   game.bombs.push(bomb);
   game.update();
   return bomb;

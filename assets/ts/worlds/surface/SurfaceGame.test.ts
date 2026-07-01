@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SurfaceGame } from './SurfaceGame';
 import { Bomb } from '../../entities/Bomb';
-import { SPRITES } from '../../assets';
 import { makeBreakdown, LEVEL_POINTS } from '../../lib/score';
 import { makeCanvas, makeRafQueue, setDocumentHidden } from '../../test-helpers';
 import { dropGroundBomb, makeSurfaceGame } from '../../test-game-factories';
@@ -9,7 +8,7 @@ import { dropGroundBomb, makeSurfaceGame } from '../../test-game-factories';
 // --- helpers ---
 
 function placeBomb(game: SurfaceGame, dx: number, dy = 390): Bomb {
-  const bomb = new Bomb(game.canvas, dx);
+  const bomb = new Bomb(dx);
   bomb.dy = dy;
   game.bombs.push(bomb);
   game.checkCollisions();
@@ -54,17 +53,16 @@ describe('SurfaceGame', () => {
 
     expect(bomb.isExploding).toBe(true);
     expect(bomb.explosionStepsLeft).toBe(6);
-    expect(bomb.image.src).toContain(SPRITES.booom);
     expect(game.bombs).toHaveLength(1);
-    expect(game.player.lives).toBe(3);
+    expect(game.player?.lives).toBe(3);
 
     runFrames(game, 5);
     expect(game.bombs).toHaveLength(1);
-    expect(game.player.lives).toBe(3);
+    expect(game.player?.lives).toBe(3);
 
     game.update();
     expect(game.bombs).toHaveLength(0);
-    expect(game.player.lives).toBe(2);
+    expect(game.player?.lives).toBe(2);
   });
 
   it('registers all overlapping bomb hits in the same frame', () => {
@@ -74,7 +72,7 @@ describe('SurfaceGame', () => {
 
     runFrames(game);
 
-    expect(game.player.lives).toBe(1);
+    expect(game.player?.lives).toBe(1);
     expect(game.bombs).toHaveLength(0);
   });
 
@@ -87,7 +85,7 @@ describe('SurfaceGame', () => {
   it('collision outcome is independent of facing direction', () => {
     for (const direction of [1, -1]) {
       const game = makeSurfaceGame(canvas);
-      game.player.direction = direction;
+      game.player?.setDirection(direction);
       expect(placeBomb(game, 82).isExploding).toBe(true);
       expect(placeBomb(game, 83).isExploding).toBe(false);
     }
@@ -95,12 +93,12 @@ describe('SurfaceGame', () => {
 
   it('sets isOver when last life is lost', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = 1;
+    game.player!.lives = 1;
     placeHitBomb(game);
 
     runFrames(game);
 
-    expect(game.player.lives).toBe(0);
+    expect(game.player?.lives).toBe(0);
     expect(game.isOver).toBe(true);
   });
 
@@ -110,7 +108,7 @@ describe('SurfaceGame', () => {
     game.gameOverCallback(onGameOver);
     game.score = 40;
     game.currentLevel = 2;
-    game.player.lives = 1;
+    game.player!.lives = 1;
 
     placeHitBomb(game);
     runFrames(game);
@@ -131,13 +129,13 @@ describe('SurfaceGame', () => {
 
     runFrames(game);
 
-    expect(game.player.blinkColor).toBe('#FFFFFF');
-    expect(game.player.blinkStepsLeft).toBe(30);
+    expect(game.player?.blinkColor).toBe('#FFFFFF');
+    expect(game.player?.blinkStepsLeft).toBe(30);
   });
 
   it('displayLives does not throw when lives drop below zero', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = -1;
+    game.player!.lives = -1;
     setupHud();
 
     expect(() => game.displayLives()).not.toThrow();
@@ -158,7 +156,7 @@ describe('SurfaceGame', () => {
 
   it('removes all excess life icons when multiple lives are lost at once', () => {
     const game = makeSurfaceGame(canvas);
-    game.player.lives = 1;
+    game.player!.lives = 1;
     setupHud();
 
     game.displayLives();

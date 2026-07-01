@@ -361,7 +361,7 @@ export class AbyssGame implements AbyssView {
     const minWorldX = Math.max(this.cameraX + canvasWidth * SCREEN_LEFT_MARGIN_FRAC, canvasWidth * CORRIDOR_START_FRAC);
     const maxWorldX = this.cameraX + canvasWidth * BOMB_SPAWN_MAX_FRAC;
     const worldX = minWorldX + Math.random() * (maxWorldX - minWorldX);
-    const bomb = new Bomb(this.canvas, worldX, level.bombSpeed);
+    const bomb = new Bomb(worldX, level.bombSpeed);
     bomb.dy = this.canvas.height * ABYSS_CEILING_FRAC;
     this.fallingBombs.push(bomb);
     this.lastBombSpawn = this.stepCount;

@@ -130,7 +130,7 @@ export class SurfaceGame implements SurfaceView {
 
     if (this.count - this.lastSpawnFrame >= SURFACE_LEVEL_CONFIG[this.currentLevel].spawnIntervalFrames) {
       const randomX = Math.random() * (this.canvas.width - BOMB_WIDTH);
-      this.bombs.push(new Bomb(this.canvas, randomX, SURFACE_LEVEL_CONFIG[this.currentLevel].bombSpeed));
+      this.bombs.push(new Bomb(randomX, SURFACE_LEVEL_CONFIG[this.currentLevel].bombSpeed));
       this.lastSpawnFrame = this.count;
     }
 
@@ -251,7 +251,6 @@ export class SurfaceGame implements SurfaceView {
       if (bomb.isExploding) continue;
 
       if (bombHitsPlayer(player.dx, player.dy, player.dWidth, player.dHeight, bomb.dx, bomb.dy)) {
-        bomb.image.src = SPRITES.booom;
         bomb.isExploding = true;
         bomb.explosionStepsLeft = EXPLOSION_STEPS;
         this.sfx.play('bombHit');

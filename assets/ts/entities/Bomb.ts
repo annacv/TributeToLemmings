@@ -1,21 +1,15 @@
-import { SPRITES } from '../assets';
 import { BOMB_WIDTH, BOMB_HEIGHT } from '../lib/geometry';
 
 export class Bomb {
-  ctx: CanvasRenderingContext2D;
-  image: HTMLImageElement;
   dx: number;
   dy: number;
-  dWidth: number;
-  dHeight: number;
+  readonly dWidth: number;
+  readonly dHeight: number;
   speed: number;
   isExploding: boolean;
   explosionStepsLeft: number;
 
-  constructor(canvas: HTMLCanvasElement, randomX: number, speed: number = 1.5) {
-    this.ctx = canvas.getContext('2d')!;
-    this.image = new Image();
-    this.image.src = SPRITES.bomb;
+  constructor(randomX: number, speed: number = 1.5) {
     this.dx = randomX;
     this.dy = -45;
     this.dWidth = BOMB_WIDTH;
@@ -27,9 +21,5 @@ export class Bomb {
 
   move(): void {
     this.dy = this.dy + this.speed;
-  }
-
-  drawImage(): void {
-    this.ctx.drawImage(this.image, this.dx, this.dy, this.dWidth, this.dHeight);
   }
 }
