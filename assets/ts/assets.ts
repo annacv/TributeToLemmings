@@ -49,6 +49,8 @@ import groundHole3Svg from '../images/backgrounds/ground-hole-3.svg';
 import groundHole4Svg from '../images/backgrounds/ground-hole-4.svg';
 import soundIconSvg from '../images/icons/sound.svg?raw';
 import mutedIconSvg from '../images/icons/muted.svg?raw';
+import arrowLeftIconSvg from '../images/icons/arrow-left.svg?raw';
+import arrowRightIconSvg from '../images/icons/arrow-right.svg?raw';
 
 export const SPRITES = {
   bomb: bombSvg,
@@ -103,6 +105,8 @@ export const ABYSS_BACKGROUND_SVG = backgroundAbyssSvg;
 export const THE_END_BACKGROUND_SVG = backgroundTheEndSvg;
 export const ICON_SOUND_SVG = soundIconSvg;
 export const ICON_MUTED_SVG = mutedIconSvg;
+export const ICON_ARROW_LEFT_SVG = arrowLeftIconSvg;
+export const ICON_ARROW_RIGHT_SVG = arrowRightIconSvg;
 
 export const CRACK_MARK_SVGS = [
   crackMark1Svg,

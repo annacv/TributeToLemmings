@@ -1,3 +1,4 @@
+import { ICON_ARROW_LEFT_SVG, ICON_ARROW_RIGHT_SVG } from '../assets';
 import { getCanvasSize } from './geometry';
 import { setupMuteButton } from './muteButton';
 
@@ -58,9 +59,9 @@ export function buildPlayScreen(host: HTMLElement, config: PlayScreenConfig): Pl
         <button class="mute-btn" aria-label="Mute sound"></button>
       </div>
       <div class="touch-controls">
-        <button class="touch-left" aria-label="Move left">&#x2190;</button>
+        <button class="touch-left" aria-label="Move left">${ICON_ARROW_LEFT_SVG}</button>
         ${actionButton}
-        <button class="touch-right" aria-label="Move right">&#x2192;</button>
+        <button class="touch-right" aria-label="Move right">${ICON_ARROW_RIGHT_SVG}</button>
       </div>
     </section>
   `;

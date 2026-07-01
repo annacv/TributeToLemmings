@@ -1,3 +1,5 @@
+import { ICON_ARROW_LEFT_SVG, ICON_ARROW_RIGHT_SVG } from '../assets';
+
 export type InfoModalOptions = { screenName: string; title: string; bodyHtml: string; storageKey: string };
 
 export const SURFACE_MODAL: InfoModalOptions = {
@@ -6,7 +8,7 @@ export const SURFACE_MODAL: InfoModalOptions = {
   storageKey: 'surface-modal-dismissed',
   bodyHtml: `
         <p class="info-modal-instruction">
-          Use <kbd class="key-hint">&#x2190;</kbd> <kbd class="key-hint">&#x2192;</kbd> arrow keys<br>
+          Use <kbd class="key-hint">${ICON_ARROW_LEFT_SVG}</kbd> <kbd class="key-hint">${ICON_ARROW_RIGHT_SVG}</kbd> arrow keys<br>
           to dodge the bombs and stay alive!
         </p>`,
 };

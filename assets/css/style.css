@@ -85,12 +85,10 @@
   --border-brand: 1px solid var(--brand);
   --border-brand-thick: 2px solid var(--brand);
   --radius-sm: 0.25rem;
-  --radius-pixel: 4px;
   --gap-sm: 0.5rem;
   --gap-md: 1rem;
   --gap-lg: 1.5rem;
   --transition-pixel-btn: background-color .15s ease, color .15s ease;
-  --touch-controls-font-size: 1.5rem;
   --touch-control-size: 3rem;
 }
 
@@ -663,12 +661,10 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: var(--font-pixel);
-  text-align: center;
   border: var(--border-brand-thick);
   color: var(--brand);
   background-color: var(--neutral-100);
-  border-radius: var(--radius-pixel);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -676,12 +672,21 @@ canvas {
   transition: background-color .1s ease, color .1s ease;
 }
 
+.touch-action {
+  font-family: var(--font-pixel);
+  text-align: center;
+}
+
 .touch-left,
 .touch-right {
   width: var(--touch-control-size);
-  padding: 0rem .35rem .35rem .35rem;
-  font-size: var(--touch-controls-font-size);
-  line-height: 1.5;
+  padding: 0;
+}
+
+.touch-left svg,
+.touch-right svg {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 /* Touch action button: static SPACE label. */
@@ -1227,22 +1232,26 @@ button:active {
 }
 
 .key-hint, .key-hint-text {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: var(--border-brand);
   color: var(--brand);
-  font-family: var(--font-pixel);
   border-radius: 2px;
-  font-style: normal;
-  line-height: 1;
 }
 
 .key-hint {
-  font-size: var(--text-md);
-  padding: 0rem .35rem .35rem .35rem;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex-shrink: 0;
+  padding: 0.25rem;
 }
 
 .key-hint-text {
+  font-family: var(--font-pixel);
   font-size: var(--text-sm);
+  font-style: normal;
+  line-height: 1;
   padding: 0.35rem;
 }
 
