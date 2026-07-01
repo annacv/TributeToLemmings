@@ -21,12 +21,30 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: () => T): Pro
   ]);
 }
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function appendRankingRow(
+  parent: Element,
+  rank: number,
+  name: string,
+  score: number,
+  current: boolean,
+): void {
+  const row = document.createElement(current ? 'div' : 'li');
+  row.className = `ranking-row${current ? ' ranking-row--current' : ''}`;
+
+  const rankEl = document.createElement('span');
+  rankEl.className = 'ranking-rank';
+  rankEl.textContent = `${rank}.`;
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'ranking-name';
+  nameEl.textContent = name;
+
+  const scoreEl = document.createElement('span');
+  scoreEl.className = 'ranking-score';
+  scoreEl.textContent = String(score);
+
+  row.append(rankEl, nameEl, scoreEl);
+  parent.appendChild(row);
 }
 
 export function createRankingScreen(
@@ -136,7 +154,11 @@ async function loadRanking(
 
     const playerInTop10 = scores.some(isPlayerRow);
 
-    let html = '<ol class="ranking-table">';
+    list.replaceChildren();
+    const table = document.createElement('ol');
+    table.className = 'ranking-table';
+    list.appendChild(table);
+
     let displayRank = 1;
     let playerRank: number | null = null;
 
@@ -144,13 +166,8 @@ async function loadRanking(
       if (i > 0 && s.score < scores[i - 1].score) displayRank = i + 1;
       const isCurrent = isPlayerRow(s);
       if (isCurrent) playerRank = displayRank;
-      html += `<li class="ranking-row${isCurrent ? ' ranking-row--current' : ''}">
-          <span class="ranking-rank">${displayRank}.</span>
-          <span class="ranking-name">${escapeHtml(s.name)}</span>
-          <span class="ranking-score">${s.score}</span>
-        </li>`;
+      appendRankingRow(table, displayRank, s.name, s.score, isCurrent);
     });
-    html += '</ol>';
 
     if (!playerInTop10) {
       const effectiveScore = bestScore ?? currentScore;
@@ -160,19 +177,18 @@ async function loadRanking(
 
       if (rank !== null) {
         playerRank = rank;
-        html += `
-            <hr class="ranking-divider">
-            ${rank > 10 ? '<p class="ranking-not-top10">&gt; you are still not in the top 10</p>' : ''}
-            <div class="ranking-row ranking-row--current">
-              <span class="ranking-rank">${rank}.</span>
-              <span class="ranking-name">${escapeHtml(playerName)}</span>
-              <span class="ranking-score">${effectiveScore}</span>
-            </div>
-          `;
+        const divider = document.createElement('hr');
+        divider.className = 'ranking-divider';
+        list.appendChild(divider);
+        if (rank > 10) {
+          const note = document.createElement('p');
+          note.className = 'ranking-not-top10';
+          note.textContent = '> you are still not in the top 10';
+          list.appendChild(note);
+        }
+        appendRankingRow(list, rank, playerName, effectiveScore, true);
       }
     }
-
-    list.innerHTML = html;
     /* Announce the settled rank once, after the list renders (both the in-top-10
        row and the appended below-top-10 row are covered) */
     if (playerRank !== null) announce(`Rank ${playerRank}`);
