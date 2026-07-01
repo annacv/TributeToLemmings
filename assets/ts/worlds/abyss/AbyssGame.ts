@@ -164,7 +164,7 @@ export class AbyssGame implements AbyssView {
     const canvasWidth = this.canvas.width;
     this.player = new Player(this.canvas);
     this.player.dy = this.canvas.height * ABYSS_FLOOR_FRAC - this.player.dHeight;
-    this.playerWorldX = this.entranceWorldX; // land below the opened ceiling door
+    this.playerWorldX = this.entranceWorldX - this.player.dWidth / 2; // land below the opened ceiling door
     this.player.dx = this.playerScreenX();
     this.hud.initLivesIcons(this.player.lives, SPRITES.lemming);
     this.hud.setText('.lives-value', String(this.player.lives));
@@ -185,7 +185,7 @@ export class AbyssGame implements AbyssView {
     const canvasHeight = this.canvas.height;
     this.player = new Player(this.canvas);
     this.cameraX = 0;
-    this.playerWorldX = this.entranceWorldX;
+    this.playerWorldX = this.entranceWorldX - this.player.dWidth / 2;
     this.player.dx = this.playerScreenX();
     const ledgeY = canvasHeight * COLD_OPEN_LEDGE_FRAC;
     const groundY = canvasHeight * ABYSS_FLOOR_FRAC - this.player.dHeight;
