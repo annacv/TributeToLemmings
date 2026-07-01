@@ -50,7 +50,7 @@ describe('the end screen', () => {
 
   it('a press lifts off immediately, without waiting out the prompt hold', () => {
     const balloonPlayed = (): boolean => audioSrcs.some((s) => /balloon/i.test(s));
-    vi.advanceTimersByTime(1500);
+    vi.advanceTimersByTime(THE_END_WALK_MS);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }));
     vi.advanceTimersByTime(THE_END_BOARD_MS);
     expect(balloonPlayed()).toBe(true);

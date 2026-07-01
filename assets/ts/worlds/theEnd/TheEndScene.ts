@@ -1,9 +1,22 @@
 export const THE_END_WALK_MS = 1400;
-export const THE_END_PROMPT_HOLD_MS = 2600;
+export const THE_END_PROMPT_HOLD_MS = 3200;
+export const THE_END_PROMPT_HOLD_MS_MOBILE = 2400;
+export const THE_END_PROMPT_HINT_VISIBLE_MS = 200; // matches .the-end-prompt opacity transition
 export const THE_END_BOARD_MS = 700;
-export const THE_END_ASCEND_MS = 4200;
-export const THE_END_CREDITS_MS = 9000;
-export const THE_END_END_HOLD_MS = 4200;
+export const THE_END_ASCEND_MS = 5000;
+export const THE_END_CREDITS_LEAD_MS = 2000; // credits begin before the balloon settles at the top
+export const THE_END_CREDITS_START_MS = THE_END_BOARD_MS + THE_END_ASCEND_MS - THE_END_CREDITS_LEAD_MS;
+export const THE_END_CREDITS_SCROLL_PX_PER_S = 90;
+export const THE_END_CREDITS_MIN_SCROLL_MS = 9000;
+export const THE_END_END_HOLD_MS = 6000;
+
+export function theEndCreditsScroll(rollH: number, viewH: number): { ms: number; endPct: number } {
+  if (rollH <= 0 || viewH <= 0) return { ms: THE_END_CREDITS_MIN_SCROLL_MS, endPct: -100 };
+  return {
+    ms: Math.round(((rollH + viewH) / THE_END_CREDITS_SCROLL_PX_PER_S) * 1000),
+    endPct: -(viewH / rollH) * 100,
+  };
+}
 
 const BALLOON_ASPECT = 423 / 272;     // balloon.svg viewBox h/w
 

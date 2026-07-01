@@ -438,7 +438,8 @@ canvas {
 
   /* Square canvas buffer fills the taller mobile box; cover keeps the scene
      undistorted (centred lemming/hole stay put, only the sides crop) */
-  .transition-canvas {
+  .transition-canvas,
+  .the-end-canvas {
     object-fit: cover;
   }
 }
@@ -934,7 +935,7 @@ canvas {
    lemming waits at the balloon. */
 .the-end-overlay {
   position: absolute;
-  inset: 1.5rem;
+  inset: 1rem;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -949,7 +950,6 @@ canvas {
   text-shadow: 2px 2px 0 var(--neutral-100);
   letter-spacing: var(--tracking-pixel);
   text-align: center;
-  margin-bottom: 0.25rem;
   opacity: 0;
   transition: opacity .2s ease;
 }
@@ -958,7 +958,20 @@ canvas {
   opacity: 1;
 }
 
-/* Credits crawl over the sky during the ascent; hidden until it rolls. */
+.the-end-prompt-mobile {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .the-end-prompt-desktop {
+    display: none;
+  }
+
+  .the-end-prompt-mobile {
+    display: inline;
+  }
+}
+
 .the-end-credits {
   position: absolute;
   inset: 0;
@@ -977,6 +990,7 @@ canvas {
   position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -985,8 +999,8 @@ canvas {
   transform: translateY(100%);
 }
 
-.the-end-credits--roll .the-end-credits-roll {
-  animation: the-end-credits-scroll 9s linear forwards;
+.the-end-credits--roll .the-end-credits-roll--scrolling {
+  animation: the-end-credits-scroll var(--the-end-credits-duration) linear forwards;
 }
 
 /* Reduced motion: no crawl — show the credits resting near the top instead. */
@@ -998,7 +1012,7 @@ canvas {
 
 @keyframes the-end-credits-scroll {
   from { transform: translateY(100%); }
-  to   { transform: translateY(-110%); }
+  to   { transform: translateY(var(--the-end-credits-scroll-end)); }
 }
 
 .the-end-credit {
@@ -1007,11 +1021,17 @@ canvas {
   color: var(--neutral-0);
   text-shadow: 2px 2px 0 var(--neutral-100);
   letter-spacing: var(--tracking-pixel);
-  line-height: var(--leading-tight);
+  line-height: var(--leading-loose);
 }
 
-.the-end-credit--gap {
-  height: var(--gap-md);
+.the-end-credit--copy {
+  max-width: min(85%, 22rem);
+  white-space: pre-line;
+}
+
+.the-end-credit--copy::first-line {
+  font-size: var(--text-xl);
+  text-transform: uppercase;
 }
 
 .the-end-skip {
